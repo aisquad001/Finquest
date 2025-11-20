@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -53,20 +54,43 @@
   animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
+@keyframes pulse-fast {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .8; transform: scale(1.05); }
+}
+
+.animate-pulse-fast {
+    animation: pulse-fast 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: #2a1b3d; 
 }
 ::-webkit-scrollbar-thumb {
   background: #FF00B8; 
-  border-radius: 5px;
+  border-radius: 4px;
   border: 2px solid #2a1b3d;
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #D10096; 
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 /* Neon Glow Text */
@@ -79,9 +103,46 @@
   text-shadow: 4px 4px 0px rgba(0,0,0,0.5);
 }
 
+.text-stroke-sm {
+    -webkit-text-stroke: 1px black;
+}
+
 .glass-panel {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(12px);
     border: 2px solid rgba(255, 255, 255, 0.2);
     box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+}
+
+/* Swiper Customization */
+.swiper-pagination-bullet {
+    width: 12px;
+    height: 12px;
+    background: rgba(255,255,255,0.3);
+    opacity: 1;
+    border: 1px solid #000;
+}
+.swiper-pagination-bullet-active {
+    background: #00FF88;
+    box-shadow: 0 0 10px #00FF88;
+    width: 24px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.slide-enter {
+    animation: slideUp 0.5s ease-out forwards;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Card 3D Tilt Logic - Simplified */
+.perspective-1000 {
+    perspective: 1000px;
+}
+.preserve-3d {
+    transform-style: preserve-3d;
 }

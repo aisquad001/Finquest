@@ -1,10 +1,11 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
 // Simple synthesizer to avoid loading external audio files
-export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin') => {
+export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin' | 'chest' | 'click') => {
     // Check for browser support
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
@@ -19,6 +20,16 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
     const now = ctx.currentTime;
   
     switch (type) {
+      case 'click':
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+        gain.gain.setValueAtTime(0.05, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+        break;
+
       case 'pop':
         osc.type = 'sine';
         osc.frequency.setValueAtTime(600, now);
@@ -42,13 +53,26 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
         break;
   
       case 'coin':
+        // High pitched shiny sound
         osc.type = 'sine';
         osc.frequency.setValueAtTime(1200, now);
-        osc.frequency.exponentialRampToValueAtTime(2000, now + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(1800, now + 0.15);
         gain.gain.setValueAtTime(0.05, now);
-        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        gain.gain.linearRampToValueAtTime(0, now + 0.3);
         osc.start(now);
-        osc.stop(now + 0.2);
+        osc.stop(now + 0.3);
+        
+        // Add a secondary sparkle
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(2000, now);
+        gain2.gain.setValueAtTime(0.01, now);
+        gain2.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc2.start(now);
+        osc2.stop(now + 0.2);
         break;
   
       case 'error':
@@ -64,7 +88,7 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
       case 'levelup':
         osc.type = 'square';
         // Arpeggio
-        const notes = [440, 554, 659, 880, 1108];
+        const notes = [440, 554, 659, 880, 1108, 1318];
         notes.forEach((freq, i) => {
             const oscN = ctx.createOscillator();
             const gainN = ctx.createGain();
@@ -73,12 +97,29 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
             oscN.connect(gainN);
             gainN.connect(ctx.destination);
             
-            const t = now + i * 0.1;
+            const t = now + i * 0.08;
             gainN.gain.setValueAtTime(0.05, t);
             gainN.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
             oscN.start(t);
             oscN.stop(t + 0.3);
         });
+        break;
+
+      case 'chest':
+        // Low rumble then high sparkle
+        const oscLow = ctx.createOscillator();
+        const gainLow = ctx.createGain();
+        oscLow.connect(gainLow);
+        gainLow.connect(ctx.destination);
+        oscLow.type = 'sawtooth';
+        oscLow.frequency.setValueAtTime(100, now);
+        oscLow.frequency.linearRampToValueAtTime(50, now + 0.5);
+        gainLow.gain.setValueAtTime(0.1, now);
+        gainLow.gain.linearRampToValueAtTime(0, now + 0.5);
+        oscLow.start(now);
+        oscLow.stop(now + 0.5);
+        
+        setTimeout(() => playSound('coin'), 400);
         break;
     }
   };

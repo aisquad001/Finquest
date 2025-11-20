@@ -1,58 +1,73 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
-*/
+ */
 import React, { useState, useEffect } from 'react';
-import { Hero } from './components/Hero';
-import { InputArea } from './components/InputArea';
+import { Dashboard } from './components/Dashboard';
 import { LivePreview } from './components/LivePreview';
-import { CreationHistory } from './components/CreationHistory';
+import { Onboarding } from './components/Onboarding';
 import { generateLesson, LessonData } from './services/gemini';
 import { playSound } from './services/audio';
+import { 
+    UserState, 
+    loadUser, 
+    saveUser, 
+    createInitialUser, 
+    WORLDS,
+    ShopItem
+} from './services/gamification';
 
 const App: React.FC = () => {
-  // Game State
-  const [xp, setXp] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [streak, setStreak] = useState(1);
-  const [completedModules, setCompletedModules] = useState<string[]>([]);
+  // Global User State
+  const [user, setUser] = useState<UserState | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   
   // Content State
   const [activeLesson, setActiveLesson] = useState<LessonData | null>(null);
-  const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
+  const [currentWorldId, setCurrentWorldId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Load progress
+  // Load progress on mount
   useEffect(() => {
-    const saved = localStorage.getItem('finquest_progress_v2');
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            setXp(data.xp || 0);
-            setLevel(data.level || 1);
-            setCompletedModules(data.completedModules || []);
-            setStreak(data.streak || 1);
-        } catch(e) { console.error(e); }
+    const loadedUser = loadUser();
+    if (loadedUser) {
+        setUser(loadedUser);
+        setShowOnboarding(false);
+    } else {
+        setShowOnboarding(true);
     }
   }, []);
 
-  // Save progress
+  // Save progress whenever user state changes
   useEffect(() => {
-    localStorage.setItem('finquest_progress_v2', JSON.stringify({ xp, level, completedModules, streak }));
-  }, [xp, level, completedModules, streak]);
+    if (user) {
+        saveUser(user);
+    }
+  }, [user]);
 
-  const handleSelectTopic = async (prompt: string, moduleId: string) => {
+  const handleOnboardingComplete = (data: any) => {
+      const newUser = createInitialUser(data);
+      setUser(newUser);
+      setShowOnboarding(false);
+  };
+
+  const handlePlayWorld = async (worldId: string, prompt: string) => {
+      if (!user) return;
       setIsGenerating(true);
-      setCurrentModuleId(moduleId);
-      // Simulate minimal loading time for feel
-      const minLoad = new Promise(resolve => setTimeout(resolve, 1500));
+      setCurrentWorldId(worldId);
+      
+      // Simulate minimal loading time for feel + loading animation
+      const minLoad = new Promise(resolve => setTimeout(resolve, 2000));
       
       try {
-          const [lesson] = await Promise.all([generateLesson(prompt), minLoad]);
+          // Personalize prompt
+          const personalizedPrompt = `${prompt}. Address the user as ${user.nickname}. Make it relatable for a level ${user.level} player.`;
+          const [lesson] = await Promise.all([generateLesson(personalizedPrompt), minLoad]);
           setActiveLesson(lesson);
           playSound('success');
       } catch (err) {
-          console.error("Failed");
+          console.error("Failed generation", err);
           setActiveLesson(null);
       } finally {
           setIsGenerating(false);
@@ -60,75 +75,100 @@ const App: React.FC = () => {
   };
 
   const handleLessonComplete = (earnedXp: number) => {
-      setXp(prev => prev + earnedXp);
+      if (!user) return;
       
-      const xpForNextLevel = level * 1000;
-      if (xp + earnedXp >= xpForNextLevel) {
-          setLevel(prev => prev + 1);
-          playSound('levelup');
-      }
+      // Calculate rewards
+      const earnedCoins = Math.floor(earnedXp * 0.5); // 1 XP = 0.5 Coins roughly
+      
+      setUser(prev => {
+          if (!prev) return null;
+          
+          const newXp = prev.xp + earnedXp;
+          const newCoins = prev.coins + earnedCoins;
+          
+          // Simple level up check (Visual handled in Dashboard bar usually, but we update state here)
+          // Note: Real level up logic would be more complex with the formula, 
+          // but for now we just increment XP. Level is derived or explicitly stored.
+          // Let's increment level if XP crosses threshold of current level * 1000 (Simplified for now to match old logic)
+          // or use the new gamification service formula if we wanted to recalculate level.
+          // For safety, let's just keep level explicit.
+          
+          let newLevel = prev.level;
+          const xpThreshold = 100 * Math.pow(prev.level, 2) + prev.xp; // Dynamic threshold
+          // Actually, let's just use a simple milestone check for this demo
+          if (newXp > prev.level * 500) {
+              newLevel += 1;
+              playSound('levelup');
+          }
 
-      if (currentModuleId && !completedModules.includes(currentModuleId)) {
-          setCompletedModules(prev => [...prev, currentModuleId]);
-      }
-      
+          const newCompletedWorlds = (currentWorldId && !prev.completedWorlds.includes(currentWorldId))
+            ? [...prev.completedWorlds, currentWorldId]
+            : prev.completedWorlds;
+
+          return {
+              ...prev,
+              xp: newXp,
+              coins: newCoins,
+              level: newLevel,
+              completedWorlds: newCompletedWorlds
+          };
+      });
+
       setActiveLesson(null);
-      setCurrentModuleId(null);
+      setCurrentWorldId(null);
+  };
+
+  const handleClaimReward = (xp: number, coins: number) => {
+      setUser(prev => {
+          if (!prev) return null;
+          return {
+              ...prev,
+              xp: prev.xp + xp,
+              coins: prev.coins + coins
+          };
+      });
+  };
+
+  const handleBuyItem = (item: ShopItem) => {
+      setUser(prev => {
+          if (!prev) return null;
+          return {
+              ...prev,
+              coins: prev.coins - item.cost,
+              inventory: [...prev.inventory, item.id]
+          };
+      });
   };
 
   const handleCloseLesson = () => {
       setActiveLesson(null);
-      setCurrentModuleId(null);
+      setCurrentWorldId(null);
   };
 
+  if (showOnboarding) {
+      return <Onboarding onComplete={handleOnboardingComplete} />;
+  }
+
+  if (!user) return null; // Loading state if needed
+
   return (
-    <div className="min-h-[100dvh] bg-gradient-to-b from-[#2a1b3d] to-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
+    <div className="min-h-[100dvh] bg-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
       
-      {/* Animated Background Particles */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-          {[...Array(10)].map((_, i) => (
-              <div 
-                key={i}
-                className="absolute text-white/10 animate-float"
-                style={{
-                    left: `${Math.random() * 100}%`,
-                    top: `${Math.random() * 100}%`,
-                    animationDuration: `${5 + Math.random() * 10}s`,
-                    fontSize: `${20 + Math.random() * 40}px`
-                }}
-              >
-                  {['●', '★', '▲', '■'][Math.floor(Math.random() * 4)]}
-              </div>
-          ))}
-           {/* Gradient Blobs */}
-           <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-neon-purple/20 rounded-full blur-[100px] mix-blend-screen"></div>
-           <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-neon-blue/20 rounded-full blur-[100px] mix-blend-screen"></div>
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+           <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-neon-purple/10 rounded-full blur-[120px] mix-blend-screen"></div>
+           <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-neon-blue/10 rounded-full blur-[120px] mix-blend-screen"></div>
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
       </div>
       
-      <div className="relative z-10 flex-1 w-full pt-4 pb-12">
-        
-        <Hero xp={xp} level={level} streak={streak} />
-        
-        {/* Map Title */}
-        <div className="text-center mb-8">
-            <h2 className="font-game text-4xl text-white text-stroke-black tracking-wide drop-shadow-neon transform -rotate-2">
-                ADVENTURE MAP
-            </h2>
-        </div>
-
-        <InputArea 
-            onSelectTopic={handleSelectTopic} 
-            completedModules={completedModules}
-            isGenerating={isGenerating}
-        />
-
-        <CreationHistory completedModules={completedModules} />
-        
-        <footer className="text-center pb-8 px-4 mt-12">
-            <p className="text-xs text-white/40 font-bold uppercase tracking-widest">
-                FinQuest v2.0 • Press Start
-            </p>
-        </footer>
+      {/* Main App Content */}
+      <div className="relative z-10">
+          <Dashboard 
+            user={user} 
+            onPlayWorld={handlePlayWorld}
+            onClaimReward={handleClaimReward}
+            onBuyItem={handleBuyItem}
+          />
       </div>
 
       {/* Game Level Overlay */}

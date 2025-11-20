@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>FinQuest: The Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Fonts: Luckiest Guy for headers, Comic Neue for body -->
@@ -13,6 +13,10 @@
     
     <!-- Confetti Library -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Swiper.js -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
     <script>
       // Tailwind config to extend theme for specific game colors
@@ -49,6 +53,7 @@
         font-family: 'Comic Neue', cursive;
         background-color: #1a0b2e;
         overflow-x: hidden;
+        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
       }
     </style>
     
