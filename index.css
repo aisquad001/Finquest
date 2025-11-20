@@ -1,57 +1,87 @@
-/* Custom Animations for Gamified UI */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Game Vibes Styles */
+
+/* 3D Button Effect */
+.btn-3d {
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(0);
+  box-shadow: 0 6px 0 0 rgba(0, 0, 0, 0.25);
 }
 
-@keyframes slideInBottom {
-  from { transform: translateY(1rem); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+.btn-3d:hover {
+  transform: translateY(2px);
+  box-shadow: 0 4px 0 0 rgba(0, 0, 0, 0.25);
 }
 
-@keyframes slideInRight {
-  from { transform: translateX(2rem); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+.btn-3d:active {
+  transform: translateY(6px);
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.25);
 }
 
-@keyframes zoomIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+/* Animation Classes */
+@keyframes float {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
 }
 
-.animate-in {
-  animation-duration: 0.5s;
-  animation-fill-mode: both;
+.animate-float {
+  animation: float 4s ease-in-out infinite;
 }
 
-.fade-in {
-  animation-name: fadeIn;
+@keyframes float-delayed {
+  0% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(-2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
 }
 
-.slide-in-from-bottom-4 {
-  animation-name: slideInBottom;
+.animate-float-delayed {
+  animation: float-delayed 5s ease-in-out infinite;
+  animation-delay: 1s;
 }
 
-.slide-in-from-right-8 {
-  animation-name: slideInRight;
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  80% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-.zoom-in {
-  animation-name: zoomIn;
+.animate-pop-in {
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Scrollbar Styling */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #18181b; 
+  background: #2a1b3d; 
 }
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46; 
-  border-radius: 4px;
+  background: #FF00B8; 
+  border-radius: 5px;
+  border: 2px solid #2a1b3d;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b; 
+  background: #D10096; 
+}
+
+/* Neon Glow Text */
+.text-shadow-neon {
+  text-shadow: 2px 2px 0px #000, 0 0 15px rgba(0, 255, 136, 0.6);
+}
+
+.text-stroke-black {
+  -webkit-text-stroke: 2px black;
+  text-shadow: 4px 4px 0px rgba(0,0,0,0.5);
+}
+
+.glass-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
 }

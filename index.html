@@ -1,53 +1,73 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gemini 3 - Bring Anything to Life</title>
+    <title>FinQuest: The Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PDF.js for rendering PDF previews -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <script>
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    </script>
-    <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-      
-      body {
-        font-family: 'Inter', sans-serif;
-        background-color: #09090b; /* Zinc 950 */
-        color: #fafafa;
-      }
-      
-      /* Technical Dot Grid Background */
-      .bg-dot-grid {
-        background-size: 40px 40px;
-        background-image: radial-gradient(circle, #3f3f46 1px, transparent 1px);
-      }
+    <!-- Fonts: Luckiest Guy for headers, Comic Neue for body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@400;700&family=Luckiest+Guy&display=swap" rel="stylesheet">
+    
+    <!-- Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
-      /* Smooth scrolling for the whole app */
-      html {
-        scroll-behavior: smooth;
+    <script>
+      // Tailwind config to extend theme for specific game colors
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              'game': ['"Luckiest Guy"', 'cursive'],
+              'body': ['"Comic Neue"', 'cursive'],
+            },
+            colors: {
+              neon: {
+                green: '#00FF88',
+                blue: '#00C2FF',
+                pink: '#FF00B8',
+                purple: '#9D00FF',
+                yellow: '#FFFF00'
+              }
+            },
+            boxShadow: {
+              '3d': '0px 6px 0px 0px rgba(0,0,0,0.3)',
+              '3d-hover': '0px 3px 0px 0px rgba(0,0,0,0.3)',
+              '3d-active': '0px 0px 0px 0px rgba(0,0,0,0.3)',
+              'neon': '0 0 10px rgba(0, 255, 136, 0.5), 0 0 20px rgba(0, 194, 255, 0.3)',
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        font-family: 'Comic Neue', cursive;
+        background-color: #1a0b2e;
+        overflow-x: hidden;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
-    "@heroicons/react/24/outline": "https://aistudiocdn.com/@heroicons/react@^2.2.0/24/outline",
-    "@heroicons/react/24/solid": "https://aistudiocdn.com/@heroicons/react@^2.2.0/24/solid",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "@heroicons/react/": "https://aistudiocdn.com/@heroicons/react@^2.2.0/"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
+    
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react-dom/client": "https://aistudiocdn.com/react-dom@^19.2.0/client",
+        "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+        "@heroicons/react/24/outline": "https://aistudiocdn.com/@heroicons/react@^2.2.0/24/outline",
+        "@heroicons/react/24/solid": "https://aistudiocdn.com/@heroicons/react@^2.2.0/24/solid",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "@heroicons/react/": "https://aistudiocdn.com/@heroicons/react@^2.2.0/"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>

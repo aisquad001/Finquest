@@ -8,6 +8,7 @@ import { InputArea } from './components/InputArea';
 import { LivePreview } from './components/LivePreview';
 import { CreationHistory } from './components/CreationHistory';
 import { generateLesson, LessonData } from './services/gemini';
+import { playSound } from './services/audio';
 
 const App: React.FC = () => {
   // Game State
@@ -21,9 +22,9 @@ const App: React.FC = () => {
   const [currentModuleId, setCurrentModuleId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Load progress on mount
+  // Load progress
   useEffect(() => {
-    const saved = localStorage.getItem('finquest_progress_v1');
+    const saved = localStorage.getItem('finquest_progress_v2');
     if (saved) {
         try {
             const data = JSON.parse(saved);
@@ -31,44 +32,42 @@ const App: React.FC = () => {
             setLevel(data.level || 1);
             setCompletedModules(data.completedModules || []);
             setStreak(data.streak || 1);
-        } catch(e) {
-            console.error("Load failed", e);
-        }
+        } catch(e) { console.error(e); }
     }
   }, []);
 
   // Save progress
   useEffect(() => {
-    localStorage.setItem('finquest_progress_v1', JSON.stringify({ xp, level, completedModules, streak }));
+    localStorage.setItem('finquest_progress_v2', JSON.stringify({ xp, level, completedModules, streak }));
   }, [xp, level, completedModules, streak]);
 
   const handleSelectTopic = async (prompt: string, moduleId: string) => {
       setIsGenerating(true);
       setCurrentModuleId(moduleId);
+      // Simulate minimal loading time for feel
+      const minLoad = new Promise(resolve => setTimeout(resolve, 1500));
+      
       try {
-          // We append the module title/context to the prompt in the service
-          const lesson = await generateLesson(prompt);
+          const [lesson] = await Promise.all([generateLesson(prompt), minLoad]);
           setActiveLesson(lesson);
+          playSound('success');
       } catch (err) {
-          console.error("Lesson generation failed");
-          // Fallback for error handled in service but extra safety here
+          console.error("Failed");
+          setActiveLesson(null);
       } finally {
           setIsGenerating(false);
       }
   };
 
   const handleLessonComplete = (earnedXp: number) => {
-      // XP Animation / State Update
       setXp(prev => prev + earnedXp);
       
-      // Level up logic (Every 1000 XP * Level)
       const xpForNextLevel = level * 1000;
       if (xp + earnedXp >= xpForNextLevel) {
           setLevel(prev => prev + 1);
-          // In a real app, trigger a level-up modal here
+          playSound('levelup');
       }
 
-      // Mark module as complete
       if (currentModuleId && !completedModules.includes(currentModuleId)) {
           setCompletedModules(prev => [...prev, currentModuleId]);
       }
@@ -83,23 +82,38 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-zinc-950 text-zinc-50 selection:bg-green-500/30 overflow-y-auto overflow-x-hidden relative flex flex-col font-sans">
+    <div className="min-h-[100dvh] bg-gradient-to-b from-[#2a1b3d] to-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
       
-      {/* Background Pattern */}
-      <div className="fixed inset-0 bg-[radial-gradient(#27272a_1px,transparent_1px)] [background-size:40px_40px] opacity-20 pointer-events-none z-0"></div>
+      {/* Animated Background Particles */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+          {[...Array(10)].map((_, i) => (
+              <div 
+                key={i}
+                className="absolute text-white/10 animate-float"
+                style={{
+                    left: `${Math.random() * 100}%`,
+                    top: `${Math.random() * 100}%`,
+                    animationDuration: `${5 + Math.random() * 10}s`,
+                    fontSize: `${20 + Math.random() * 40}px`
+                }}
+              >
+                  {['●', '★', '▲', '■'][Math.floor(Math.random() * 4)]}
+              </div>
+          ))}
+           {/* Gradient Blobs */}
+           <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-neon-purple/20 rounded-full blur-[100px] mix-blend-screen"></div>
+           <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-neon-blue/20 rounded-full blur-[100px] mix-blend-screen"></div>
+      </div>
       
-      <div className="relative z-10 flex-1 w-full pt-6 md:pt-12 pb-12">
+      <div className="relative z-10 flex-1 w-full pt-4 pb-12">
+        
         <Hero xp={xp} level={level} streak={streak} />
         
-        <div className="w-full max-w-5xl mx-auto px-4 mb-6 flex items-end justify-between">
-            <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">WORLD MAP</h2>
-                <p className="text-zinc-400 text-sm">Select a region to start your quest.</p>
-            </div>
-            <div className="hidden sm:block text-right">
-                <p className="text-xs font-mono text-zinc-500">PROGRESS</p>
-                <p className="text-lg font-bold text-white">{Math.round((completedModules.length / 8) * 100)}%</p>
-            </div>
+        {/* Map Title */}
+        <div className="text-center mb-8">
+            <h2 className="font-game text-4xl text-white text-stroke-black tracking-wide drop-shadow-neon transform -rotate-2">
+                ADVENTURE MAP
+            </h2>
         </div>
 
         <InputArea 
@@ -110,19 +124,14 @@ const App: React.FC = () => {
 
         <CreationHistory completedModules={completedModules} />
         
-        <footer className="text-center pb-8 px-4">
-            <p className="text-xs text-zinc-600 font-mono mb-2">
-                Powered by Google Gemini • FinQuest v1.2
+        <footer className="text-center pb-8 px-4 mt-12">
+            <p className="text-xs text-white/40 font-bold uppercase tracking-widest">
+                FinQuest v2.0 • Press Start
             </p>
-            <div className="flex justify-center gap-4 text-[10px] text-zinc-700 uppercase tracking-wider">
-                <span>Privacy</span>
-                <span>Terms</span>
-                <span>Support</span>
-            </div>
         </footer>
       </div>
 
-      {/* Interactive Lesson Overlay */}
+      {/* Game Level Overlay */}
       <LivePreview
         lesson={activeLesson}
         isLoading={isGenerating}
