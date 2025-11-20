@@ -39,24 +39,29 @@ export const LivePreview: React.FC<LessonModalProps> = ({ lesson, isLoading, onC
       setSelectedOption(index);
       setShowExplanation(true);
       
-      if (index === lesson!.quiz[quizIndex].correctIndex) {
+      // Safe check for quiz existence
+      if (lesson?.quiz && lesson.quiz[quizIndex] && index === lesson.quiz[quizIndex].correctIndex) {
           setScore(prev => prev + 1);
       }
   };
 
   const handleNextQuestion = () => {
-      if (quizIndex < lesson!.quiz.length - 1) {
+      if (!lesson?.quiz) return;
+
+      if (quizIndex < lesson.quiz.length - 1) {
           setQuizIndex(prev => prev + 1);
           setSelectedOption(null);
           setShowExplanation(false);
       } else {
           setStep('result');
           // Only award XP if they pass (50%+)
-          if (score >= Math.ceil(lesson!.quiz.length / 2)) {
-              onComplete(lesson!.xpReward || 100);
+          if (score >= Math.ceil(lesson.quiz.length / 2)) {
+              onComplete(lesson.xpReward || 100);
           }
       }
   };
+
+  const hasQuiz = Array.isArray(lesson?.quiz) && lesson.quiz.length > 0;
 
   return (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/90 backdrop-blur-md transition-all duration-300 ${isLoading || lesson ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
@@ -116,7 +121,8 @@ export const LivePreview: React.FC<LessonModalProps> = ({ lesson, isLoading, onC
                         
                         {/* Sections */}
                         <div className="grid gap-6">
-                            {lesson.sections.map((section, idx) => (
+                            {/* Defensive check: Ensure sections is an array */}
+                            {(Array.isArray(lesson.sections) ? lesson.sections : []).map((section, idx) => (
                                 <div key={idx} className="group">
                                     <div className="flex items-start gap-4 mb-2">
                                         <span className="text-3xl bg-zinc-800 w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-zinc-700 shadow-lg group-hover:scale-110 transition-transform">
@@ -129,21 +135,35 @@ export const LivePreview: React.FC<LessonModalProps> = ({ lesson, isLoading, onC
                                     </div>
                                 </div>
                             ))}
+                            {(!Array.isArray(lesson.sections) || lesson.sections.length === 0) && (
+                                <div className="p-4 bg-zinc-900 rounded-xl text-zinc-500 text-center">
+                                    No sections generated.
+                                </div>
+                            )}
                         </div>
 
                         {/* Action Button */}
                         <div className="pt-4">
-                            <button 
-                                onClick={() => setStep('quiz')}
-                                className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
-                            >
-                                Start Challenge <ArrowRightIcon className="w-5 h-5" />
-                            </button>
+                            {hasQuiz ? (
+                                <button 
+                                    onClick={() => setStep('quiz')}
+                                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-blue-600/20 transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
+                                >
+                                    Start Challenge <ArrowRightIcon className="w-5 h-5" />
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => onComplete(lesson.xpReward || 50)}
+                                    className="w-full py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-green-600/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    Collect Free Reward <CheckCircleIcon className="w-5 h-5" />
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
 
-                {step === 'quiz' && (
+                {step === 'quiz' && hasQuiz && lesson.quiz[quizIndex] && (
                     <div className="max-w-xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
                         {/* Progress Bar */}
                         <div className="w-full h-2 bg-zinc-800 rounded-full mb-8">
@@ -158,9 +178,10 @@ export const LivePreview: React.FC<LessonModalProps> = ({ lesson, isLoading, onC
                         </h3>
 
                         <div className="space-y-3">
-                            {lesson.quiz[quizIndex].options.map((option, idx) => {
+                            {/* Defensive check: Ensure options is an array */}
+                            {(Array.isArray(lesson.quiz[quizIndex].options) ? lesson.quiz[quizIndex].options : []).map((option, idx) => {
                                 const isSelected = selectedOption === idx;
-                                const isCorrect = idx === lesson.quiz[quizIndex].correctIndex;
+                                const isCorrect = idx === lesson.quiz![quizIndex].correctIndex;
                                 const showState = showExplanation;
 
                                 let btnClass = "bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700";
@@ -207,21 +228,21 @@ export const LivePreview: React.FC<LessonModalProps> = ({ lesson, isLoading, onC
                 {step === 'result' && (
                     <div className="text-center space-y-6 py-12 animate-in zoom-in duration-500">
                         <div className="relative inline-block">
-                            <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-4 shadow-2xl ${score >= lesson.quiz.length / 2 ? 'bg-yellow-500 rotate-12' : 'bg-zinc-800 rotate-0'}`}>
-                                <span className="text-4xl">{score >= lesson.quiz.length / 2 ? '👑' : '💀'}</span>
+                            <div className={`w-24 h-24 rounded-3xl flex items-center justify-center mb-4 shadow-2xl ${score >= (lesson.quiz?.length || 0) / 2 ? 'bg-yellow-500 rotate-12' : 'bg-zinc-800 rotate-0'}`}>
+                                <span className="text-4xl">{score >= (lesson.quiz?.length || 0) / 2 ? '👑' : '💀'}</span>
                             </div>
                         </div>
                         
                         <div>
                             <h2 className="text-4xl font-black text-white mb-2">
-                                {score >= lesson.quiz.length / 2 ? "QUEST COMPLETE!" : "GAME OVER"}
+                                {score >= (lesson.quiz?.length || 0) / 2 ? "QUEST COMPLETE!" : "GAME OVER"}
                             </h2>
                             <p className="text-zinc-400 text-lg">
-                                You got {score} out of {lesson.quiz.length} correct
+                                You got {score} out of {lesson.quiz?.length || 0} correct
                             </p>
                         </div>
 
-                        {score >= lesson.quiz.length / 2 ? (
+                        {score >= (lesson.quiz?.length || 0) / 2 ? (
                             <div className="inline-flex flex-col items-center gap-2 animate-bounce">
                                 <div className="bg-green-500/20 border border-green-500/50 px-6 py-2 rounded-full">
                                     <p className="text-green-400 font-mono font-bold text-xl">+{lesson.xpReward} XP</p>

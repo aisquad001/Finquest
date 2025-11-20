@@ -69,10 +69,60 @@ export async function generateLesson(topic: string): Promise<LessonData> {
       }
     });
     
+    let data: any = {};
+
     if (response.text) {
-      return JSON.parse(response.text);
+      try {
+        // Handle potential markdown wrapping if the model ignores mimeType
+        const cleanText = response.text.replace(/```json\n?|```/g, '').trim();
+        data = JSON.parse(cleanText);
+      } catch (e) {
+        console.error("JSON Parse Error", e);
+        // Don't throw here, we will use fallback data below
+        data = {};
+      }
     }
-    throw new Error("No content generated");
+
+    // Deep Sanitization to prevent UI crashes
+    // We explicitly check isArray to prevent 'map is not a function' errors
+    const safeSections = (Array.isArray(data?.sections)) 
+        ? data.sections.map((s: any) => ({
+            emoji: s?.emoji || '💡',
+            heading: s?.heading || 'Topic',
+            text: s?.text || 'Loading content...'
+        }))
+        : [];
+
+    const safeQuiz = (Array.isArray(data?.quiz))
+        ? data.quiz.filter((q: any) => q).map((q: any) => ({
+            question: q?.question || 'Bonus Question',
+            // Ensure options are an array of strings
+            options: Array.isArray(q?.options) ? q.options.map((opt: any) => String(opt)) : ['True', 'False'],
+            correctIndex: typeof q?.correctIndex === 'number' ? q.correctIndex : 0,
+            explanation: q?.explanation || 'Good luck!'
+        }))
+        : [];
+
+    // If everything failed (e.g. empty JSON), provide a backup lesson so the app doesn't break
+    if (safeSections.length === 0 && safeQuiz.length === 0) {
+        return {
+            title: "The Bank is Closed",
+            xpReward: 50,
+            intro: "We couldn't generate the lesson right now. Try again later!",
+            sections: [{ emoji: "🔒", heading: "System Maintenance", text: "The finance servers are taking a nap." }],
+            quiz: []
+        };
+    }
+
+    // Sanitize and return safe data structure
+    return {
+        title: data.title || "Bonus Quest",
+        xpReward: typeof data.xpReward === 'number' ? data.xpReward : 100,
+        intro: data.intro || "Let's get this bread! 🍞",
+        sections: safeSections,
+        quiz: safeQuiz
+    };
+
   } catch (error) {
     console.error("Gemini Generation Error:", error);
     return {
