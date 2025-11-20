@@ -14,7 +14,8 @@ import {
     TrophyIcon,
     GiftIcon,
     ClockIcon,
-    FireIcon
+    FireIcon,
+    ChartBarIcon
 } from '@heroicons/react/24/solid';
 import { WORLDS_METADATA, Quest, ShopItem, LeaderboardEntry, UserState, getXpForNextLevel, getMockLeaderboard, generateDailyQuests, SHOP_ITEMS } from '../services/gamification';
 import { playSound } from '../services/audio';
@@ -22,12 +23,13 @@ import { GET_WORLD_LEVELS } from '../services/content';
 
 interface DashboardProps {
     user: UserState;
-    onOpenWorld: (worldId: string) => void; // Changed from onPlayWorld
+    onOpenWorld: (worldId: string) => void;
     onClaimReward: (xp: number, coins: number) => void;
     onBuyItem: (item: ShopItem) => void;
+    onOpenZoo: () => void; // New prop
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard'>('map');
     const [quests, setQuests] = useState<Quest[]>(generateDailyQuests());
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
@@ -80,6 +82,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             playSound('error');
         }
     };
+
+    const zooUnlocked = user.level >= 20;
 
     return (
         <div className="relative pb-24 max-w-md mx-auto md:max-w-2xl">
@@ -185,6 +189,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                     style={{ height: `${(user.completedLevels.length / (WORLDS_METADATA.length * 8)) * 100}%` }}
                                 ></div>
                             </div>
+
+                            {/* WALL STREET ZOO ENTRY CARD (Floating Ad Style) */}
+                            <button 
+                                onClick={onOpenZoo}
+                                className={`relative w-full max-w-[300px] z-20 rounded-3xl p-1 p-[2px] btn-3d group transition-transform
+                                    ${zooUnlocked 
+                                        ? 'bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer' 
+                                        : 'bg-gray-700 cursor-not-allowed grayscale opacity-80'
+                                    }
+                                `}
+                            >
+                                <div className="bg-[#1a0b2e] rounded-[22px] p-4 flex items-center gap-4 h-full">
+                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 ${zooUnlocked ? 'bg-white/10' : 'bg-black/50'}`}>
+                                        🦍
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <h3 className="font-game text-lg text-white leading-none mb-1 text-stroke-black">WALL STREET ZOO</h3>
+                                        <p className="text-[10px] text-gray-400 font-bold leading-tight">
+                                            {zooUnlocked ? 'Trade Stocks. Get Rich. No Cap.' : 'Unlocks at Level 20'}
+                                        </p>
+                                    </div>
+                                    {zooUnlocked ? (
+                                        <ChartBarIcon className="w-6 h-6 text-neon-green" />
+                                    ) : (
+                                        <LockClosedIcon className="w-6 h-6 text-gray-500" />
+                                    )}
+                                </div>
+                            </button>
 
                             {WORLDS_METADATA.map((world, index) => {
                                 const isUnlocked = user.level >= world.unlockLevel;

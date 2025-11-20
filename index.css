@@ -1,4 +1,5 @@
 
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -145,4 +146,12 @@
 }
 .preserve-3d {
     transform-style: preserve-3d;
+}
+
+/* Chart Gradients */
+.chart-gradient-green {
+    background: linear-gradient(180deg, rgba(0,255,136,0.2) 0%, rgba(0,255,136,0) 100%);
+}
+.chart-gradient-red {
+    background: linear-gradient(180deg, rgba(239,68,68,0.2) 0%, rgba(239,68,68,0) 100%);
 }

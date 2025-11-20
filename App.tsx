@@ -7,6 +7,7 @@ import { Dashboard } from './components/Dashboard';
 import { LessonPlayer } from './components/LessonPlayer';
 import { WorldLevelMap } from './components/WorldLevelMap';
 import { Onboarding } from './components/Onboarding';
+import { WallStreetZoo } from './components/WallStreetZoo';
 import { playSound } from './services/audio';
 import { 
     UserState, 
@@ -15,7 +16,8 @@ import {
     createInitialUser, 
     ShopItem,
     WORLDS_METADATA,
-    WorldData
+    WorldData,
+    Portfolio
 } from './services/gamification';
 import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 
@@ -25,7 +27,7 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(true);
   
   // Navigation State
-  const [view, setView] = useState<'dashboard' | 'map' | 'lesson'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo'>('dashboard');
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
 
@@ -75,6 +77,16 @@ const App: React.FC = () => {
       }
   };
 
+  const handleOpenZoo = () => {
+      if (user && user.level >= 20) { // Strict check, though user starts at 21 in this version
+          setView('zoo');
+          playSound('pop');
+      } else {
+          playSound('error');
+          alert("Requires Level 20!");
+      }
+  };
+
   const handleCloseMap = () => {
       setActiveWorld(null);
       setView('dashboard');
@@ -83,6 +95,10 @@ const App: React.FC = () => {
   const handleCloseLesson = () => {
       setActiveLevel(null);
       setView('map');
+  };
+
+  const handleCloseZoo = () => {
+      setView('dashboard');
   };
 
   const handleLevelComplete = (xp: number, coins: number) => {
@@ -140,6 +156,13 @@ const App: React.FC = () => {
       });
   };
 
+  const handleUpdatePortfolio = (newPortfolio: Portfolio) => {
+      setUser(prev => {
+          if (!prev) return null;
+          return { ...prev, portfolio: newPortfolio };
+      });
+  };
+
   if (showOnboarding) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
   }
@@ -164,6 +187,7 @@ const App: React.FC = () => {
                 onOpenWorld={handleOpenWorld}
                 onClaimReward={handleClaimReward}
                 onBuyItem={handleBuyItem}
+                onOpenZoo={handleOpenZoo}
             />
           )}
           
@@ -181,6 +205,14 @@ const App: React.FC = () => {
                   level={activeLevel}
                   onClose={handleCloseLesson}
                   onComplete={handleLevelComplete}
+              />
+          )}
+
+          {view === 'zoo' && user.portfolio && (
+              <WallStreetZoo 
+                  portfolio={user.portfolio}
+                  onUpdatePortfolio={handleUpdatePortfolio}
+                  onClose={handleCloseZoo}
               />
           )}
       </div>
