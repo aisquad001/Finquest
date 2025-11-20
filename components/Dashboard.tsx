@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -17,17 +16,18 @@ import {
     ClockIcon,
     FireIcon
 } from '@heroicons/react/24/solid';
-import { WORLDS, Quest, ShopItem, LeaderboardEntry, UserState, getXpForNextLevel, getMockLeaderboard, generateDailyQuests, SHOP_ITEMS } from '../services/gamification';
+import { WORLDS_METADATA, Quest, ShopItem, LeaderboardEntry, UserState, getXpForNextLevel, getMockLeaderboard, generateDailyQuests, SHOP_ITEMS } from '../services/gamification';
 import { playSound } from '../services/audio';
+import { GET_WORLD_LEVELS } from '../services/content';
 
 interface DashboardProps {
     user: UserState;
-    onPlayWorld: (worldId: string, prompt: string) => void;
+    onOpenWorld: (worldId: string) => void; // Changed from onPlayWorld
     onClaimReward: (xp: number, coins: number) => void;
     onBuyItem: (item: ShopItem) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onPlayWorld, onClaimReward, onBuyItem }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard'>('map');
     const [quests, setQuests] = useState<Quest[]>(generateDailyQuests());
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
@@ -182,14 +182,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onPlayWorld, onClaim
                             <div className="absolute top-0 bottom-0 left-1/2 w-4 bg-black/30 -translate-x-1/2 rounded-full">
                                 <div 
                                     className="w-full bg-neon-green rounded-full transition-all duration-1000"
-                                    style={{ height: `${(user.completedWorlds.length / WORLDS.length) * 100}%` }}
+                                    style={{ height: `${(user.completedLevels.length / (WORLDS_METADATA.length * 8)) * 100}%` }}
                                 ></div>
                             </div>
 
-                            {WORLDS.map((world, index) => {
-                                const isUnlocked = user.level >= world.unlockLevel || index === 0 || user.completedWorlds.includes(WORLDS[Math.max(0, index-1)].id);
-                                const isCompleted = user.completedWorlds.includes(world.id);
-                                const isNext = !isCompleted && isUnlocked && (index === 0 || user.completedWorlds.includes(WORLDS[index-1].id));
+                            {WORLDS_METADATA.map((world, index) => {
+                                const isUnlocked = user.level >= world.unlockLevel;
+                                // Determine if world is fully complete or in progress
+                                const worldLevels = GET_WORLD_LEVELS(world.id);
+                                const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
+                                const isCompleted = completedInWorld === worldLevels.length;
+                                const progressPercent = (completedInWorld / worldLevels.length) * 100;
+                                
                                 const Icon = world.icon;
 
                                 return (
@@ -200,15 +204,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onPlayWorld, onClaim
                                         </div>
 
                                         <button
-                                            onClick={() => isUnlocked && onPlayWorld(world.id, world.prompt)}
+                                            onClick={() => isUnlocked && onOpenWorld(world.id)}
                                             disabled={!isUnlocked}
                                             className={`
                                                 group relative w-64 h-24 rounded-3xl border-4 transition-all duration-300 flex items-center px-4 gap-4
-                                                ${isNext 
-                                                    ? `${world.color} border-white scale-110 shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-bounce` 
-                                                    : isCompleted 
-                                                        ? 'bg-gray-800 border-gray-600 grayscale opacity-80'
-                                                        : 'bg-black border-gray-800 opacity-60'
+                                                ${isUnlocked
+                                                    ? `${world.color} border-white shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:scale-105 btn-3d` 
+                                                    : 'bg-black border-gray-800 opacity-60 grayscale'
                                                 }
                                             `}
                                         >
@@ -223,9 +225,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onPlayWorld, onClaim
                                                 <h3 className={`font-game text-lg leading-none mb-1 ${isUnlocked ? 'text-white text-stroke-black' : 'text-gray-500'}`}>
                                                     {world.title}
                                                 </h3>
-                                                {isNext && <div className="text-[10px] font-bold bg-black/30 inline-block px-2 py-0.5 rounded-full text-white animate-pulse">START HERE</div>}
-                                                {isCompleted && <div className="text-[10px] font-bold text-green-400 flex items-center gap-1"><CheckBadgeIcon className="w-3 h-3"/> DONE</div>}
-                                                {!isUnlocked && <div className="text-[10px] font-bold text-gray-500">LOCKED</div>}
+                                                
+                                                {isUnlocked && (
+                                                    <div className="w-full h-2 bg-black/30 rounded-full mt-1 overflow-hidden">
+                                                        <div className="h-full bg-white" style={{ width: `${progressPercent}%` }}></div>
+                                                    </div>
+                                                )}
+                                                
+                                                {isCompleted && <div className="text-[10px] font-bold text-green-400 flex items-center gap-1 mt-1"><CheckBadgeIcon className="w-3 h-3"/> 100% DONE</div>}
+                                                {!isUnlocked && <div className="text-[10px] font-bold text-gray-500 mt-1">LOCKED</div>}
                                             </div>
 
                                             {/* Completion Stars */}

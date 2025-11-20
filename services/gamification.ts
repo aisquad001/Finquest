@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -25,9 +24,11 @@ export interface UserState {
     coins: number;
     streak: number;
     streakLastDate: string; // ISO Date string
-    completedWorlds: string[];
+    completedLevels: string[]; // Format: "worldId_levelId"
+    masteredWorlds: string[]; // Format: "worldId"
     inventory: string[];
     joinedAt: string;
+    knowledgeGems: string[]; // Collected gems
 }
 
 export interface Quest {
@@ -61,17 +62,25 @@ export interface LeaderboardEntry {
     country?: string;
 }
 
-// --- Constants & Data ---
+// --- World Data Structure ---
+export interface WorldData {
+    id: string;
+    title: string;
+    icon: any;
+    color: string;
+    description: string;
+    unlockLevel: number;
+}
 
-export const WORLDS = [
-    { id: 'basics', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", prompt: "History of money and inflation explained simply.", unlockLevel: 1 },
-    { id: 'budget', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", prompt: "Budgeting with 50/30/20 rule.", unlockLevel: 2 },
-    { id: 'savings', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", prompt: "Compound interest and emergency funds.", unlockLevel: 3 },
-    { id: 'banking', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", prompt: "Checking, savings, and safety.", unlockLevel: 5 },
-    { id: 'debt', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", prompt: "Good vs bad debt and credit scores.", unlockLevel: 8 },
-    { id: 'income', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", prompt: "Taxes, gross vs net, side hustles.", unlockLevel: 12 },
-    { id: 'investing', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", prompt: "Stocks, ETFs, and risk.", unlockLevel: 15 },
-    { id: 'wealth', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", prompt: "Net worth and long term wealth.", unlockLevel: 20 }
+export const WORLDS_METADATA: WorldData[] = [
+    { id: 'basics', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "History of money and inflation explained simply.", unlockLevel: 1 },
+    { id: 'budget', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "Budgeting with 50/30/20 rule.", unlockLevel: 2 },
+    { id: 'savings', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "Compound interest and emergency funds.", unlockLevel: 3 },
+    { id: 'banking', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "Checking, savings, and safety.", unlockLevel: 5 },
+    { id: 'debt', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Good vs bad debt and credit scores.", unlockLevel: 8 },
+    { id: 'income', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes, gross vs net, side hustles.", unlockLevel: 12 },
+    { id: 'investing', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Stocks, ETFs, and risk.", unlockLevel: 15 },
+    { id: 'wealth', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net worth and long term wealth.", unlockLevel: 20 }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -84,20 +93,13 @@ export const SHOP_ITEMS: ShopItem[] = [
 
 // --- Logic ---
 
-// Formula: XP = 100 * level^2
 export const getXpForNextLevel = (level: number) => {
     return 100 * Math.pow(level, 2);
 };
 
-export const getLevelFromXp = (xp: number) => {
-    // Inverse: level = sqrt(xp / 100)
-    // This is an approximation, usually we track current level state
-    return Math.floor(Math.sqrt(xp / 100)) || 1;
-};
-
 export const generateDailyQuests = (): Quest[] => [
     { id: 'q1', title: 'Daily Grind', description: 'Complete 1 lesson', rewardXp: 300, rewardCoins: 100, progress: 0, total: 1, type: 'daily', completed: false },
-    { id: 'q2', title: 'Quiz Whiz', description: 'Score 100% on a quiz', rewardXp: 500, rewardCoins: 200, progress: 0, total: 1, type: 'daily', completed: false },
+    { id: 'q2', title: 'Quiz Whiz', description: 'Score 100% on a boss fight', rewardXp: 500, rewardCoins: 200, progress: 0, total: 1, type: 'daily', completed: false },
     { id: 'q3', title: 'Big Spender', description: 'Buy an item from the shop', rewardXp: 200, rewardCoins: 50, progress: 0, total: 1, type: 'daily', completed: false },
 ];
 
@@ -111,7 +113,7 @@ export const getMockLeaderboard = (): LeaderboardEntry[] => [
 
 // --- Persistence (Mock Firebase) ---
 
-const DB_KEY = 'finquest_db_v1';
+const DB_KEY = 'finquest_db_v2';
 
 export const saveUser = (user: UserState) => {
     localStorage.setItem(DB_KEY, JSON.stringify(user));
@@ -131,8 +133,10 @@ export const createInitialUser = (onboardingData: any): UserState => {
         coins: 500, // Bonus
         streak: 1,
         streakLastDate: new Date().toISOString(),
-        completedWorlds: [],
+        completedLevels: [],
+        masteredWorlds: [],
         inventory: [],
+        knowledgeGems: [],
         joinedAt: new Date().toISOString()
     };
 };

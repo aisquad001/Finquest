@@ -1,32 +1,33 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState, useEffect } from 'react';
 import { Dashboard } from './components/Dashboard';
-import { LivePreview } from './components/LivePreview';
+import { LessonPlayer } from './components/LessonPlayer';
+import { WorldLevelMap } from './components/WorldLevelMap';
 import { Onboarding } from './components/Onboarding';
-import { generateLesson, LessonData } from './services/gemini';
 import { playSound } from './services/audio';
 import { 
     UserState, 
     loadUser, 
     saveUser, 
     createInitialUser, 
-    WORLDS,
-    ShopItem
+    ShopItem,
+    WORLDS_METADATA,
+    WorldData
 } from './services/gamification';
+import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 
 const App: React.FC = () => {
   // Global User State
   const [user, setUser] = useState<UserState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
   
-  // Content State
-  const [activeLesson, setActiveLesson] = useState<LessonData | null>(null);
-  const [currentWorldId, setCurrentWorldId] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  // Navigation State
+  const [view, setView] = useState<'dashboard' | 'map' | 'lesson'>('dashboard');
+  const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
+  const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
 
   // Load progress on mount
   useEffect(() => {
@@ -52,70 +53,69 @@ const App: React.FC = () => {
       setShowOnboarding(false);
   };
 
-  const handlePlayWorld = async (worldId: string, prompt: string) => {
-      if (!user) return;
-      setIsGenerating(true);
-      setCurrentWorldId(worldId);
-      
-      // Simulate minimal loading time for feel + loading animation
-      const minLoad = new Promise(resolve => setTimeout(resolve, 2000));
-      
-      try {
-          // Personalize prompt
-          const personalizedPrompt = `${prompt}. Address the user as ${user.nickname}. Make it relatable for a level ${user.level} player.`;
-          const [lesson] = await Promise.all([generateLesson(personalizedPrompt), minLoad]);
-          setActiveLesson(lesson);
-          playSound('success');
-      } catch (err) {
-          console.error("Failed generation", err);
-          setActiveLesson(null);
-      } finally {
-          setIsGenerating(false);
+  // Navigation Handlers
+  const handleOpenWorld = (worldId: string) => {
+      const world = WORLDS_METADATA.find(w => w.id === worldId);
+      if (world) {
+          setActiveWorld(world);
+          setView('map');
+          playSound('pop');
       }
   };
 
-  const handleLessonComplete = (earnedXp: number) => {
-      if (!user) return;
+  const handleSelectLevel = (levelId: string) => {
+      if (!activeWorld) return;
+      const levels = GET_WORLD_LEVELS(activeWorld.id);
+      const level = levels.find(l => l.id === levelId);
       
-      // Calculate rewards
-      const earnedCoins = Math.floor(earnedXp * 0.5); // 1 XP = 0.5 Coins roughly
-      
+      if (level) {
+          setActiveLevel(level);
+          setView('lesson');
+          playSound('pop');
+      }
+  };
+
+  const handleCloseMap = () => {
+      setActiveWorld(null);
+      setView('dashboard');
+  };
+
+  const handleCloseLesson = () => {
+      setActiveLevel(null);
+      setView('map');
+  };
+
+  const handleLevelComplete = (xp: number, coins: number) => {
+      if (!user || !activeLevel) return;
+
       setUser(prev => {
           if (!prev) return null;
           
-          const newXp = prev.xp + earnedXp;
-          const newCoins = prev.coins + earnedCoins;
+          const newXp = prev.xp + xp;
+          const newCoins = prev.coins + coins;
           
-          // Simple level up check (Visual handled in Dashboard bar usually, but we update state here)
-          // Note: Real level up logic would be more complex with the formula, 
-          // but for now we just increment XP. Level is derived or explicitly stored.
-          // Let's increment level if XP crosses threshold of current level * 1000 (Simplified for now to match old logic)
-          // or use the new gamification service formula if we wanted to recalculate level.
-          // For safety, let's just keep level explicit.
-          
+          // Check for level up
           let newLevel = prev.level;
-          const xpThreshold = 100 * Math.pow(prev.level, 2) + prev.xp; // Dynamic threshold
-          // Actually, let's just use a simple milestone check for this demo
-          if (newXp > prev.level * 500) {
-              newLevel += 1;
-              playSound('levelup');
+          // Simple incremental check for demo purposes
+          if (newXp > prev.level * 500) { 
+             // In a real app, check against the quadratic formula
+             newLevel += 1;
           }
 
-          const newCompletedWorlds = (currentWorldId && !prev.completedWorlds.includes(currentWorldId))
-            ? [...prev.completedWorlds, currentWorldId]
-            : prev.completedWorlds;
+          const newCompletedLevels = !prev.completedLevels.includes(activeLevel.id)
+            ? [...prev.completedLevels, activeLevel.id]
+            : prev.completedLevels;
 
           return {
               ...prev,
               xp: newXp,
               coins: newCoins,
               level: newLevel,
-              completedWorlds: newCompletedWorlds
+              completedLevels: newCompletedLevels
           };
       });
 
-      setActiveLesson(null);
-      setCurrentWorldId(null);
+      handleCloseLesson();
   };
 
   const handleClaimReward = (xp: number, coins: number) => {
@@ -140,16 +140,11 @@ const App: React.FC = () => {
       });
   };
 
-  const handleCloseLesson = () => {
-      setActiveLesson(null);
-      setCurrentWorldId(null);
-  };
-
   if (showOnboarding) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
   }
 
-  if (!user) return null; // Loading state if needed
+  if (!user) return null;
 
   return (
     <div className="min-h-[100dvh] bg-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
@@ -161,23 +156,35 @@ const App: React.FC = () => {
            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
       </div>
       
-      {/* Main App Content */}
+      {/* Views */}
       <div className="relative z-10">
-          <Dashboard 
-            user={user} 
-            onPlayWorld={handlePlayWorld}
-            onClaimReward={handleClaimReward}
-            onBuyItem={handleBuyItem}
-          />
+          {view === 'dashboard' && (
+            <Dashboard 
+                user={user} 
+                onOpenWorld={handleOpenWorld}
+                onClaimReward={handleClaimReward}
+                onBuyItem={handleBuyItem}
+            />
+          )}
+          
+          {view === 'map' && activeWorld && (
+              <WorldLevelMap 
+                  world={activeWorld}
+                  completedLevels={user.completedLevels}
+                  onClose={handleCloseMap}
+                  onSelectLevel={handleSelectLevel}
+              />
+          )}
+
+          {view === 'lesson' && activeLevel && (
+              <LessonPlayer 
+                  level={activeLevel}
+                  onClose={handleCloseLesson}
+                  onComplete={handleLevelComplete}
+              />
+          )}
       </div>
 
-      {/* Game Level Overlay */}
-      <LivePreview
-        lesson={activeLesson}
-        isLoading={isGenerating}
-        onClose={handleCloseLesson}
-        onComplete={handleLessonComplete}
-      />
     </div>
   );
 };
