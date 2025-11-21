@@ -146,17 +146,22 @@ const App: React.FC = () => {
   };
 
   const handleOnboardingAuth = async (data: any) => {
+      console.log("Handle Onboarding Auth:", data);
       try {
           let firebaseUser;
           
-          if (data.authMethod === 'google') {
-              firebaseUser = await signInWithGoogle();
-          } else {
-              // Handle Guest Mode via Anonymous Auth
+          // Explicitly check for Guest FIRST
+          if (data.authMethod === 'guest') {
+              console.log("Attempting Guest Login...");
               firebaseUser = await signInAsGuest();
+          } else {
+              // Default to Google if not guest
+              console.log("Attempting Google Login...");
+              firebaseUser = await signInWithGoogle();
           }
 
           if (firebaseUser) {
+              console.log("User authenticated:", firebaseUser.uid);
               // Create Doc - Store will pick it up automatically via sync
               await createUserDoc(firebaseUser.uid, { 
                   ...data, 

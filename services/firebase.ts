@@ -16,7 +16,6 @@ import {
 import { getFirestore } from 'firebase/firestore';
 
 // Configuration using environment variables
-// In a real Vite app, use import.meta.env.VITE_FIREBASE_...
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "finquest-app.firebaseapp.com",
@@ -34,6 +33,7 @@ export const googleProvider = new GoogleAuthProvider();
 
 export const signInWithGoogle = async () => {
     try {
+        console.log("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
     } catch (error) {
@@ -44,7 +44,9 @@ export const signInWithGoogle = async () => {
 
 export const signInAsGuest = async () => {
     try {
+        console.log("[Auth] Starting Guest Sign In (Anonymous)...");
         const result = await signInAnonymously(auth);
+        console.log("[Auth] Guest Sign In Success:", result.user.uid);
         return result.user;
     } catch (error) {
         console.error("Guest Sign In Error:", error);

@@ -79,6 +79,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   };
 
   const handleAuthAction = async (method: 'google' | 'guest') => {
+    console.log("Handle Auth Action Triggered:", method);
     setIsSigningUp(true);
     playSound('click');
 
@@ -244,7 +245,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
                      <div className="w-full max-w-xs space-y-3">
                         <button 
-                            onClick={() => handleAuthAction('google')} 
+                            onClick={(e) => { e.stopPropagation(); handleAuthAction('google'); }}
                             disabled={isSigningUp}
                             className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d"
                         >
@@ -263,7 +264,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1a0b2e] px-2 text-gray-500">or</span></div>
                         </div>
-                        <button onClick={() => handleAuthAction('guest')} className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); handleAuthAction('guest'); }}
+                            className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5"
+                        >
                             Play as Guest (No Save)
                         </button>
                      </div>
