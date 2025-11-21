@@ -104,7 +104,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
             if (newHearts <= 0) {
                 playSound('fail');
-                alert("THE BOSS DEFEATED YOU! 💀\nThe Debt Demon ate your allowance.");
+                alert("THE BOSS DEFEATED YOU! 💀\nTry again!");
                 onClose();
             }
         }
@@ -130,7 +130,6 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                 }
             } else {
                 playSound('error');
-                // Shake animation logic here
             }
         };
 
@@ -168,14 +167,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
         const handleDrop = (itemId: string, bucket: string) => {
             // Verify logic (Mock verification for demo)
-            const item = items.find((i: any) => i.id === itemId);
-            if (item.category.toLowerCase() === bucket.toLowerCase()) {
-                playSound('coin');
-                setItems((prev: any[]) => prev.filter((i: any) => i.id !== itemId));
-                if (items.length <= 1) onNext();
-            } else {
-                playSound('error');
-            }
+            // In generated content, validation is loose or assumed for demo flow
+            playSound('coin');
+            setItems((prev: any[]) => prev.filter((i: any) => i.id !== itemId));
+            if (items.length <= 1) onNext();
         };
 
         return (
@@ -200,11 +195,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                             dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
                             dragElastic={0.2}
                             onDragEnd={(e, info) => {
-                                // Simple heuristic collision detection based on drop position
-                                // In real app, use proper refs collision
                                 if (info.point.y < window.innerHeight / 2) {
-                                    // Assume they dragged it up to buckets
-                                    handleDrop(item.id, item.category); // Auto-success for demo feel
+                                    handleDrop(item.id, item.category);
                                 }
                             }}
                             className="px-6 py-3 bg-neon-blue text-black font-bold rounded-full shadow-lg cursor-grab active:cursor-grabbing"
@@ -227,8 +219,6 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                 setTimeLeft(prev => {
                     if (prev <= 0) {
                         clearInterval(timer);
-                        // Fail state? For now just reset or annoying sound
-                        playSound('fail');
                         return 10;
                     }
                     return prev - 1;
@@ -243,7 +233,6 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                 onNext();
             } else {
                 playSound('error');
-                setTimeLeft(prev => Math.max(0, prev - 2)); // Penalty
             }
         };
 
@@ -292,7 +281,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                     onChange={(e) => setVal(Number(e.target.value))}
                     className="w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer mb-4"
                 />
-                <p className="text-white font-bold">Investing ${val}/month from age 16</p>
+                <p className="text-white font-bold">{lesson.content.resultLabel || "Future Value"}</p>
 
                 <button onClick={onNext} className="mt-12 px-8 py-4 bg-neon-pink text-white font-game text-xl rounded-full btn-3d">
                     MIND BLOWN 🤯
@@ -340,7 +329,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     const ExplainerView = ({ lesson, onNext }: { lesson: Lesson, onNext: () => void }) => {
         // Helper to parse **text** into buttons
         const renderText = () => {
-            const parts = lesson.content.text.split(/(\*\*.*?\*\*)/g);
+            const parts = (lesson.content.text || "").split(/(\*\*.*?\*\*)/g);
             return (
                 <div className="text-xl leading-relaxed text-white">
                     {parts.map((part: string, i: number) => {
@@ -370,12 +359,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             <div className="flex flex-col h-full p-6 pt-12 items-center">
                 <div className="w-full max-w-md aspect-video bg-black rounded-2xl mb-8 flex items-center justify-center border border-white/20 shadow-2xl relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-black opacity-50"></div>
-                    {lesson.content.videoUrl && lesson.content.videoUrl !== 'placeholder' ? (
-                        <div className="text-white">Video Player Here</div> 
-                    ) : (
-                        <PlayIcon className="w-16 h-16 text-white/50" />
-                    )}
-                    {/* Video would go here */}
+                    <PlayIcon className="w-16 h-16 text-white/50" />
                 </div>
 
                 <div className="bg-white/5 p-6 rounded-3xl border border-white/10 mb-8 w-full">
@@ -430,7 +414,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         >
                             <div className="text-8xl mb-4 animate-bounce">{level.bossImage || '👹'}</div>
                             <h1 className="font-game text-6xl text-white text-stroke-black mb-4">BOSS FIGHT</h1>
-                            <p className="text-2xl font-bold text-red-200 uppercase tracking-widest">{level.bossName}</p>
+                            <p className="text-3xl font-bold text-red-200 uppercase tracking-widest mb-4">{level.bossName}</p>
+                            <div className="bg-black/40 p-4 rounded-xl border-l-4 border-red-500 italic text-white text-xl">
+                                "{level.bossIntro || "Prepare to lose your allowance!"}"
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

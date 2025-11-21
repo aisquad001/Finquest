@@ -150,6 +150,7 @@ export interface LevelData {
     description: string;
     bossName: string;
     bossImage: string; // Emoji or URL
+    bossIntro: string; // Trash talk line
     bossQuiz: BossQuestion[];
 }
 
