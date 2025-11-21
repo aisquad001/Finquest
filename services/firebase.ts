@@ -8,6 +8,7 @@ import {
     getAuth, 
     GoogleAuthProvider, 
     signInWithPopup, 
+    signInAnonymously,
     signOut as firebaseSignOut,
     onAuthStateChanged,
     User
@@ -37,6 +38,16 @@ export const signInWithGoogle = async () => {
         return result.user;
     } catch (error) {
         console.error("Google Sign In Error:", error);
+        throw error;
+    }
+};
+
+export const signInAsGuest = async () => {
+    try {
+        const result = await signInAnonymously(auth);
+        return result.user;
+    } catch (error) {
+        console.error("Guest Sign In Error:", error);
         throw error;
     }
 };

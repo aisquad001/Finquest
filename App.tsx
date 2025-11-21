@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -28,7 +29,7 @@ import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
 import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
-import { auth, signInWithGoogle } from './services/firebase';
+import { auth, signInWithGoogle, signInAsGuest } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createUserDoc } from './services/db';
 
@@ -145,21 +146,27 @@ const App: React.FC = () => {
   };
 
   const handleOnboardingAuth = async (data: any) => {
-      if (data.authMethod === 'google') {
-          try {
-              const firebaseUser = await signInWithGoogle();
+      try {
+          let firebaseUser;
+          
+          if (data.authMethod === 'google') {
+              firebaseUser = await signInWithGoogle();
+          } else {
+              // Handle Guest Mode via Anonymous Auth
+              firebaseUser = await signInAsGuest();
+          }
+
+          if (firebaseUser) {
               // Create Doc - Store will pick it up automatically via sync
               await createUserDoc(firebaseUser.uid, { 
                   ...data, 
-                  email: firebaseUser.email 
+                  email: firebaseUser.email || 'guest' // Fallback for guests
               });
               setShowOnboarding(false);
-          } catch (error) {
-              console.error("Signup Failed", error);
-              alert("Signup failed. Please try again.");
           }
-      } else {
-          alert("Guest mode is currently disabled for the Real-Time update.");
+      } catch (error) {
+          console.error("Signup Failed", error);
+          alert("Signup failed. Please try again.");
       }
   };
 
