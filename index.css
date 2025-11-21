@@ -1,5 +1,6 @@
 
 
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -184,6 +185,16 @@ body.portal-mode ::-webkit-scrollbar-thumb {
 }
 body.portal-mode ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
+}
+
+/* ADMIN OVERRIDES */
+body.admin-mode {
+    background-color: #0f172a !important; /* slate-950 */
+    color: #f8fafc !important;
+    font-family: ui-sans-serif, system-ui, sans-serif !important;
+}
+.dashed-border {
+    background-image: url("data:image/svg+xml,%3csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3e%3crect width='100%25' height='100%25' fill='none' rx='16' ry='16' stroke='%23334155FF' stroke-width='4' stroke-dasharray='12%2c 12' stroke-dashoffset='0' stroke-linecap='square'/%3e%3c/svg%3e");
 }
 
 /* PRINT STYLES */

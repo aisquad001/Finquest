@@ -24,6 +24,10 @@ export interface UserState {
     xp: number;
     coins: number;
     
+    // Monetization
+    subscriptionStatus: 'free' | 'pro';
+    referralCount: number;
+
     // Streak 2.0
     streak: number;
     streakLastDate: string; // ISO Date string of last activity
@@ -303,7 +307,7 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
 
 // --- Persistence (Mock Firebase) ---
 
-const DB_KEY = 'finquest_db_v4'; // Bump version for new schema
+const DB_KEY = 'finquest_db_v5'; // Bump version for new schema
 
 export const saveUser = (user: UserState) => {
     localStorage.setItem(DB_KEY, JSON.stringify(user));
@@ -321,6 +325,8 @@ export const createInitialUser = (onboardingData: any): UserState => {
         level: 21,
         xp: onboardingData.xp || 0,
         coins: 500,
+        subscriptionStatus: 'free',
+        referralCount: 0,
         
         streak: 1,
         streakLastDate: new Date().toISOString(),

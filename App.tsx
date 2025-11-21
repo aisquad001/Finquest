@@ -10,7 +10,10 @@ import { WorldLevelMap } from './components/WorldLevelMap';
 import { Onboarding } from './components/Onboarding';
 import { WallStreetZoo } from './components/WallStreetZoo';
 import { PortalDashboard } from './components/PortalDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
+import { PremiumModal } from './components/PremiumModal';
 import { playSound } from './services/audio';
+import { trackEvent } from './services/analytics';
 import { 
     UserState, 
     loadUser, 
@@ -30,26 +33,33 @@ const App: React.FC = () => {
   // Global User State
   const [user, setUser] = useState<UserState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   
   // Navigation State
-  // Checking URL for simple client-side routing to /portal
   const isPortalRoute = window.location.pathname === '/portal';
-  const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo' | 'portal'>(
-      isPortalRoute ? 'portal' : 'dashboard'
+  const isAdminRoute = window.location.pathname === '/admin';
+  
+  const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo' | 'portal' | 'admin'>(
+      isAdminRoute ? 'admin' : isPortalRoute ? 'portal' : 'dashboard'
   );
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
 
   // Theme Effect: Switch body class based on view
   useEffect(() => {
+      document.body.classList.remove('portal-mode', 'game-mode', 'admin-mode');
       if (view === 'portal') {
           document.body.classList.add('portal-mode');
-          document.body.classList.remove('game-mode');
+      } else if (view === 'admin') {
+          document.body.classList.add('admin-mode');
       } else {
           document.body.classList.add('game-mode');
-          document.body.classList.remove('portal-mode');
       }
-  }, [view]);
+      
+      if (user) {
+          trackEvent('view_changed', { view });
+      }
+  }, [view, user]);
 
   // Load progress & Streak Logic
   useEffect(() => {
@@ -60,7 +70,7 @@ const App: React.FC = () => {
         setUser(updatedUser);
         setShowOnboarding(false);
 
-        if (view !== 'portal') {
+        if (view !== 'portal' && view !== 'admin') {
             if (savedByFreeze) {
                 alert("❄️ STREAK FROZEN! Your streak was saved by a freeze item.");
             } else if (broken) {
@@ -74,9 +84,11 @@ const App: React.FC = () => {
                 });
             }, 3000);
         }
+        
+        trackEvent('session_start', { level: updatedUser.level, streak: updatedUser.streak });
 
     } else {
-        if (view !== 'portal') {
+        if (view !== 'portal' && view !== 'admin') {
              setShowOnboarding(true);
         }
     }
@@ -93,6 +105,7 @@ const App: React.FC = () => {
       const newUser = createInitialUser(data);
       setUser(newUser);
       setShowOnboarding(false);
+      trackEvent('signup_complete', { path: newUser.avatar.outfit }); // Simplified tracking
       // Prompt for notifications
       requestNotificationPermission().then(granted => {
           if (granted) scheduleDemoNotifications();
@@ -147,11 +160,14 @@ const App: React.FC = () => {
 
   const handleLevelComplete = (xp: number, coins: number) => {
       if (!user || !activeLevel) return;
+      
+      // 2x Boost logic check (mocked)
+      const finalXp = user.subscriptionStatus === 'pro' ? xp * 2 : xp;
 
       setUser(prev => {
           if (!prev) return null;
           
-          const newXp = prev.xp + xp;
+          const newXp = prev.xp + finalXp;
           const newCoins = prev.coins + coins;
           
           let newLevel = prev.level;
@@ -181,6 +197,7 @@ const App: React.FC = () => {
           };
       });
 
+      trackEvent('level_complete', { levelId: activeLevel.id, xpEarned: finalXp });
       handleCloseLesson();
   };
 
@@ -208,6 +225,7 @@ const App: React.FC = () => {
               inventory: [...prev.inventory, item.id]
           };
       });
+      trackEvent('purchase_item', { itemId: item.id, cost: item.cost });
   };
 
   const handleUpdatePortfolio = (newPortfolio: Portfolio) => {
@@ -229,9 +247,22 @@ const App: React.FC = () => {
       });
   };
 
+  const handleUpgrade = () => {
+      setUser(prev => prev ? ({ ...prev, subscriptionStatus: 'pro' }) : null);
+      trackEvent('upgrade_pro', { source: 'modal' });
+  };
+
   // Portal View Renders differently (no background effects)
   if (view === 'portal') {
       return <PortalDashboard childData={user} onExit={() => {
+          window.history.pushState({}, '', '/');
+          setView('dashboard');
+      }} />;
+  }
+
+  // Admin View
+  if (view === 'admin') {
+      return <AdminDashboard onExit={() => {
           window.history.pushState({}, '', '/');
           setView('dashboard');
       }} />;
@@ -262,6 +293,8 @@ const App: React.FC = () => {
                 onClaimReward={handleClaimReward}
                 onBuyItem={handleBuyItem}
                 onOpenZoo={handleOpenZoo}
+                onOpenPremium={() => setShowPremiumModal(true)}
+                onOpenAdmin={() => { window.history.pushState({}, '', '/admin'); setView('admin'); }}
             />
           )}
           
@@ -295,6 +328,14 @@ const App: React.FC = () => {
       <div className="relative z-10 text-center pb-4 text-white/10 text-xs uppercase font-bold cursor-pointer hover:text-white/50 transition-colors">
           <span onClick={() => { window.history.pushState({}, '', '/portal'); setView('portal'); }}>Teacher / Parent Portal</span>
       </div>
+
+      {/* Premium Modal */}
+      {showPremiumModal && (
+          <PremiumModal 
+             onClose={() => setShowPremiumModal(false)} 
+             onUpgrade={handleUpgrade}
+          />
+      )}
 
     </div>
   );

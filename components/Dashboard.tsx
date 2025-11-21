@@ -17,7 +17,8 @@ import {
     FireIcon,
     ChartBarIcon,
     UserGroupIcon,
-    QrCodeIcon
+    QrCodeIcon,
+    SparklesIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -40,9 +41,11 @@ interface DashboardProps {
     onClaimReward: (xp: number, coins: number) => void;
     onBuyItem: (item: ShopItem) => void;
     onOpenZoo: () => void;
+    onOpenPremium: () => void;
+    onOpenAdmin: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
     const [showChestModal, setShowChestModal] = useState(false);
@@ -129,25 +132,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
                         </div>
                         <div>
-                             <div className="text-white font-bold text-lg leading-none font-game">{user.nickname}</div>
+                             <div className="flex items-center gap-2">
+                                <div className="text-white font-bold text-lg leading-none font-game">{user.nickname}</div>
+                                {user.subscriptionStatus === 'pro' && (
+                                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1 rounded uppercase">PRO</span>
+                                )}
+                             </div>
                              <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase mt-1">
                                 <span className="text-yellow-400">🪙 {user.coins.toLocaleString()}</span>
                              </div>
                         </div>
                     </div>
 
-                    {/* GIANT STREAK FIRE */}
-                    <button onClick={handleShareStreak} className="flex flex-col items-center relative group">
-                         <div className={`text-5xl transition-transform group-hover:scale-110 drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
-                             {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
-                         </div>
-                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-black text-xl mt-2 pointer-events-none">
-                             {user.streak}
-                         </div>
-                         <div className="text-[9px] text-orange-400 font-black uppercase tracking-wider bg-black/50 px-2 rounded-full mt-[-5px]">
-                             Streak
-                         </div>
-                    </button>
+                    <div className="flex items-center gap-3">
+                         {/* GO PRO BUTTON */}
+                         {user.subscriptionStatus !== 'pro' && (
+                            <button 
+                                onClick={onOpenPremium}
+                                className="hidden sm:flex items-center gap-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xs px-3 py-1.5 rounded-full hover:scale-105 transition-transform animate-pulse"
+                            >
+                                <SparklesIcon className="w-3 h-3" /> GO PRO
+                            </button>
+                         )}
+
+                        {/* GIANT STREAK FIRE */}
+                        <button onClick={handleShareStreak} className="flex flex-col items-center relative group">
+                            <div className={`text-5xl transition-transform group-hover:scale-110 drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
+                                {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
+                            </div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-black text-xl mt-2 pointer-events-none">
+                                {user.streak}
+                            </div>
+                            <div className="text-[9px] text-orange-400 font-black uppercase tracking-wider bg-black/50 px-2 rounded-full mt-[-5px]">
+                                Streak
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 {/* CHALLENGE CHEST WIDGET */}
@@ -329,6 +349,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 INVITE FRIENDS
                             </button>
                             <div className="text-xs text-gray-500 font-bold uppercase">Your Code: RICH-KID-99</div>
+                            <div className="text-xs text-gray-400 mt-2">{user.referralCount} Friends Joined</div>
                         </div>
 
                         {/* PARENT LINKING SECTION */}
@@ -422,6 +443,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     onClose={() => setShowSocialShare(null)} 
                 />
             )}
+            
+            {/* SECRET ADMIN LINK */}
+            <div className="text-center py-8 opacity-10 hover:opacity-100 transition-opacity">
+                 <button onClick={onOpenAdmin} className="text-[10px] font-mono uppercase text-white">
+                     ⚡ Access God Mode
+                 </button>
+            </div>
 
         </div>
     );

@@ -5,7 +5,7 @@
  */
 
 // Simple synthesizer to avoid loading external audio files
-export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin' | 'chest' | 'click') => {
+export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin' | 'chest' | 'click' | 'kaching' | 'fanfare' | 'fail') => {
     // Check for browser support
     const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContext) return;
@@ -61,21 +61,33 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
         gain.gain.linearRampToValueAtTime(0, now + 0.3);
         osc.start(now);
         osc.stop(now + 0.3);
-        
-        // Add a secondary sparkle
+        break;
+
+      case 'kaching':
+        // Register sound
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1000, now);
+        osc.frequency.linearRampToValueAtTime(2000, now + 0.1);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0, now + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.2);
+        // Second ching
         const osc2 = ctx.createOscillator();
         const gain2 = ctx.createGain();
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
         osc2.type = 'square';
-        osc2.frequency.setValueAtTime(2000, now);
-        gain2.gain.setValueAtTime(0.01, now);
-        gain2.gain.linearRampToValueAtTime(0, now + 0.2);
-        osc2.start(now);
-        osc2.stop(now + 0.2);
+        osc2.frequency.setValueAtTime(1500, now + 0.15);
+        osc2.frequency.linearRampToValueAtTime(2500, now + 0.25);
+        gain2.gain.setValueAtTime(0.1, now + 0.15);
+        gain2.gain.linearRampToValueAtTime(0, now + 0.4);
+        osc2.start(now + 0.15);
+        osc2.stop(now + 0.4);
         break;
   
       case 'error':
+      case 'fail':
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(200, now);
         osc.frequency.linearRampToValueAtTime(100, now + 0.3);
@@ -86,6 +98,7 @@ export const playSound = (type: 'pop' | 'success' | 'error' | 'levelup' | 'coin'
         break;
   
       case 'levelup':
+      case 'fanfare':
         osc.type = 'square';
         // Arpeggio
         const notes = [440, 554, 659, 880, 1108, 1318];
