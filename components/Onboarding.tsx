@@ -80,6 +80,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
   const handleAuthAction = async (method: 'google' | 'guest') => {
     console.log("Handle Auth Action Triggered:", method);
+    if (isSigningUp) return;
+    
     setIsSigningUp(true);
     playSound('click');
 
@@ -97,12 +99,22 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     try {
         // Trigger callback in App.tsx which handles the actual Firebase Popup
         await onComplete(userData);
-        
         // If we are here, success - but typically onComplete will trigger unmount
-    } catch (e) {
-        console.error("Auth failed", e);
+    } catch (e: any) {
+        console.error("Auth failed in Onboarding:", e);
         setIsSigningUp(false);
-        alert("Sign in failed. Try again!");
+        
+        let msg = "Sign in failed. Please try again.";
+        if (e.code === 'auth/operation-not-allowed') {
+             msg = "Guest login is disabled. Please use Google.";
+        } else if (e.code === 'auth/popup-closed-by-user') {
+             msg = "Sign in cancelled.";
+        } else if (e.message) {
+            // Show part of error for debugging if needed, or generic
+            // msg = `Error: ${e.message}`;
+        }
+        
+        alert(msg);
     }
   };
 
@@ -248,7 +260,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('google'); }}
                             disabled={isSigningUp}
-                            className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d cursor-pointer z-50 relative"
+                            className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d cursor-pointer z-50 relative disabled:opacity-50"
                         >
                             {isSigningUp ? 'Signing In...' : (
                                 <>
@@ -268,9 +280,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('guest'); }}
-                            className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5 cursor-pointer z-50 relative"
+                            disabled={isSigningUp}
+                            className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5 cursor-pointer z-50 relative disabled:opacity-50"
                         >
-                            Play as Guest (No Save)
+                            {isSigningUp ? 'Starting...' : 'Play as Guest (No Save)'}
                         </button>
                      </div>
                 </div>

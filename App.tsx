@@ -160,7 +160,7 @@ const App: React.FC = () => {
               firebaseUser = await signInWithGoogle();
           } else {
               console.error("Unknown auth method:", data.authMethod);
-              return;
+              throw new Error("Unknown authentication method");
           }
 
           if (firebaseUser) {
@@ -168,13 +168,16 @@ const App: React.FC = () => {
               // Create Doc - Store will pick it up automatically via sync
               await createUserDoc(firebaseUser.uid, { 
                   ...data, 
-                  email: firebaseUser.email || 'guest' // Fallback for guests
+                  email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` // Robust fallback
               });
               setShowOnboarding(false);
+          } else {
+              throw new Error("Authentication failed - no user returned");
           }
-      } catch (error) {
-          console.error("Signup Failed", error);
-          alert("Signup failed. Please try again.");
+      } catch (error: any) {
+          console.error("Signup Failed:", error);
+          // Re-throw so Onboarding component handles the UI state (resetting buttons)
+          throw error;
       }
   };
 
