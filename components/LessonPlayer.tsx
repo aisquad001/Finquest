@@ -162,15 +162,27 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     };
 
     const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: () => void }) => {
-        const [items, setItems] = useState(lesson.content.items || []);
+        // Provide fallback items to ensure UI never breaks even if content is missing
+        const fallbackItems = [
+            { id: 'f1', text: 'Starbucks', category: 'Wants' },
+            { id: 'f2', text: 'Rent', category: 'Needs' },
+            { id: 'f3', text: 'Groceries', category: 'Needs' },
+            { id: 'f4', text: 'New iPhone', category: 'Wants' }
+        ];
+        
+        const [items, setItems] = useState(lesson.content.items && lesson.content.items.length > 0 ? lesson.content.items : fallbackItems);
         const buckets = lesson.content.buckets || ['Needs', 'Wants'];
 
         const handleDrop = (itemId: string, bucket: string) => {
-            // Verify logic (Mock verification for demo)
-            // In generated content, validation is loose or assumed for demo flow
             playSound('coin');
-            setItems((prev: any[]) => prev.filter((i: any) => i.id !== itemId));
-            if (items.length <= 1) onNext();
+            // Filter out the dropped item
+            const remaining = items.filter((i: any) => i.id !== itemId);
+            setItems(remaining);
+            
+            // If we just dropped the last item (meaning remaining is empty), proceed
+            if (remaining.length === 0) {
+                setTimeout(onNext, 500);
+            }
         };
 
         return (
@@ -187,19 +199,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                 </div>
 
                 {/* Draggables */}
-                <div className="flex flex-wrap justify-center gap-4 pb-12">
+                <div className="flex flex-wrap justify-center gap-4 pb-12 min-h-[150px]">
                     {items.map((item: any) => (
                         <motion.div
                             key={item.id}
                             drag
                             dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
                             dragElastic={0.2}
+                            whileDrag={{ scale: 1.1 }}
                             onDragEnd={(e, info) => {
                                 if (info.point.y < window.innerHeight / 2) {
                                     handleDrop(item.id, item.category);
                                 }
                             }}
-                            className="px-6 py-3 bg-neon-blue text-black font-bold rounded-full shadow-lg cursor-grab active:cursor-grabbing"
+                            className="px-6 py-3 bg-neon-blue text-black font-bold rounded-full shadow-lg cursor-grab active:cursor-grabbing select-none"
                         >
                             {item.text}
                         </motion.div>

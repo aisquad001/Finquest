@@ -7,8 +7,6 @@
 import { Lesson, LevelData, BossQuestion, LessonType } from './gamification';
 
 // --- DETERMINISTIC RNG ---
-// Ensures that "World 1 Level 1" always generates the same unique content
-// for every user, but is different from "World 1 Level 2"
 class SeededRNG {
     private seed: number;
     constructor(seedStr: string) {
@@ -74,7 +72,6 @@ const BOSS_TRASH_TALK: Record<string, string[]> = {
     world8: ["You'll work until you're 90!", "Social Security is empty!", "Inflation ate your nest egg!", "Too late to start now!", "Welcome to the poor house!"]
 };
 
-// Templates for lesson content to ensure variety
 const SCENARIOS = [
     { text: "Spending $50 on Doordash", isRight: false, label: "L" },
     { text: "Cooking at home", isRight: true, label: "W" },
@@ -103,9 +100,8 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const rng = new SeededRNG(levelId);
 
     // 1. BOSS GENERATION
-    // Pick a unique boss name for this world/level combo
     const worldBossNames = BOSS_NAMES[worldId] || BOSS_NAMES['world1'];
-    const bossName = worldBossNames[(levelNum - 1) % worldBossNames.length]; // Cycle through names deterministically
+    const bossName = worldBossNames[(levelNum - 1) % worldBossNames.length];
     
     const worldBossEmojis = BOSS_EMOJIS[worldId] || BOSS_EMOJIS['world1'];
     const bossImage = rng.pick(worldBossEmojis);
@@ -113,14 +109,13 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const worldTrashTalk = BOSS_TRASH_TALK[worldId] || BOSS_TRASH_TALK['world1'];
     const bossIntro = rng.pick(worldTrashTalk);
 
-    // Generate Boss Quiz
     const bossQuiz: BossQuestion[] = [];
-    for (let i = 0; i < 5; i++) { // 5 Questions per boss
+    for (let i = 0; i < 5; i++) {
         bossQuiz.push({
             question: generateBossQuestion(worldId, rng),
             options: ["Yes", "No", "Maybe"],
             correctIndex: rng.int(0, 2),
-            explanation: "Financial wisdom goes here." // Placeholder for brevity, in real app would be mapped
+            explanation: "Financial wisdom goes here."
         });
     }
 
@@ -140,7 +135,6 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const lessons: Lesson[] = [];
     const lessonTypes: LessonType[] = ['swipe', 'meme', 'tap_lie', 'drag_drop', 'calculator', 'info'];
     
-    // Shuffle types for this level so order is unique
     const shuffledTypes = [...lessonTypes].sort(() => 0.5 - rng.next());
 
     for (let i = 0; i < 6; i++) {
@@ -193,7 +187,7 @@ const generateLessonTitle = (type: LessonType, rng: SeededRNG): string => {
 const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG): any => {
     switch (type) {
         case 'swipe':
-            return { cards: rng.pickSubset(SCENARIOS, 3) };
+            return { cards: rng.pickSubset(SCENARIOS, 4) };
         case 'meme':
             const tmpl = rng.pick(MEME_TEMPLATES);
             return { 
@@ -209,6 +203,21 @@ const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG
                     { text: "Compound interest takes time", isLie: false },
                     { text: "You need a budget", isLie: false }
                 ].sort(() => 0.5 - rng.next()) 
+            };
+        case 'drag_drop':
+            const sortItems = [
+                { id: 's1', text: "Netflix Sub", category: "Wants" },
+                { id: 's2', text: "Rent", category: "Needs" },
+                { id: 's3', text: "Groceries", category: "Needs" },
+                { id: 's4', text: "New Jordans", category: "Wants" },
+                { id: 's5', text: "Bus Pass", category: "Needs" },
+                { id: 's6', text: "Concert Tix", category: "Wants" },
+                { id: 's7', text: "Electricity", category: "Needs" },
+                { id: 's8', text: "Video Games", category: "Wants" }
+            ];
+            return { 
+                buckets: ['Needs', 'Wants'],
+                items: rng.pickSubset(sortItems, 4) 
             };
         case 'calculator':
             const amount = rng.pick([50, 100, 200, 500]);
