@@ -18,6 +18,7 @@ import {
 // --- Types ---
 
 export interface UserState {
+    uid?: string; // Firebase UID
     nickname: string;
     avatar: any;
     level: number;
@@ -221,7 +222,10 @@ export const generateDailyChallenges = (): Challenge[] => [
 // STREAK LOGIC 2.0
 export const checkStreak = (user: UserState): { updatedUser: UserState, savedByFreeze: boolean, broken: boolean } => {
     const today = new Date().toISOString().split('T')[0];
-    const lastActive = user.streakLastDate.split('T')[0];
+    
+    // Ensure valid date string, fallback if Firestore timestamp issue
+    const lastActiveDate = new Date(user.streakLastDate || new Date());
+    const lastActive = lastActiveDate.toISOString().split('T')[0];
     
     // Already active today
     if (today === lastActive) {
@@ -257,7 +261,7 @@ export const checkStreak = (user: UserState): { updatedUser: UserState, savedByF
     // Streak Lost
     return {
         updatedUser: { ...user, streak: 1, streakLastDate: new Date().toISOString() },
-        savedByFreeze: false,
+        savedByFreeze: false, 
         broken: true
     };
 };
@@ -305,25 +309,12 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
     return Math.round(weightedRisk / (totalValue - portfolio.cash));
 };
 
-// --- Persistence (Mock Firebase) ---
-
-const DB_KEY = 'finquest_db_v5'; // Bump version for new schema
-
-export const saveUser = (user: UserState) => {
-    localStorage.setItem(DB_KEY, JSON.stringify(user));
-};
-
-export const loadUser = (): UserState | null => {
-    const data = localStorage.getItem(DB_KEY);
-    return data ? JSON.parse(data) : null;
-};
-
 export const createInitialUser = (onboardingData: any): UserState => {
     return {
         nickname: onboardingData.nickname,
         avatar: onboardingData.avatar,
-        level: 21,
-        xp: onboardingData.xp || 0,
+        level: 1, // Reset to 1 for real accounts
+        xp: onboardingData.xp || 500, // Bonus included
         coins: 500,
         subscriptionStatus: 'free',
         referralCount: 0,

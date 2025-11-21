@@ -16,23 +16,25 @@ import { playSound } from './services/audio';
 import { trackEvent } from './services/analytics';
 import { 
     UserState, 
-    loadUser, 
-    saveUser, 
-    createInitialUser, 
     ShopItem,
     WORLDS_METADATA,
     WorldData,
     Portfolio,
-    checkStreak,
-    Challenge
+    createInitialUser
 } from './services/gamification';
 import { requestNotificationPermission, scheduleDemoNotifications } from './services/notifications';
 import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 
+// FIREBASE IMPORTS
+import { auth, signInWithGoogle, logout } from './services/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { getUser, createUserDoc, updateUser, handleDailyLogin } from './services/db';
+
 const App: React.FC = () => {
   // Global User State
   const [user, setUser] = useState<UserState | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false); // Default false, check logic below
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   
   // Navigation State
@@ -45,6 +47,42 @@ const App: React.FC = () => {
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
 
+  // AUTH LISTENER
+  useEffect(() => {
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          if (firebaseUser) {
+              // User is signed in, fetch data from Firestore
+              const userDoc = await getUser(firebaseUser.uid);
+              if (userDoc) {
+                  // Existing user: check streak
+                  const { updatedUser, message } = await handleDailyLogin(firebaseUser.uid, userDoc);
+                  setUser(updatedUser);
+                  setShowOnboarding(false);
+                  
+                  if (message) {
+                      // Small delay to ensure UI is ready before alert (or use toast in future)
+                      setTimeout(() => alert(message), 1000);
+                  }
+                  trackEvent('session_start', { level: updatedUser.level, streak: updatedUser.streak });
+              } else {
+                  // Firebase Auth exists but no Firestore doc? 
+                  // This usually means they are mid-onboarding or it's a fresh google sign-in without app logic yet.
+                  // We show onboarding to collect nickname/avatar, then create doc.
+                  setShowOnboarding(true);
+              }
+          } else {
+              // No user
+              if (view !== 'portal' && view !== 'admin') {
+                  setShowOnboarding(true);
+              }
+              setUser(null);
+          }
+          setLoading(false);
+      });
+
+      return () => unsubscribe();
+  }, []);
+
   // Theme Effect: Switch body class based on view
   useEffect(() => {
       document.body.classList.remove('portal-mode', 'game-mode', 'admin-mode');
@@ -55,61 +93,56 @@ const App: React.FC = () => {
       } else {
           document.body.classList.add('game-mode');
       }
-      
-      if (user) {
-          trackEvent('view_changed', { view });
-      }
-  }, [view, user]);
+  }, [view]);
 
-  // Load progress & Streak Logic
+  // Persist state changes to Firestore (Debounced/Optimistic)
+  // NOTE: Real-time sync is handled by db.ts for critical stuff, 
+  // here we just catch state updates from local actions.
   useEffect(() => {
-    const loadedUser = loadUser();
-    if (loadedUser) {
-        // Run Streak Check Logic
-        const { updatedUser, savedByFreeze, broken } = checkStreak(loadedUser);
-        setUser(updatedUser);
-        setShowOnboarding(false);
-
-        if (view !== 'portal' && view !== 'admin') {
-            if (savedByFreeze) {
-                alert("❄️ STREAK FROZEN! Your streak was saved by a freeze item.");
-            } else if (broken) {
-                alert("💔 STREAK LOST! You missed a day. Start again!");
-            }
-
-            // Initial Notification Prompt (Simulated)
-            setTimeout(() => {
-                requestNotificationPermission().then(granted => {
-                    if (granted) scheduleDemoNotifications();
-                });
-            }, 3000);
-        }
-        
-        trackEvent('session_start', { level: updatedUser.level, streak: updatedUser.streak });
-
-    } else {
-        if (view !== 'portal' && view !== 'admin') {
-             setShowOnboarding(true);
-        }
-    }
-  }, []);
-
-  // Save progress whenever user state changes
-  useEffect(() => {
-    if (user) {
-        saveUser(user);
+    if (user && user.uid) {
+        // We don't await this, optimistic update
+        updateUser(user.uid, user);
     }
   }, [user]);
 
-  const handleOnboardingComplete = (data: any) => {
-      const newUser = createInitialUser(data);
-      setUser(newUser);
-      setShowOnboarding(false);
-      trackEvent('signup_complete', { path: newUser.avatar.outfit }); // Simplified tracking
-      // Prompt for notifications
-      requestNotificationPermission().then(granted => {
-          if (granted) scheduleDemoNotifications();
-      });
+  const handleOnboardingAuth = async (data: any) => {
+      if (data.authMethod === 'google') {
+          try {
+              // 1. Trigger Google Popup
+              const firebaseUser = await signInWithGoogle();
+              
+              // 2. Create User Doc in Firestore
+              // Note: createUserDoc checks if exists internally or overwrites? 
+              // Ideally we only create if new, but getUser logic in auth listener handles existing.
+              // Here we force create/overwrite because it's the completion of onboarding.
+              const newUser = await createUserDoc(firebaseUser.uid, { 
+                  ...data, 
+                  email: firebaseUser.email 
+              });
+
+              // 3. Set Local State
+              setUser(newUser as UserState);
+              setShowOnboarding(false);
+              
+              // 4. Analytics
+              trackEvent('signup_complete', { method: 'google' });
+              
+              // 5. Request Notifications
+              requestNotificationPermission().then(granted => {
+                  if (granted) scheduleDemoNotifications();
+              });
+
+          } catch (error) {
+              console.error("Signup Failed", error);
+              alert("Signup failed. Please try again.");
+          }
+      } else {
+          // GUEST MODE (No Persistence)
+          const newUser = createInitialUser(data);
+          setUser(newUser);
+          setShowOnboarding(false);
+          alert("Playing in Guest Mode. Progress won't be saved if you close the tab!");
+      }
   };
 
   // Navigation Handlers
@@ -161,7 +194,6 @@ const App: React.FC = () => {
   const handleLevelComplete = (xp: number, coins: number) => {
       if (!user || !activeLevel) return;
       
-      // 2x Boost logic check (mocked)
       const finalXp = user.subscriptionStatus === 'pro' ? xp * 2 : xp;
 
       setUser(prev => {
@@ -171,7 +203,6 @@ const App: React.FC = () => {
           const newCoins = prev.coins + coins;
           
           let newLevel = prev.level;
-          // Simple check for demo level up
           if (newXp > prev.level * 500) { 
              newLevel += 1;
           }
@@ -180,7 +211,6 @@ const App: React.FC = () => {
             ? [...prev.completedLevels, activeLevel.id]
             : prev.completedLevels;
 
-          // Update Daily Challenge (Medium)
           const updatedChallenges = prev.dailyChallenges.map(c => 
               (c.difficulty === 'medium' && !c.completed) 
               ? { ...c, completed: true } 
@@ -215,9 +245,7 @@ const App: React.FC = () => {
   const handleBuyItem = (item: ShopItem) => {
       setUser(prev => {
           if (!prev) return null;
-          // Special logic for Streak Freeze
           const newStreakFreezes = item.id === 'item_freeze' ? (prev.streakFreezes || 0) + 1 : prev.streakFreezes;
-          
           return {
               ...prev,
               coins: prev.coins - item.cost,
@@ -232,7 +260,6 @@ const App: React.FC = () => {
       setUser(prev => {
           if (!prev) return null;
           
-          // Update Daily Challenge (Hard) if a trade happened
           const updatedChallenges = prev.dailyChallenges.map(c => 
             (c.difficulty === 'hard' && !c.completed)
             ? { ...c, completed: true }
@@ -252,7 +279,7 @@ const App: React.FC = () => {
       trackEvent('upgrade_pro', { source: 'modal' });
   };
 
-  // Portal View Renders differently (no background effects)
+  // Portal View
   if (view === 'portal') {
       return <PortalDashboard childData={user} onExit={() => {
           window.history.pushState({}, '', '/');
@@ -268,12 +295,24 @@ const App: React.FC = () => {
       }} />;
   }
 
-  if (showOnboarding) {
-      return <Onboarding onComplete={handleOnboardingComplete} />;
+  // Loading State
+  if (loading) {
+      return (
+          <div className="min-h-screen bg-[#1a0b2e] flex items-center justify-center">
+              <div className="flex flex-col items-center animate-pulse">
+                  <div className="text-6xl mb-4">💸</div>
+                  <h2 className="font-game text-white text-2xl">LOADING EMPIRE...</h2>
+              </div>
+          </div>
+      );
   }
 
-  if (!user) return null;
+  // Onboarding View
+  if (showOnboarding || !user) {
+      return <Onboarding onComplete={handleOnboardingAuth} />;
+  }
 
+  // Main App
   return (
     <div className="min-h-[100dvh] bg-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
       

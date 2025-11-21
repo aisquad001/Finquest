@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -77,28 +78,31 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     });
   };
 
-  const handleSignup = () => {
+  const handleAuthAction = async (method: 'google' | 'guest') => {
     setIsSigningUp(true);
-    playSound('success');
-    // Simulate API call
-    setTimeout(() => {
-        setIsSigningUp(false);
-        handleNext(); // Go to final slide
-        triggerConfetti();
-    }, 1500);
-  };
+    playSound('click');
 
-  const handleFinish = () => {
+    // Prepare User Data
     const userData = {
         nickname: nickname || "Player 1",
         avatar: avatarConfig,
         path: selectedPath || "balanced",
         joinedAt: new Date().toISOString(),
-        xp: 500, // Bonus
-        streak: 1
+        xp: 500, // First time bonus
+        streak: 1,
+        authMethod: method // Flag for App.tsx
     };
-    playSound('levelup');
-    onComplete(userData);
+
+    try {
+        // Trigger callback in App.tsx which handles the actual Firebase Popup
+        await onComplete(userData);
+        
+        // If we are here, success - but typically onComplete will trigger unmount
+    } catch (e) {
+        console.error("Auth failed", e);
+        setIsSigningUp(false);
+        alert("Sign in failed. Try again!");
+    }
   };
 
   return (
@@ -239,51 +243,31 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                      <p className="text-gray-300 text-center mb-8 px-4">Save your progress to claim <span className="text-neon-green font-bold">500 XP</span> + Starter Pack.</p>
 
                      <div className="w-full max-w-xs space-y-3">
-                        <button onClick={handleSignup} className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d">
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
-                            Continue with Google
+                        <button 
+                            onClick={() => handleAuthAction('google')} 
+                            disabled={isSigningUp}
+                            className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d"
+                        >
+                            {isSigningUp ? 'Signing In...' : (
+                                <>
+                                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
+                                    Continue with Google
+                                </>
+                            )}
                         </button>
-                        <button onClick={handleSignup} className="w-full py-3 bg-black text-white border border-white/20 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-900 btn-3d">
+                        <button disabled className="w-full py-3 bg-black text-white border border-white/20 font-bold rounded-xl flex items-center justify-center gap-2 opacity-60 cursor-not-allowed">
                              <img src="https://www.svgrepo.com/show/511330/apple-173.svg" className="w-5 h-5 invert" />
-                            Continue with Apple
+                            Apple (Coming Soon)
                         </button>
                         <div className="relative py-2">
                              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1a0b2e] px-2 text-gray-500">or</span></div>
                         </div>
-                        <button onClick={() => { playSound('pop'); setNickname(nickname || 'Guest'); handleNext(); }} className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5">
-                            Play as Guest
+                        <button onClick={() => handleAuthAction('guest')} className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5">
+                            Play as Guest (No Save)
                         </button>
                      </div>
                 </div>
-
-                {/* Slide 6: Welcome & Reward */}
-                <div className="swiper-slide flex flex-col items-center justify-center p-6 relative overflow-hidden">
-                    {/* Radial burst bg */}
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-neon-purple/40 via-[#1a0b2e] to-[#1a0b2e] animate-pulse"></div>
-                    
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                        <h1 className="font-game text-5xl text-white text-stroke-black mb-2">WELCOME</h1>
-                        <h2 className="font-game text-3xl text-neon-blue mb-8">{nickname.toUpperCase()}</h2>
-
-                        <div className="bg-black/60 p-6 rounded-3xl border-2 border-neon-green mb-8 animate-bounce">
-                            <div className="text-sm text-gray-400 uppercase font-bold tracking-widest mb-1">You Received</div>
-                            <div className="text-5xl font-game text-neon-green drop-shadow-neon">+500 XP</div>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-neon-yellow font-bold text-xl mb-12">
-                            <span className="text-2xl">🔥</span> 1 Day Streak Started!
-                        </div>
-
-                        <button 
-                            onClick={handleFinish}
-                            className="w-full max-w-xs py-4 bg-neon-green text-black font-game text-3xl rounded-2xl border-b-[8px] border-green-800 active:border-b-0 active:translate-y-2 transition-all shadow-[0_0_30px_rgba(0,255,136,0.4)] hover:brightness-110"
-                        >
-                            LET'S GOOO
-                        </button>
-                    </div>
-                </div>
-
             </div>
             {/* Pagination */}
             <div className="swiper-pagination !right-4 !left-auto !top-1/2 !-translate-y-1/2 flex flex-col gap-2"></div>

@@ -13,7 +13,8 @@
     "react-dom": "^19.2.0",
     "framer-motion": "^11.0.0",
     "@google/genai": "^1.28.0",
-    "@heroicons/react": "^2.2.0"
+    "@heroicons/react": "^2.2.0",
+    "firebase": "^12.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
