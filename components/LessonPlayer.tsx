@@ -170,7 +170,14 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             { id: 'f4', text: 'New iPhone', category: 'Wants' }
         ];
         
-        const [items, setItems] = useState(lesson.content.items && lesson.content.items.length > 0 ? lesson.content.items : fallbackItems);
+        // Initialize state with robust check for valid content items
+        const [items, setItems] = useState(() => {
+            if (lesson.content && Array.isArray(lesson.content.items) && lesson.content.items.length > 0) {
+                return lesson.content.items;
+            }
+            return fallbackItems;
+        });
+        
         const buckets = lesson.content.buckets || ['Needs', 'Wants'];
 
         const handleDrop = (itemId: string, bucket: string) => {
@@ -468,31 +475,46 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                 )}
 
                 {/* BOSS BATTLE */}
-                {isBossStage && !showBossIntro && level.bossQuiz && level.bossQuiz[bossCurrentQuestion] && (
-                    <div className="h-full flex flex-col p-6 pt-12 bg-red-950/30">
-                        <div className="flex-1 flex flex-col items-center justify-center max-w-lg mx-auto w-full">
-                             <div className="text-6xl mb-8 animate-pulse">{level.bossImage || '👹'}</div>
-                             
-                             <div className="bg-black/60 border-2 border-red-500 rounded-3xl p-6 mb-8 w-full text-center shadow-[0_0_40px_rgba(220,38,38,0.3)]">
-                                <h3 className="text-2xl font-bold text-white">{level.bossQuiz[bossCurrentQuestion].question}</h3>
-                             </div>
+                {isBossStage && !showBossIntro && (
+                    (level.bossQuiz && level.bossQuiz[bossCurrentQuestion]) ? (
+                        <div className="h-full flex flex-col p-6 pt-12 bg-red-950/30">
+                            <div className="flex-1 flex flex-col items-center justify-center max-w-lg mx-auto w-full">
+                                <div className="text-6xl mb-8 animate-pulse">{level.bossImage || '👹'}</div>
+                                
+                                <div className="bg-black/60 border-2 border-red-500 rounded-3xl p-6 mb-8 w-full text-center shadow-[0_0_40px_rgba(220,38,38,0.3)]">
+                                    <h3 className="text-2xl font-bold text-white">{level.bossQuiz[bossCurrentQuestion].question}</h3>
+                                </div>
 
-                             <div className="grid grid-cols-1 gap-4 w-full">
-                                {level.bossQuiz[bossCurrentQuestion].options.map((opt: string, i: number) => (
-                                    <button
-                                        key={i}
-                                        onClick={() => handleBossAnswer(i === level.bossQuiz[bossCurrentQuestion].correctIndex)}
-                                        className="p-4 bg-white text-black font-bold text-lg rounded-2xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all hover:bg-gray-100"
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                             </div>
+                                <div className="grid grid-cols-1 gap-4 w-full">
+                                    {level.bossQuiz[bossCurrentQuestion].options.map((opt: string, i: number) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleBossAnswer(i === level.bossQuiz[bossCurrentQuestion].correctIndex)}
+                                            className="p-4 bg-white text-black font-bold text-lg rounded-2xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all hover:bg-gray-100"
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="text-center text-red-400 font-mono text-xs uppercase tracking-widest mt-4">
+                                Boss HP: {level.bossQuiz.length - bossCurrentQuestion}/{level.bossQuiz.length}
+                            </div>
                         </div>
-                        <div className="text-center text-red-400 font-mono text-xs uppercase tracking-widest mt-4">
-                             Boss HP: {level.bossQuiz.length - bossCurrentQuestion}/{level.bossQuiz.length}
+                    ) : (
+                        // Fallback if boss quiz data is corrupt or missing
+                        <div className="h-full flex flex-col items-center justify-center p-8 text-center">
+                            <div className="text-6xl mb-4">💀</div>
+                            <h2 className="font-game text-3xl text-white mb-4">BOSS GLITCHED!</h2>
+                            <p className="text-gray-400 mb-8">The boss was too scared to fight you.</p>
+                            <button 
+                                onClick={() => onComplete(500, 200)} 
+                                className="px-8 py-4 bg-green-500 text-black font-bold rounded-xl btn-3d"
+                            >
+                                CLAIM FREE VICTORY
+                            </button>
                         </div>
-                    </div>
+                    )
                 )}
             </div>
 
