@@ -13,6 +13,27 @@ import {
 } from 'firebase/firestore';
 import { UserState, checkStreak, createInitialUser } from './gamification';
 
+// --- MOCK DB HELPERS ---
+const MOCK_STORAGE_KEY = 'finquest_mock_users';
+
+const getMockDB = (): Record<string, UserState> => {
+    try {
+        return JSON.parse(localStorage.getItem(MOCK_STORAGE_KEY) || '{}');
+    } catch {
+        return {};
+    }
+};
+
+const saveMockDB = (data: Record<string, UserState>) => {
+    localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(data));
+};
+
+const dispatchMockUpdate = (uid: string, user: UserState) => {
+    window.dispatchEvent(new CustomEvent('mock-user-update', { detail: { uid, user } }));
+};
+
+// --- CONVERTER ---
+
 // Helper to convert Firestore Timestamps to ISO strings for the app
 export const convertDocToUser = (data: any): UserState => {
     const user = { ...data };
@@ -31,7 +52,15 @@ export const convertDocToUser = (data: any): UserState => {
     return user as UserState;
 };
 
+// --- METHODS ---
+
 export const getUser = async (uid: string): Promise<UserState | null> => {
+    // Mock Fallback
+    if (uid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        return mockDB[uid] || null;
+    }
+
     try {
         const userDoc = await getDoc(doc(db, 'users', uid));
         if (userDoc.exists()) {
@@ -45,32 +74,38 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
 };
 
 export const createUserDoc = async (uid: string, onboardingData: any) => {
+    const initialData = createInitialUser(onboardingData);
+    
+    const dataToSave = {
+        ...initialData,
+        uid: uid,
+        email: onboardingData.email || '',
+        createdAt: new Date().toISOString(), 
+        lastLoginAt: new Date().toISOString(),
+        isPro: false,
+        proExpiresAt: null
+    };
+
+    // Mock Fallback
+    if (uid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        mockDB[uid] = dataToSave;
+        saveMockDB(mockDB);
+        dispatchMockUpdate(uid, dataToSave);
+        return dataToSave;
+    }
+
     try {
-        const initialData = createInitialUser(onboardingData);
-        
-        // Note: We save dates as strings primarily to match UserState, 
-        // but serverTimestamp() is useful for 'createdAt' to get server time.
-        // We will convert it back on read.
-        const dataToSave = {
-            ...initialData,
-            uid: uid,
-            email: onboardingData.email || '',
-            // Use serverTimestamp for truth, convert on read
-            createdAt: serverTimestamp(), 
-            lastLoginAt: serverTimestamp(),
-            // Ensure these are set if missing
-            isPro: false,
-            proExpiresAt: null
+        // Use serverTimestamp for Firestore truth
+        const firestoreData = {
+            ...dataToSave,
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
         };
 
-        await setDoc(doc(db, 'users', uid), dataToSave);
+        await setDoc(doc(db, 'users', uid), firestoreData);
         
-        // Return the object with ISO strings for immediate local state usage
-        return {
-            ...dataToSave,
-            createdAt: new Date().toISOString(),
-            lastLoginAt: new Date().toISOString()
-        };
+        return dataToSave;
     } catch (error) {
         console.error("Error creating user doc:", error);
         throw error;
@@ -78,6 +113,17 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
 };
 
 export const updateUser = async (uid: string, data: Partial<UserState>) => {
+    // Mock Fallback
+    if (uid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        if (mockDB[uid]) {
+            mockDB[uid] = { ...mockDB[uid], ...data };
+            saveMockDB(mockDB);
+            dispatchMockUpdate(uid, mockDB[uid]);
+        }
+        return;
+    }
+
     try {
         const userRef = doc(db, 'users', uid);
         await updateDoc(userRef, {
@@ -95,14 +141,13 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
     if (updatedUser.streak !== currentUserState.streak || updatedUser.streakFreezes !== currentUserState.streakFreezes) {
         await updateUser(uid, {
             streak: updatedUser.streak,
-            streakLastDate: updatedUser.streakLastDate, // This is string from checkStreak
+            streakLastDate: updatedUser.streakLastDate, 
             streakFreezes: updatedUser.streakFreezes,
-            lastLoginAt: serverTimestamp()
+            lastLoginAt: uid.startsWith('mock_') ? new Date().toISOString() : serverTimestamp()
         } as any);
     } else {
-        // Just update last login
          await updateUser(uid, {
-            lastLoginAt: serverTimestamp()
+            lastLoginAt: uid.startsWith('mock_') ? new Date().toISOString() : serverTimestamp()
         } as any);
     }
 

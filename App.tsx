@@ -55,8 +55,12 @@ const App: React.FC = () => {
   useEffect(() => {
       let unsubscribeSync: () => void;
 
+      // 1. Firebase Listener (Real Auth)
       const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
+              // Clean up any previous sync
+              if (unsubscribeSync) unsubscribeSync();
+
               // Connect Store to Firestore
               unsubscribeSync = syncUser(firebaseUser.uid);
               
@@ -65,10 +69,17 @@ const App: React.FC = () => {
                   if (granted) scheduleDemoNotifications();
               });
           } else {
-              clearUser();
-              if (unsubscribeSync) unsubscribeSync();
-              // Trigger onboarding if not in special routes
-              if (window.location.pathname === '/') setShowOnboarding(true);
+              // If not firebase user, check if we have a local mock session
+              const mockUid = localStorage.getItem('finquest_mock_session_uid');
+              if (mockUid) {
+                  console.log("Restoring Mock Session:", mockUid);
+                  unsubscribeSync = syncUser(mockUid);
+              } else {
+                  clearUser();
+                  if (unsubscribeSync) unsubscribeSync();
+                  // Trigger onboarding if not in special routes
+                  if (window.location.pathname === '/') setShowOnboarding(true);
+              }
           }
       });
 
@@ -170,8 +181,16 @@ const App: React.FC = () => {
                   // Create Doc - Store will pick it up automatically via sync
                   await createUserDoc(firebaseUser.uid, { 
                       ...data, 
-                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` // Robust fallback
+                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` 
                   });
+
+                  // IMPORTANT: If this is a mock user, we must manually store session and trigger sync
+                  // because onAuthStateChanged won't fire.
+                  if (firebaseUser.uid.startsWith('mock_')) {
+                      localStorage.setItem('finquest_mock_session_uid', firebaseUser.uid);
+                      syncUser(firebaseUser.uid);
+                  }
+
                   setShowOnboarding(false);
               } catch (dbError) {
                   console.error("DB Profile Creation Failed:", dbError);
