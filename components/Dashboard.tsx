@@ -1,8 +1,9 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
 import { 
@@ -11,7 +12,9 @@ import {
     StarIcon,
     ShoppingBagIcon,
     TrophyIcon,
-    QrCodeIcon
+    QrCodeIcon,
+    UserPlusIcon,
+    ShareIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -21,8 +24,7 @@ import {
     getXpForNextLevel, 
     getMockLeaderboard, 
     SHOP_ITEMS,
-    SEASONAL_EVENTS,
-    Challenge
+    SEASONAL_EVENTS
 } from '../services/gamification';
 import { claimDailyChest, devAddResources } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
@@ -42,10 +44,25 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
-    const [showChestModal, setShowChestModal] = useState(false);
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(null);
     const [devClickCount, setDevClickCount] = useState(0);
+    const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+    // PWA Install Logic
+    useEffect(() => {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            setInstallPrompt(e);
+        });
+    }, []);
+
+    const handleInstall = () => {
+        if (installPrompt) {
+            installPrompt.prompt();
+            setInstallPrompt(null);
+        }
+    };
 
     // Calculate XP Progress
     const nextLevelXp = getXpForNextLevel(user.level);
@@ -66,7 +83,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     };
 
     const handleBuy = (item: ShopItem) => {
-        // Prevent buying same item twice if it's unique (like outfit)
         if (user.inventory.includes(item.id)) {
             playSound('error');
             alert("You already own this!");
@@ -89,6 +105,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const handleGenerateCode = () => {
         playSound('pop');
         setFamilyCode(generateLinkCode());
+    };
+
+    const handleCopyReferral = () => {
+        navigator.clipboard.writeText(user.referralCode);
+        playSound('coin');
+        alert("Code copied! Share it to get rich.");
     };
 
     const zooUnlocked = user.level >= 20;
@@ -141,7 +163,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </button>
                          )}
 
-                        {/* STREAK / DEV BUTTON */}
+                        {/* STREAK BUTTON */}
                         <button onClick={handleStreakClick} className="flex flex-col items-center relative group active:scale-90 transition-transform">
                             <div className={`text-5xl drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
                                 {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
@@ -201,6 +223,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 {activeTab === 'map' && (
                     <div className="relative flex flex-col items-center gap-8 py-4">
                         
+                        {/* INSTALL APP PROMPT */}
+                        {installPrompt && (
+                            <div className="w-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-4 flex items-center justify-between shadow-lg animate-pop-in">
+                                <div>
+                                    <div className="font-game text-white text-lg">INSTALL APP</div>
+                                    <div className="text-xs text-white/80">Get daily rewards + instant notifications</div>
+                                </div>
+                                <button onClick={handleInstall} className="bg-white text-pink-600 font-bold px-4 py-2 rounded-xl shadow-md">
+                                    GET IT
+                                </button>
+                            </div>
+                        )}
+
                         {/* ZOO BUTTON */}
                         <button 
                             onClick={onOpenZoo}
@@ -325,21 +360,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                 {/* SOCIAL TAB */}
                 {activeTab === 'social' && (
-                    <div className="text-center py-12 space-y-8">
-                        <div>
-                            <div className="text-6xl mb-4">👯‍♀️</div>
-                            <h2 className="font-game text-2xl text-white mb-2">SQUAD GOALS</h2>
-                            <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo!</p>
+                    <div className="text-center py-8 space-y-8">
+                        
+                        {/* Referral Widget */}
+                        <div className="bg-gradient-to-br from-purple-900 to-blue-900 rounded-3xl p-6 border border-white/10 shadow-xl">
+                            <div className="text-6xl mb-4 animate-bounce">👯‍♀️</div>
+                            <h2 className="font-game text-2xl text-white mb-2">GET RICH TOGETHER</h2>
+                            <p className="text-purple-200 text-sm mb-6 px-4">
+                                Invite friends. They get <span className="text-yellow-400 font-bold">20k Coins</span>. You get <span className="text-yellow-400 font-bold">50k Coins</span> + Pro!
+                            </p>
                             
-                            <button className="bg-neon-blue text-black font-game text-xl px-8 py-4 rounded-full btn-3d mb-4 w-full">
-                                INVITE FRIENDS
-                            </button>
+                            <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/10">
+                                <div className="text-xs text-gray-400 uppercase font-bold mb-1">Your Secret Code</div>
+                                <div onClick={handleCopyReferral} className="font-mono text-3xl text-neon-blue font-bold tracking-widest cursor-pointer hover:scale-105 transition-transform">
+                                    {user.referralCode}
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-1">Tap to copy</div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                <button onClick={handleCopyReferral} className="flex-1 bg-white text-black font-game text-lg py-3 rounded-xl btn-3d flex items-center justify-center gap-2">
+                                    <ShareIcon className="w-5 h-5" /> SHARE
+                                </button>
+                            </div>
+
+                            <div className="mt-6 flex items-center justify-center gap-2 text-sm text-purple-300">
+                                <UserPlusIcon className="w-4 h-4" />
+                                <span className="font-bold">{user.referralCount} Friends Invited</span>
+                            </div>
                         </div>
 
                         <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
                              <h2 className="font-game text-xl text-white mb-2 flex items-center justify-center gap-2">
                                  <QrCodeIcon className="w-6 h-6 text-neon-pink" />
-                                 LINK PARENT
+                                 PARENT LINK
                              </h2>
                              <p className="text-gray-400 text-sm mb-6">
                                  Unlock the FinQuest Debit Card.

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -29,10 +30,6 @@ export const addXP = async (uid: string, amount: number, currentLevel: number) =
             xp: increment(amount)
         });
         triggerVisualEffect(`+${amount} XP`, 'xp');
-        
-        // Check Level Up (Optimistic calculation, Firestore handles truth)
-        // Note: In a real robust app, this logic should be in a Cloud Function
-        // Here we do a client-side check after update or just rely on listener
     } catch (e) {
         console.error("Failed to add XP", e);
     }
@@ -45,7 +42,7 @@ export const addCoins = async (uid: string, amount: number, reason: string) => {
             coins: increment(amount)
         });
         playSound('coin');
-        triggerVisualEffect(`+${amount} Coins (${reason})`, 'coin');
+        triggerVisualEffect(`+${amount} Coins`, 'coin');
     } catch (e) {
         console.error("Failed to add Coins", e);
     }
@@ -95,6 +92,20 @@ export const claimDailyChest = async (uid: string, user: UserState) => {
         (window as any).confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     } catch (e) {
         console.error("Chest claim failed", e);
+    }
+};
+
+export const triggerMoneyCheat = async (uid: string) => {
+    try {
+        const userRef = doc(db, 'users', uid);
+        await updateDoc(userRef, {
+            coins: increment(1337)
+        });
+        playSound('kaching');
+        triggerVisualEffect("+1,337 Coins (HACKER MODE)", 'coin');
+        (window as any).confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#00FF00', '#000000'] });
+    } catch (e) {
+        console.error("Cheat failed", e);
     }
 };
 
@@ -155,6 +166,13 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
     } catch (e) {
         console.error("Streak processing failed", e);
     }
+};
+
+export const processReferral = async (referrerCode: string) => {
+    // NOTE: In a real app, this would be a Cloud Function to prevent client-side exploitation
+    // We simulate it here.
+    console.log(`[REFERRAL] Processing code: ${referrerCode}`);
+    // For demo, we just assume it's valid and applied to the current user during creation logic in db.ts
 };
 
 // --- DEV TOOLS ---

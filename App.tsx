@@ -23,10 +23,10 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
-import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
+import { addXP, addCoins, purchaseItem, processDailyStreak, devAddResources, triggerMoneyCheat } from './services/gameLogic';
 import { auth, signInWithGoogle, signInAsGuest } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { createUserDoc, saveLevelProgress } from './services/db';
+import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 
 const App: React.FC = () => {
   // Global State from Zustand
@@ -46,6 +46,9 @@ const App: React.FC = () => {
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<any | null>(null);
 
+  // EASTER EGG STATE
+  const [konami, setKonami] = useState('');
+
   // AUTH & SYNC LISTENER
   useEffect(() => {
       let unsubscribeSync: () => void;
@@ -53,18 +56,13 @@ const App: React.FC = () => {
       // 1. Firebase Listener (Real Auth)
       const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-              // Clean up any previous sync
               if (unsubscribeSync) unsubscribeSync();
-
-              // Connect Store to Firestore
               unsubscribeSync = syncUser(firebaseUser.uid);
               
-              // Request Notifications
               requestNotificationPermission().then(granted => {
                   if (granted) scheduleDemoNotifications();
               });
           } else {
-              // If not firebase user, check if we have a local mock session
               const mockUid = localStorage.getItem('finquest_mock_session_uid');
               if (mockUid) {
                   console.log("Restoring Mock Session:", mockUid);
@@ -72,7 +70,6 @@ const App: React.FC = () => {
               } else {
                   clearUser();
                   if (unsubscribeSync) unsubscribeSync();
-                  // Trigger onboarding if not in special routes
                   if (window.location.pathname === '/') setShowOnboarding(true);
               }
           }
@@ -84,13 +81,27 @@ const App: React.FC = () => {
       };
   }, []);
 
+  // CHEAT CODES LISTENER
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        const newCode = (konami + e.key).slice(-5).toUpperCase();
+        setKonami(newCode);
+        if (newCode === 'MONEY' && user?.uid) {
+            triggerMoneyCheat(user.uid);
+            setKonami('');
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [user?.uid, konami]);
+
   // POST-SYNC LOGIC (Streaks & Loading)
   useEffect(() => {
       if (user && user.uid) {
           setShowOnboarding(false);
           processDailyStreak(user.uid, user);
       }
-  }, [user?.uid]); // Only run when UID is confirmed
+  }, [user?.uid]);
 
   // Navigation Handlers
   const handleOpenWorld = (worldId: string) => {
@@ -118,6 +129,8 @@ const App: React.FC = () => {
   const handleCloseLesson = () => {
       setActiveLevel(null);
       setView('map');
+      // Request notification permission after first lesson for high conversion
+      requestNotificationPermission(); 
   };
 
   const handleLevelComplete = async (xp: number, coins: number) => {
@@ -147,6 +160,12 @@ const App: React.FC = () => {
       if (!user?.uid) return;
       await purchaseItem(user.uid, item.id, item.cost, user.coins);
       trackEvent('purchase_item', { itemId: item.id, cost: item.cost });
+  };
+
+  const handleUpdatePortfolio = async (newPortfolio: any) => {
+      if (user?.uid) {
+          await updateUser(user.uid, { portfolio: newPortfolio });
+      }
   };
 
   const handleOnboardingAuth = async (data: any) => {
@@ -239,7 +258,7 @@ const App: React.FC = () => {
                 onOpenWorld={handleOpenWorld}
                 onClaimReward={handleClaimReward}
                 onBuyItem={handleBuyItem}
-                onOpenZoo={() => { if(user.level >= 20) setView('zoo'); else alert("Level 20 Required!"); }}
+                onOpenZoo={() => { if(user.level >= 2) setView('zoo'); else alert("Reach Level 2 to Unlock Market!"); }} // Lowered for testing
                 onOpenPremium={() => setShowPremiumModal(true)}
                 onOpenAdmin={() => { window.history.pushState({}, '', '/admin'); setView('admin'); }}
             />
@@ -265,7 +284,7 @@ const App: React.FC = () => {
           {view === 'zoo' && user.portfolio && (
               <WallStreetZoo 
                   portfolio={user.portfolio}
-                  onUpdatePortfolio={() => {}} 
+                  onUpdatePortfolio={handleUpdatePortfolio} 
                   onClose={() => setView('dashboard')}
               />
           )}

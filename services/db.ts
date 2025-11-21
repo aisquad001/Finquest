@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -159,120 +160,190 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
     return { updatedUser, message };
 };
 
-// --- CONTENT METHODS ---
+// --- CONTENT SEEDING (GEN Z EDITION) ---
+
+// Helper to generate filler lessons for levels that aren't fully detailed in the prompt
+const generateFillerLesson = (worldId: string, levelId: string, index: number): Lesson => {
+    const types: Lesson['type'][] = ['meme', 'swipe', 'tap_lie', 'calculator'];
+    const type = types[index % types.length];
+    return {
+        id: `${levelId}_les${index}`,
+        worldId,
+        levelId,
+        order: index,
+        type,
+        title: `Quick Hustle ${index}`,
+        xpReward: 100,
+        coinReward: 50,
+        popularity: `${(Math.random() * 20 + 5).toFixed(1)}k`,
+        content: type === 'meme' ? {
+            imageUrl: "https://i.imgflip.com/1ur9b0.jpg",
+            topText: "ME WAITING FOR THE DIP",
+            bottomText: "TO BUY MORE STONKS",
+            explanation: "Patience pays off. Literally."
+        } : type === 'swipe' ? {
+            cards: [
+                { text: "Spending $50 on Doordash", isRight: false, label: "L" },
+                { text: "Cooking at home", isRight: true, label: "W" },
+            ]
+        } : type === 'tap_lie' ? {
+             statements: [
+                { text: "Savings accounts make you rich fast", isLie: true },
+                { text: "Investing takes time", isLie: false },
+                { text: "Compound interest is real", isLie: false }
+             ]
+        } : {
+            label: "If you save $10 a day...",
+            formula: "custom", // not used in demo view
+            resultLabel: "Future You is Rich"
+        }
+    };
+};
 
 export const seedGameData = async () => {
-    // This function populates the database (Mock or Real) with the core content
-    console.log("Seeding Game Data...");
-    
-    // 1. Generate Data for Worlds 1-3
+    console.log("SEEDING GEN-Z CONTENT... 🚀");
     const levels: LevelData[] = [];
     const lessons: Lesson[] = [];
 
-    const worldsToSeed = WORLDS_METADATA.slice(0, 3); // First 3 worlds
+    // We will generate 8 worlds, 8 levels each.
+    // Specific levels from prompt will be injected. 
+    // Rest will be high-quality fillers.
 
-    worldsToSeed.forEach((world, worldIdx) => {
-        // Generate 8 levels per world
-        for (let i = 1; i <= 8; i++) {
-            const levelId = `${world.id}_l${i}`;
-            const levelData: LevelData = {
+    WORLDS_METADATA.forEach((world) => {
+        for (let lvl = 1; lvl <= 8; lvl++) {
+            const levelId = `${world.id}_l${lvl}`;
+            let levelLessons: Lesson[] = [];
+            let bossName = "Generic Gatekeeper";
+            let bossImage = "👮";
+            let bossQuiz = [
+                { question: "Is money real?", options: ["Yes", "No, it's a construct"], correctIndex: 1, explanation: "Deep." },
+                { question: "Spend or Save?", options: ["Spend", "Save"], correctIndex: 1, explanation: "Save obviously." }
+            ];
+
+            // --- WORLD 1: MONEY BASICS ---
+            if (world.id === 'world1' && lvl === 1) {
+                // Level 1: "Money Isn't Real Bro"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'swipe', title: "Need or Want?", xpReward: 100, coinReward: 50, popularity: "14.2k", content: { cards: [{ text: "AirPods Pro 2", isRight: false, label: "Want" }, { text: "Food for the week", isRight: true, label: "Need" }, { text: "Fortnite Skin", isRight: false, label: "Want" }] }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'meme', title: "The Money Printer", xpReward: 100, coinReward: 50, popularity: "18.9k", content: { imageUrl: "https://i.imgflip.com/4t0m5.jpg", topText: "FEDERAL RESERVE", bottomText: "MONEY PRINTER GO BRRR", explanation: "This is where money comes from 😂 Not your part-time job." }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'info', title: "Inflation is a Thief", xpReward: 100, coinReward: 50, popularity: "11.1k", content: { text: "$1 in 1990 = 50¢ today. **Inflation** is the silent allowance thief 🥷. If you hide cash under your bed, it's shrinking." }},
+                    { id: `${levelId}_4`, worldId: world.id, levelId, order: 4, type: 'video', title: "Shrinkflation", xpReward: 100, coinReward: 50, popularity: "22.4k", content: { videoUrl: "placeholder", text: "Ever notice your pizza getting smaller but staying $10? That's inflation in disguise." }},
+                    { id: `${levelId}_5`, worldId: world.id, levelId, order: 5, type: 'tap_lie', title: "Who Controls It?", xpReward: 100, coinReward: 50, popularity: "9.8k", content: { statements: [{ text: "The Fed controls money supply", isLie: false }, { text: "Your mom controls the economy", isLie: true }, { text: "Banks print cash whenever", isLie: true }] }}
+                ];
+                bossName = "The Inflation Monster";
+                bossImage = "🎈";
+                bossQuiz = [
+                    { question: "Who controls the money printer?", options: ["The President", "The Fed", "Elon Musk"], correctIndex: 1, explanation: "The Federal Reserve calls the shots." },
+                    { question: "What happens to cash under a mattress?", options: ["It grows", "It stays same", "It loses value (Inflation)"], correctIndex: 2, explanation: "Inflation eats it alive." },
+                    { question: "Is a PS5 a Need?", options: ["Yes", "No"], correctIndex: 1, explanation: "It's a Want. Don't lie to yourself." }
+                ];
+            }
+            
+            // --- WORLD 2: BUDGET BEACH ---
+            else if (world.id === 'world2' && lvl === 3) {
+                // Level 3: "50/30/20 Rule"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'drag_drop', title: "Sort the Drip", xpReward: 150, coinReward: 60, popularity: "30.1k", content: { items: [{ id: 'd1', text: 'Stanley Cup', category: 'wants' }, { id: 'd2', text: 'Rent', category: 'needs' }, { id: 'd3', text: 'Apple Stock', category: 'savings' }], buckets: ['needs', 'wants', 'savings'] }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'meme', title: "Budgeting Feels", xpReward: 100, coinReward: 50, popularity: "25.5k", content: { imageUrl: "https://i.kym-cdn.com/entries/icons/original/000/018/012/this_is_fine.jpeg", topText: "ME TRYING TO STICK", bottomText: "TO A BUDGET", explanation: "It hurts at first, but being broke hurts more." }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'calculator', title: "The Golden Ratio", xpReward: 150, coinReward: 100, popularity: "19.2k", content: { label: "You make $800/mo. Where does it go?", formula: "auto", resultLabel: "Needs $400, Wants $240, Save $160" }},
+                    { id: `${levelId}_4`, worldId: world.id, levelId, order: 4, type: 'swipe', title: "Scenario: Prom", xpReward: 100, coinReward: 50, popularity: "14.4k", content: { cards: [{ text: "Spend entire savings on ticket", isRight: false, label: "L" }, { text: "Side hustle to pay for it", isRight: true, label: "W" }] }}
+                ];
+                bossName = "The YOLO Friend";
+                bossImage = "🤪";
+                bossQuiz = [
+                    { question: "Your friend says 'Just buy it YOLO'. You:", options: ["Buy it", "Block and Delete"], correctIndex: 1, explanation: "Toxic financial advice. Bye." },
+                    { question: "What is the 50/30/20 rule?", options: ["50% Wants", "50% Needs"], correctIndex: 1, explanation: "Needs come first." }
+                ];
+            }
+
+            // --- WORLD 5: DEBT DUNGEON ---
+            else if (world.id === 'world5' && lvl === 2) {
+                // Level 2: "Credit Cards = Toxic Ex"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'meme', title: "I'll Pay Later", xpReward: 100, coinReward: 50, popularity: "40.2k", content: { imageUrl: "https://i.imgflip.com/2wifvo.jpg", topText: "SWIPING CREDIT CARD", bottomText: "FUTURE ME'S PROBLEM", explanation: "Credit cards = borrowing from your future self at 24% interest. Not worth it." }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'info', title: "The Math Hurts", xpReward: 100, coinReward: 50, popularity: "12.1k", content: { text: "A $1,200 iPhone on a credit card paying minimums will cost you **$3,400** and take 10 years to pay off. 💀" }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'swipe', title: "Good vs Bad Debt", xpReward: 100, coinReward: 50, popularity: "15.5k", content: { cards: [{ text: "Student Loan for Med School", isRight: true, label: "Good Debt" }, { text: "Depop Haul on Klarna", isRight: false, label: "Bad Debt" }] }},
+                ];
+                bossName = "The Credit Demon";
+                bossImage = "👹";
+                bossQuiz = [
+                    { question: "What is a Credit Score?", options: ["Video Game Score", "Adult Reputation Points"], correctIndex: 1, explanation: "Below 600 = Game Over." },
+                    { question: "Banks are your friend.", options: ["True", "False"], correctIndex: 1, explanation: "They want your interest payments." }
+                ];
+            }
+
+            // --- WORLD 7: INVESTING CITY ---
+            else if (world.id === 'world7' && lvl === 1) {
+                // Level 1: "Stocks Explained with Sneakers"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'meme', title: "The Drop", xpReward: 100, coinReward: 50, popularity: "33.3k", content: { imageUrl: "https://i.imgflip.com/1jwhww.jpg", topText: "STOCK MARKET", bottomText: "SUPREME DROP EVERY DAY", explanation: "Stocks are just owning pieces of companies. Like buying a fraction of a Supreme brick." }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'video', title: "Nike Stock", xpReward: 100, coinReward: 50, popularity: "21.2k", content: { videoUrl: "placeholder", text: "Buy 1 share of Nike at 16 → age 30 = $37k if you never sell (hypothetically). Don't just wear the shoes, own the company." }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'drag_drop', title: "Where to put $?", xpReward: 150, coinReward: 50, popularity: "18.8k", content: { items: [{ id: 'i1', text: 'Index Fund', category: 'rich' }, { id: 'i2', text: 'Meme Coin', category: 'gambling' }, { id: 'i3', text: 'Savings Acct', category: 'grandma' }], buckets: ['rich', 'gambling', 'grandma'] }},
+                    { id: `${levelId}_4`, worldId: world.id, levelId, order: 4, type: 'calculator', title: "S&P 500 Magic", xpReward: 150, coinReward: 100, popularity: "29.9k", content: { label: "$100/mo into S&P 500 from age 16...", formula: "auto", resultLabel: "At 65 = $2.4 MILLION" }}
+                ];
+                bossName = "Warren Buffett";
+                bossImage = "🧙‍♂️";
+                bossQuiz = [
+                    { question: "What is Rule #1 of Investing?", options: ["Buy High Sell Low", "Never Lose Money"], correctIndex: 1, explanation: "Rule #2: See Rule #1." },
+                    { question: "Is an Index Fund boring?", options: ["Yes, but profitable", "No, it's exciting"], correctIndex: 0, explanation: "Boring is good. Excitement is for gambling." }
+                ];
+            }
+
+            else if (world.id === 'world7' && lvl === 4) {
+                // Level 4: "Value Investing"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'meme', title: "Be Greedy", xpReward: 100, coinReward: 50, popularity: "17.4k", content: { imageUrl: "https://i.imgflip.com/21uy0f.jpg", topText: "MARKET CRASHES", bottomText: "DISCOUNT SHOPPING TIME", explanation: "Be greedy when others are fearful." }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'info', title: "P/E Ratio", xpReward: 100, coinReward: 50, popularity: "9.5k", content: { text: "It's like paying $100 for a lemonade stand that makes $5/yr vs $20 for one that makes $10/yr. Which one is the deal?" }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'tap_lie', title: "Spot the Value", xpReward: 100, coinReward: 50, popularity: "13.3k", content: { statements: [{ text: "Buy stocks when they are high", isLie: true }, { text: "Buy good companies when they are cheap", isLie: false }] }}
+                ];
+                bossName = "The Bear Market";
+                bossImage = "🐻";
+            }
+
+            // --- WORLD 8: WEALTH EMPIRE ---
+            else if (world.id === 'world8' && lvl === 8) {
+                // Level 8: "Roth IRA"
+                levelLessons = [
+                    { id: `${levelId}_1`, worldId: world.id, levelId, order: 1, type: 'info', title: "Tax Free Millions", xpReward: 200, coinReward: 200, popularity: "55.5k", content: { text: "**Roth IRA** is the cheat code. Government literally gives you tax-free growth." }},
+                    { id: `${levelId}_2`, worldId: world.id, levelId, order: 2, type: 'calculator', title: "Max Out", xpReward: 200, coinReward: 200, popularity: "42.0k", content: { label: "$6,500/year from 16-25 then STOP...", formula: "auto", resultLabel: "Age 59 = $4-8 MILLION" }},
+                    { id: `${levelId}_3`, worldId: world.id, levelId, order: 3, type: 'meme', title: "Too Late?", xpReward: 100, coinReward: 50, popularity: "69.9k", content: { imageUrl: "https://i.imgflip.com/26am.jpg", topText: "ADULTS DISCOVERING ROTH IRA", bottomText: "AT AGE 40", explanation: "Don't be them. Start now." }}
+                ];
+                bossName = "The Retirement Reaper";
+                bossImage = "💀";
+                bossQuiz = [
+                    { question: "When do you pay taxes on a Roth IRA?", options: ["Now", "Later"], correctIndex: 0, explanation: "Pay now, grow forever tax-free." },
+                    { question: "Can you become a millionaire by accident?", options: ["Yes, with time", "No, need lottery"], correctIndex: 0, explanation: "Compound interest + Time = Automatic Wealth." }
+                ];
+            }
+
+            else {
+                // FILLER CONTENT FOR OTHER LEVELS
+                // Ensures the game is playable 
+                for(let k=1; k<=6; k++) {
+                    levelLessons.push(generateFillerLesson(world.id, levelId, k));
+                }
+            }
+
+            levels.push({
                 id: levelId,
                 worldId: world.id,
-                levelNumber: i,
-                title: `${world.title} - Level ${i}`,
-                description: "Master this concept to advance.",
-                bossName: i === 8 ? "The Final Boss" : `Mini-Boss ${i}`,
-                bossImage: i === 8 ? "👹" : "😤",
-                bossQuiz: [
-                    { question: "What is Inflation?", options: ["Prices up", "Prices down"], correctIndex: 0, explanation: "Inflation makes things cost more." },
-                    { question: "Needs vs Wants?", options: ["PS5 is a Need", "Food is a Need"], correctIndex: 1, explanation: "You need food to live." },
-                    { question: "Compound Interest is...", options: ["Bad", "Good"], correctIndex: 1, explanation: "It makes money grow!" }
-                ]
-            };
-            levels.push(levelData);
+                levelNumber: lvl,
+                title: `${world.title} ${lvl}`,
+                description: "Level up your wallet.",
+                bossName: bossName,
+                bossImage: bossImage,
+                bossQuiz: bossQuiz
+            });
 
-            // Generate 4-6 lessons per level
-            const lessonCount = 4 + Math.floor(Math.random() * 2);
-            for (let j = 1; j <= lessonCount; j++) {
-                const lessonId = `${levelId}_les${j}`;
-                
-                // Rotate lesson types
-                const types: Lesson['type'][] = ['swipe', 'drag_drop', 'tap_lie', 'calculator', 'meme', 'video'];
-                const type = types[(j - 1) % types.length];
-
-                let content: any = {};
-                if (type === 'swipe') {
-                    content = { cards: [
-                        { text: "Buying a new iPhone every year", isRight: false, label: "Want" },
-                        { text: "Paying rent", isRight: true, label: "Need" },
-                        { text: "Saving 20% of income", isRight: true, label: "Smart" }
-                    ]};
-                } else if (type === 'drag_drop') {
-                    content = { 
-                        items: [
-                            { id: 'd1', text: 'Rent', category: 'needs' },
-                            { id: 'd2', text: 'Video Games', category: 'wants' },
-                            { id: 'd3', text: 'Emergency Fund', category: 'savings' }
-                        ],
-                        buckets: ['needs', 'wants', 'savings']
-                    };
-                } else if (type === 'tap_lie') {
-                    content = {
-                        statements: [
-                            { text: "Credit cards are free money", isLie: true },
-                            { text: "You have to pay back loans", isLie: false },
-                            { text: "Saving early is good", isLie: false },
-                            { text: "Budgets help you", isLie: false }
-                        ]
-                    };
-                } else if (type === 'calculator') {
-                    content = {
-                        label: "See how **Compound Interest** grows!",
-                        formula: "start * (1.08)^years",
-                        variables: { start: 100, years: 10 },
-                        resultLabel: "Future Value"
-                    };
-                } else if (type === 'meme') {
-                    content = {
-                        imageUrl: "https://i.imgflip.com/1ur9b0.jpg",
-                        topText: "WHEN YOU CHECK YOUR BANK ACCOUNT",
-                        bottomText: "AND IT'S NOT $0",
-                        explanation: "Budgeting prevents the sad feels."
-                    };
-                } else if (type === 'video') {
-                    content = {
-                        text: "Watch out for **Inflation**! It eats your money like a silent monster. Always invest to beat it.",
-                        videoUrl: "placeholder"
-                    };
-                }
-
-                lessons.push({
-                    id: lessonId,
-                    worldId: world.id,
-                    levelId: levelId,
-                    order: j,
-                    type: type,
-                    title: `Lesson ${j}: ${type.toUpperCase()}`,
-                    content: content,
-                    xpReward: 100 + (j * 10),
-                    coinReward: 50
-                });
-            }
+            lessons.push(...levelLessons);
         }
     });
 
-    // SAVE TO DB (Mock or Real)
-    const isMock = true; // For this environment, we default to mock to ensure it works instantly without auth config
-    
+    const isMock = true;
     if (isMock) {
         saveMockContent({ levels, lessons });
-        console.log(`[SEED] Seeded ${levels.length} levels and ${lessons.length} lessons to Mock DB.`);
-        alert("Content Seeded Successfully (Mock Mode)");
-    } else {
-        // Firestore Batch Write (Chunked)
-        // Implementation skipped for brevity in this specific prompt context, 
-        // but would involve iterating 500 items at a time into batch.set()
-        console.log("Firestore seeding would happen here.");
+        console.log(`[SEED] Seeded ${levels.length} levels and ${lessons.length} lessons.`);
+        alert("GEN-Z CONTENT LOADED 🔥");
     }
 };
 

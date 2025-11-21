@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -5,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { XMarkIcon, HeartIcon, StarIcon, PlayIcon, CheckCircleIcon } from '@heroicons/react/24/solid';
-import { SparklesIcon, HandThumbUpIcon, HandThumbDownIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, HandThumbUpIcon, HandThumbDownIcon, FireIcon } from '@heroicons/react/24/outline';
 import { GameLevel, Lesson, KNOWLEDGE_GEMS } from '../services/content';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
@@ -30,6 +31,9 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     // Knowledge Gem
     const [activeGem, setActiveGem] = useState<string | null>(null);
 
+    // Social
+    const [isLiked, setIsLiked] = useState(false);
+
     useEffect(() => {
         const loadContent = async () => {
             setIsLoading(true);
@@ -48,6 +52,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     }, [level.id]);
 
     const currentLesson = lessons[currentIndex];
+
+    useEffect(() => {
+        setIsLiked(false); // Reset like state on new lesson
+    }, [currentIndex]);
 
     const handleLessonComplete = (xp: number, coins: number) => {
         playSound('success');
@@ -143,7 +151,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         else if (offset.x < -100) handleSwipe('left');
                     }}
                 >
-                    <div className="text-black font-black text-3xl mb-4">{currentCard.text}</div>
+                    <div className="text-black font-black text-3xl mb-4 leading-tight">{currentCard.text}</div>
                     <div className="text-gray-500 font-bold uppercase tracking-widest">{currentCard.label}</div>
                 </motion.div>
                 <div className="flex gap-8 mt-8">
@@ -266,11 +274,11 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     };
 
     const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: () => void }) => {
-        const [val, setVal] = useState(50);
+        const [val, setVal] = useState(100);
         
         return (
             <div className="flex flex-col h-full p-6 justify-center items-center text-center">
-                <h3 className="font-game text-2xl text-white mb-2">Compound Interest Magic ✨</h3>
+                <h3 className="font-game text-2xl text-white mb-2">{lesson.title}</h3>
                 <p className="text-gray-300 mb-8">{lesson.content.label}</p>
                 
                 <div className="text-6xl font-black text-neon-green mb-8 font-mono">
@@ -279,12 +287,12 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
                 <input 
                     type="range" 
-                    min="10" max="500" 
+                    min="50" max="1000" step="50"
                     value={val} 
                     onChange={(e) => setVal(Number(e.target.value))}
                     className="w-full h-4 bg-gray-700 rounded-lg appearance-none cursor-pointer mb-4"
                 />
-                <p className="text-white font-bold">Investing ${val}/month</p>
+                <p className="text-white font-bold">Investing ${val}/month from age 16</p>
 
                 <button onClick={onNext} className="mt-12 px-8 py-4 bg-neon-pink text-white font-game text-xl rounded-full btn-3d">
                     MIND BLOWN 🤯
@@ -305,8 +313,8 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                     className="relative w-full max-w-md aspect-square bg-black border-4 border-white rounded-xl overflow-hidden mb-6 cursor-pointer"
                 >
                     <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-80" />
-                    <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black">{lesson.content.topText}</div>
-                    <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black">{lesson.content.bottomText}</div>
+                    <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.topText}</div>
+                    <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.bottomText}</div>
                     
                     {!revealed && (
                         <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
@@ -362,11 +370,15 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             <div className="flex flex-col h-full p-6 pt-12 items-center">
                 <div className="w-full max-w-md aspect-video bg-black rounded-2xl mb-8 flex items-center justify-center border border-white/20 shadow-2xl relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-black opacity-50"></div>
-                    <PlayIcon className="w-16 h-16 text-white/50" />
+                    {lesson.content.videoUrl && lesson.content.videoUrl !== 'placeholder' ? (
+                        <div className="text-white">Video Player Here</div> 
+                    ) : (
+                        <PlayIcon className="w-16 h-16 text-white/50" />
+                    )}
                     {/* Video would go here */}
                 </div>
 
-                <div className="bg-white/5 p-6 rounded-3xl border border-white/10 mb-8">
+                <div className="bg-white/5 p-6 rounded-3xl border border-white/10 mb-8 w-full">
                     {renderText()}
                 </div>
 
@@ -438,6 +450,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         {currentLesson.type === 'calculator' && <CalculatorView lesson={currentLesson} onNext={() => handleLessonComplete(100, 50)} />}
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={() => handleLessonComplete(50, 20)} />}
                         {(currentLesson.type === 'video' || currentLesson.type === 'info') && <ExplainerView lesson={currentLesson} onNext={() => handleLessonComplete(100, 50)} />}
+                    
+                        {/* VIRAL SOCIAL BAR */}
+                        <div className="absolute bottom-4 right-4 flex items-center gap-4">
+                             <div className="bg-black/40 px-3 py-1 rounded-full text-xs font-bold text-gray-400 flex items-center gap-1 border border-white/10">
+                                 <span>🔥</span>
+                                 <span>Reacted by {currentLesson.popularity || '12.4k'} teens</span>
+                             </div>
+                             <button 
+                                onClick={() => { playSound('pop'); setIsLiked(!isLiked); }}
+                                className={`p-3 rounded-full border-2 transition-all ${isLiked ? 'bg-neon-pink border-neon-pink text-white' : 'bg-black/40 border-white/20 text-gray-400 hover:border-neon-pink hover:text-neon-pink'}`}
+                             >
+                                 <HandThumbUpIcon className="w-6 h-6" />
+                             </button>
+                        </div>
                     </motion.div>
                 )}
 

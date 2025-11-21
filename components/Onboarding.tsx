@@ -31,6 +31,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   
   // User State
   const [nickname, setNickname] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [avatarConfig, setAvatarConfig] = useState({
     emoji: '😎',
     outfit: '👕',
@@ -69,15 +70,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setNickname(random);
   };
 
-  const triggerConfetti = () => {
-    (window as any).confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.6 },
-        colors: ['#00FF88', '#00C2FF', '#FF00B8', '#FFFF00']
-    });
-  };
-
   const handleAuthAction = async (method: 'google' | 'guest') => {
     console.log("Handle Auth Action Triggered:", method);
     if (isSigningUp) return;
@@ -90,30 +82,19 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         nickname: nickname || "Player 1",
         avatar: avatarConfig,
         path: selectedPath || "balanced",
+        referralCodeInput: referralCode || null, // Pass code to DB creation
         joinedAt: new Date().toISOString(),
-        xp: 500, // First time bonus
+        xp: referralCode ? 1500 : 500, // Bonus XP for referral
         streak: 1,
-        authMethod: method // Flag for App.tsx
+        authMethod: method 
     };
 
     try {
-        // Trigger callback in App.tsx which handles the actual Firebase Popup
         await onComplete(userData);
-        // If we are here, success - but typically onComplete will trigger unmount
     } catch (e: any) {
         console.error("Auth failed in Onboarding:", e);
         setIsSigningUp(false);
-        
-        let msg = "Sign in failed. Please try again.";
-        if (e.code === 'auth/operation-not-allowed') {
-             msg = "Guest login is disabled in the system configuration. Please use Google.";
-        } else if (e.code === 'auth/popup-closed-by-user') {
-             msg = "Sign in cancelled.";
-        } else if (e.message) {
-             msg = `Error: ${e.message}`;
-        }
-        
-        alert(msg);
+        alert("Sign in failed. Please try again.");
     }
   };
 
@@ -126,7 +107,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 <div className="swiper-slide flex flex-col items-center justify-center p-6 text-center relative">
                      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                      
-                     {/* Animation Placeholder */}
                      <div className="relative w-full max-w-xs aspect-square mb-8">
                         <div className="absolute inset-0 bg-neon-green/20 blur-3xl rounded-full animate-pulse"></div>
                         <div className="relative z-10 text-9xl animate-float">💸</div>
@@ -147,24 +127,41 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                      </div>
                 </div>
 
-                {/* Slide 2: Nickname */}
+                {/* Slide 2: Nickname & Referral */}
                 <div className="swiper-slide flex flex-col items-center justify-center p-6 relative">
-                    <h2 className="font-game text-3xl mb-8 text-center">What do the homies call you?</h2>
+                    <h2 className="font-game text-3xl mb-4 text-center">Who are you?</h2>
                     
-                    <div className="w-full max-w-xs space-y-4">
-                        <input 
-                            type="text" 
-                            value={nickname}
-                            onChange={(e) => setNickname(e.target.value)}
-                            placeholder="Type ur name..."
-                            className="w-full p-4 rounded-2xl bg-white/10 border-2 border-white/20 text-center text-2xl font-bold placeholder-white/30 focus:outline-none focus:border-neon-blue focus:bg-white/20 transition-all"
-                        />
-                        <button 
-                            onClick={generateNickname}
-                            className="text-sm text-neon-yellow font-bold uppercase tracking-widest underline hover:text-white"
-                        >
-                            Give me a cool name
-                        </button>
+                    <div className="w-full max-w-xs space-y-6">
+                        <div>
+                             <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Nickname</label>
+                             <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={nickname}
+                                    onChange={(e) => setNickname(e.target.value)}
+                                    placeholder="Type ur name..."
+                                    className="w-full p-4 rounded-2xl bg-white/10 border-2 border-white/20 text-center text-2xl font-bold placeholder-white/30 focus:outline-none focus:border-neon-blue focus:bg-white/20 transition-all"
+                                />
+                                <button 
+                                    onClick={generateNickname}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xl"
+                                >
+                                    🎲
+                                </button>
+                             </div>
+                        </div>
+
+                        <div>
+                             <label className="text-xs font-bold text-gray-400 uppercase mb-1 block">Referral Code (Optional)</label>
+                             <input 
+                                type="text" 
+                                value={referralCode}
+                                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                                placeholder="CASHKING69"
+                                className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-center text-lg font-mono font-bold placeholder-white/20 focus:outline-none focus:border-neon-green transition-all"
+                            />
+                            {referralCode.length > 3 && <div className="text-center text-xs text-neon-green mt-1 font-bold">Code Applied! +1000 XP Bonus</div>}
+                        </div>
                     </div>
 
                     <button 
@@ -287,7 +284,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                      </div>
                 </div>
             </div>
-            {/* Pagination */}
             <div className="swiper-pagination !right-4 !left-auto !top-1/2 !-translate-y-1/2 flex flex-col gap-2"></div>
         </div>
     </div>
