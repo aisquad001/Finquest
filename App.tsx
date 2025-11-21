@@ -150,14 +150,17 @@ const App: React.FC = () => {
       try {
           let firebaseUser;
           
-          // Explicitly check for Guest FIRST
+          // Strict check for Auth Method
           if (data.authMethod === 'guest') {
               console.log("Attempting Guest Login...");
               firebaseUser = await signInAsGuest();
-          } else {
+          } else if (data.authMethod === 'google') {
               // Default to Google if not guest
               console.log("Attempting Google Login...");
               firebaseUser = await signInWithGoogle();
+          } else {
+              console.error("Unknown auth method:", data.authMethod);
+              return;
           }
 
           if (firebaseUser) {

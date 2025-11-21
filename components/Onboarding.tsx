@@ -245,9 +245,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
                      <div className="w-full max-w-xs space-y-3">
                         <button 
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('google'); }}
                             disabled={isSigningUp}
-                            className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d"
+                            className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d cursor-pointer z-50 relative"
                         >
                             {isSigningUp ? 'Signing In...' : (
                                 <>
@@ -265,8 +266,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1a0b2e] px-2 text-gray-500">or</span></div>
                         </div>
                         <button 
+                            type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('guest'); }}
-                            className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5"
+                            className="w-full py-3 bg-transparent border-2 border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5 cursor-pointer z-50 relative"
                         >
                             Play as Guest (No Save)
                         </button>
