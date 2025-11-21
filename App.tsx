@@ -165,12 +165,18 @@ const App: React.FC = () => {
 
           if (firebaseUser) {
               console.log("User authenticated:", firebaseUser.uid);
-              // Create Doc - Store will pick it up automatically via sync
-              await createUserDoc(firebaseUser.uid, { 
-                  ...data, 
-                  email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` // Robust fallback
-              });
-              setShowOnboarding(false);
+              
+              try {
+                  // Create Doc - Store will pick it up automatically via sync
+                  await createUserDoc(firebaseUser.uid, { 
+                      ...data, 
+                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` // Robust fallback
+                  });
+                  setShowOnboarding(false);
+              } catch (dbError) {
+                  console.error("DB Profile Creation Failed:", dbError);
+                  throw new Error("Authentication successful, but profile creation failed. Please try again.");
+              }
           } else {
               throw new Error("Authentication failed - no user returned");
           }

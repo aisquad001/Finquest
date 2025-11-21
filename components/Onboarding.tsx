@@ -106,12 +106,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         
         let msg = "Sign in failed. Please try again.";
         if (e.code === 'auth/operation-not-allowed') {
-             msg = "Guest login is disabled. Please use Google.";
+             msg = "Guest login is disabled in the system configuration. Please use Google.";
         } else if (e.code === 'auth/popup-closed-by-user') {
              msg = "Sign in cancelled.";
         } else if (e.message) {
-            // Show part of error for debugging if needed, or generic
-            // msg = `Error: ${e.message}`;
+             msg = `Error: ${e.message}`;
         }
         
         alert(msg);
