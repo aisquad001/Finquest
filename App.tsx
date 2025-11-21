@@ -16,22 +16,17 @@ import { VisualEffects } from './components/VisualEffects';
 import { playSound } from './services/audio';
 import { trackEvent } from './services/analytics';
 import { 
-    UserState, 
-    ShopItem,
     WORLDS_METADATA,
     WorldData,
-    Portfolio,
-    createInitialUser
 } from './services/gamification';
 import { requestNotificationPermission, scheduleDemoNotifications } from './services/notifications';
-import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
 import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
 import { auth, signInWithGoogle, signInAsGuest } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { createUserDoc } from './services/db';
+import { createUserDoc, saveLevelProgress } from './services/db';
 
 const App: React.FC = () => {
   // Global State from Zustand
@@ -49,7 +44,7 @@ const App: React.FC = () => {
       isAdminRoute ? 'admin' : isPortalRoute ? 'portal' : 'dashboard'
   );
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
-  const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
+  const [activeLevel, setActiveLevel] = useState<any | null>(null);
 
   // AUTH & SYNC LISTENER
   useEffect(() => {
@@ -107,11 +102,7 @@ const App: React.FC = () => {
       }
   };
 
-  const handleSelectLevel = (levelId: string) => {
-      if (!activeWorld) return;
-      const levels = GET_WORLD_LEVELS(activeWorld.id);
-      const level = levels.find(l => l.id === levelId);
-      
+  const handleSelectLevel = (level: any) => {
       if (level) {
           setActiveLevel(level);
           setView('lesson');
@@ -129,16 +120,18 @@ const App: React.FC = () => {
       setView('map');
   };
 
-  const handleLevelComplete = (xp: number, coins: number) => {
-      if (!user || !user.uid) return;
+  const handleLevelComplete = async (xp: number, coins: number) => {
+      if (!user || !user.uid || !activeWorld || !activeLevel) return;
       
       const finalXp = user.subscriptionStatus === 'pro' ? xp * 2 : xp;
       
-      // Call Atomic Logic
+      // 1. Update Atomic Stats
       addXP(user.uid, finalXp, user.level);
       addCoins(user.uid, coins, 'Level Complete');
-      
-      // Note: user object updates automatically via store sync
+
+      // 2. Save Detailed Progress (DB)
+      await saveLevelProgress(user.uid, activeWorld.id, activeLevel.id, finalXp, true);
+
       trackEvent('level_complete', { levelId: activeLevel?.id, xpEarned: finalXp });
       handleCloseLesson();
   };
@@ -150,7 +143,7 @@ const App: React.FC = () => {
       }
   };
 
-  const handleBuyItem = async (item: ShopItem) => {
+  const handleBuyItem = async (item: any) => {
       if (!user?.uid) return;
       await purchaseItem(user.uid, item.id, item.cost, user.coins);
       trackEvent('purchase_item', { itemId: item.id, cost: item.cost });
@@ -161,47 +154,35 @@ const App: React.FC = () => {
       try {
           let firebaseUser;
           
-          // Strict check for Auth Method
           if (data.authMethod === 'guest') {
-              console.log("Attempting Guest Login...");
               firebaseUser = await signInAsGuest();
           } else if (data.authMethod === 'google') {
-              // Default to Google if not guest
-              console.log("Attempting Google Login...");
               firebaseUser = await signInWithGoogle();
           } else {
-              console.error("Unknown auth method:", data.authMethod);
               throw new Error("Unknown authentication method");
           }
 
           if (firebaseUser) {
-              console.log("User authenticated:", firebaseUser.uid);
-              
               try {
-                  // Create Doc - Store will pick it up automatically via sync
                   await createUserDoc(firebaseUser.uid, { 
                       ...data, 
                       email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` 
                   });
 
-                  // IMPORTANT: If this is a mock user, we must manually store session and trigger sync
-                  // because onAuthStateChanged won't fire.
                   if (firebaseUser.uid.startsWith('mock_')) {
                       localStorage.setItem('finquest_mock_session_uid', firebaseUser.uid);
                       syncUser(firebaseUser.uid);
                   }
-
                   setShowOnboarding(false);
               } catch (dbError) {
                   console.error("DB Profile Creation Failed:", dbError);
-                  throw new Error("Authentication successful, but profile creation failed. Please try again.");
+                  throw new Error("Profile creation failed.");
               }
           } else {
-              throw new Error("Authentication failed - no user returned");
+              throw new Error("Authentication failed");
           }
       } catch (error: any) {
           console.error("Signup Failed:", error);
-          // Re-throw so Onboarding component handles the UI state (resetting buttons)
           throw error;
       }
   };
@@ -284,7 +265,7 @@ const App: React.FC = () => {
           {view === 'zoo' && user.portfolio && (
               <WallStreetZoo 
                   portfolio={user.portfolio}
-                  onUpdatePortfolio={() => {}} // Handled via internal transactions in future update
+                  onUpdatePortfolio={() => {}} 
                   onClose={() => setView('dashboard')}
               />
           )}
@@ -294,7 +275,7 @@ const App: React.FC = () => {
       {showPremiumModal && (
           <PremiumModal 
              onClose={() => setShowPremiumModal(false)} 
-             onUpgrade={() => {}} // Store updates automatically
+             onUpgrade={() => {}} 
           />
       )}
 

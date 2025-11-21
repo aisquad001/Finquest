@@ -2,22 +2,32 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeftIcon, LockClosedIcon, StarIcon } from '@heroicons/react/24/solid';
-import { GET_WORLD_LEVELS } from '../services/content';
-import { WorldData } from '../services/gamification';
+import { fetchLevelsForWorld } from '../services/db';
+import { WorldData, LevelData } from '../services/gamification';
 import { playSound } from '../services/audio';
 
 interface WorldLevelMapProps {
     world: WorldData;
     completedLevels: string[]; // list of level IDs
     onClose: () => void;
-    onSelectLevel: (levelId: string) => void;
+    onSelectLevel: (level: LevelData) => void;
 }
 
 export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLevels, onClose, onSelectLevel }) => {
-    const levels = GET_WORLD_LEVELS(world.id);
+    const [levels, setLevels] = useState<LevelData[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadLevels = async () => {
+            const data = await fetchLevelsForWorld(world.id);
+            setLevels(data);
+            setLoading(false);
+        };
+        loadLevels();
+    }, [world.id]);
 
     return (
         <div className="fixed inset-0 z-40 bg-[#1a0b2e] flex flex-col overflow-y-auto overflow-x-hidden">
@@ -35,26 +45,37 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                     <div className="h-1 w-24 bg-gray-700 rounded-full overflow-hidden mt-1">
                         <div 
                             className={`h-full ${world.color}`} 
-                            style={{ width: `${(levels.filter(l => completedLevels.includes(l.id)).length / levels.length) * 100}%` }}
+                            style={{ width: levels.length ? `${(levels.filter(l => completedLevels.includes(l.id)).length / levels.length) * 100}%` : '0%' }}
                         ></div>
                     </div>
                 </div>
             </div>
 
             {/* Map Path */}
-            <div className="flex-1 relative p-8 pb-32 flex flex-col items-center gap-12">
+            <div className="flex-1 relative p-8 pb-32 flex flex-col items-center gap-12 min-h-[80vh]">
                 
+                {loading && <div className="text-white animate-pulse mt-20">Drawing Map...</div>}
+                
+                {!loading && levels.length === 0 && (
+                    <div className="text-center mt-20 text-gray-500">
+                        <div>No levels found.</div>
+                        <div className="text-xs mt-2">Use Admin Dashboard to Seed Content</div>
+                    </div>
+                )}
+
                 {/* S-Curve Path SVG Line */}
-                <svg className="absolute top-20 left-0 w-full h-full pointer-events-none opacity-20" style={{ zIndex: 0 }}>
-                     <path 
-                        d="M 50% 50 Q 90% 200 50% 350 T 50% 650" 
-                        fill="none" 
-                        stroke="white" 
-                        strokeWidth="8" 
-                        strokeDasharray="20 20" 
-                        strokeLinecap="round"
-                     />
-                </svg>
+                {!loading && levels.length > 0 && (
+                     <svg className="absolute top-20 left-0 w-full h-full pointer-events-none opacity-20" style={{ zIndex: 0 }}>
+                        <path 
+                            d={`M 50% 50 ${levels.map((_, i) => `Q ${i % 2 === 0 ? '90%' : '10%'} ${200 + i * 150} 50% ${350 + i * 150}`).join(' ')}`}
+                            fill="none" 
+                            stroke="white" 
+                            strokeWidth="8" 
+                            strokeDasharray="20 20" 
+                            strokeLinecap="round"
+                        />
+                     </svg>
+                )}
 
                 {levels.map((level, index) => {
                     const isLocked = index > 0 && !completedLevels.includes(levels[index - 1].id);
@@ -67,7 +88,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ delay: index * 0.1 }}
-                            onClick={() => !isLocked && onSelectLevel(level.id)}
+                            onClick={() => !isLocked && onSelectLevel(level)}
                             disabled={isLocked}
                             className={`
                                 relative z-10 w-24 h-24 rounded-[2rem] flex items-center justify-center border-4 shadow-2xl transition-transform
@@ -89,7 +110,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                             )}
 
                             {/* Level Label */}
-                            <div className={`absolute -bottom-10 w-32 text-center text-xs font-bold px-2 py-1 rounded-lg ${isCurrent ? 'bg-white text-black' : 'text-gray-400'}`}>
+                            <div className={`absolute -bottom-10 w-40 text-center text-xs font-bold px-2 py-1 rounded-lg ${isCurrent ? 'bg-white text-black' : 'text-gray-400'}`}>
                                 {level.title}
                             </div>
 
@@ -104,7 +125,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                 })}
 
                 {/* Boss Castle at the end (Visual Only for now) */}
-                <div className="mt-8 text-6xl animate-bounce">🏰</div>
+                {!loading && levels.length > 0 && <div className="mt-8 text-6xl animate-bounce">🏰</div>}
             </div>
         </div>
     );

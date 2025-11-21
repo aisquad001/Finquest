@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -13,10 +12,13 @@ import {
     FunnelIcon,
     ExclamationTriangleIcon,
     CheckCircleIcon,
-    BoltIcon
+    BoltIcon,
+    CloudArrowUpIcon
 } from '@heroicons/react/24/solid';
 import { getAnalyticsSnapshot, getRecentEvents } from '../services/analytics';
 import { MOCK_USERS, banUser, giftCoins, getContentStats } from '../services/admin';
+import { seedGameData } from '../services/db';
+import { playSound } from '../services/audio';
 
 interface AdminProps {
     onExit: () => void;
@@ -26,6 +28,17 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'content' | 'economy'>('overview');
     const stats = getAnalyticsSnapshot();
     const content = getContentStats();
+    const [isSeeding, setIsSeeding] = useState(false);
+
+    const handleSeed = async () => {
+        if (window.confirm("This will overwrite/fill the database with World 1-3 data. Continue?")) {
+            setIsSeeding(true);
+            playSound('pop');
+            await seedGameData();
+            setIsSeeding(false);
+            playSound('levelup');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-900 text-white font-sans flex">
@@ -227,11 +240,23 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
                                 </div>
                             </div>
                             
-                            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 flex flex-col justify-center items-center text-center dashed-border">
-                                <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mb-4 text-2xl">➕</div>
-                                <h3 className="font-bold text-lg">Add New Micro-Lesson</h3>
-                                <p className="text-slate-400 text-sm mb-4">Drag & Drop JSON file or use Builder</p>
-                                <button className="bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Open Builder</button>
+                            <div className="flex flex-col gap-6">
+                                <button 
+                                    onClick={handleSeed}
+                                    disabled={isSeeding}
+                                    className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl border border-indigo-400 p-6 flex flex-col justify-center items-center text-center transition-all active:scale-95"
+                                >
+                                    <CloudArrowUpIcon className="w-12 h-12 mb-2" />
+                                    <h3 className="font-bold text-lg">{isSeeding ? 'Seeding DB...' : 'Seed Game Content'}</h3>
+                                    <p className="text-indigo-200 text-sm">Populate Worlds 1-3 (Database Init)</p>
+                                </button>
+
+                                <div className="bg-slate-800 rounded-xl border border-slate-700 p-6 flex flex-col justify-center items-center text-center dashed-border">
+                                    <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mb-4 text-2xl">➕</div>
+                                    <h3 className="font-bold text-lg">Add New Micro-Lesson</h3>
+                                    <p className="text-slate-400 text-sm mb-4">Drag & Drop JSON file or use Builder</p>
+                                    <button className="bg-blue-600 text-white font-bold py-2 px-6 rounded-full">Open Builder</button>
+                                </div>
                             </div>
                         </div>
                     )}

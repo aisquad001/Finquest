@@ -27,6 +27,7 @@ export interface UserState {
     // Monetization
     subscriptionStatus: 'free' | 'pro';
     referralCount: number;
+    proExpiresAt?: string | null;
 
     // Streak 2.0
     streak: number;
@@ -38,16 +39,29 @@ export interface UserState {
     lastChallengeDate: string;
     lastDailyChestClaim?: string; // ISO Date string YYYY-MM-DD
 
-    // Progression
-    completedLevels: string[]; // Format: "worldId_levelId"
-    masteredWorlds: string[]; // Format: "worldId"
+    // Progression (Legacy)
+    completedLevels: string[]; 
+    masteredWorlds: string[]; 
+    
+    // Progression (New System)
+    progress: Record<string, WorldProgress>; // worldId -> data
+
     inventory: string[];
     joinedAt: string;
-    knowledgeGems: string[]; // Collected gems
+    knowledgeGems: string[]; // Collected gems IDs
     
     // Features
     portfolio: Portfolio; // Wall Street Zoo Data
     friends: string[]; // Friend IDs
+    
+    lastLoginAt?: string;
+    createdAt?: string;
+}
+
+export interface WorldProgress {
+    level: number; // Highest level unlocked/completed
+    lessonsCompleted: Record<string, boolean>; // lessonId -> true
+    score: number; // Total score for world
 }
 
 export interface Portfolio {
@@ -110,6 +124,49 @@ export interface LeaderboardEntry {
     country?: string;
 }
 
+// --- Content Types for Firestore ---
+
+export type LessonType = 'swipe' | 'drag_drop' | 'tap_lie' | 'calculator' | 'meme' | 'video' | 'info';
+
+export interface Lesson {
+    id: string;
+    worldId: string;
+    levelId: string;
+    order: number;
+    type: LessonType;
+    title: string;
+    content: any; // Flexible payload based on type
+    xpReward: number;
+    coinReward: number;
+}
+
+export interface LevelData {
+    id: string;
+    worldId: string;
+    levelNumber: number;
+    title: string;
+    description: string;
+    bossName: string;
+    bossImage: string; // Emoji or URL
+    bossQuiz: BossQuestion[];
+}
+
+export interface BossQuestion {
+    question: string;
+    options: string[];
+    correctIndex: number;
+    explanation: string;
+}
+
+export interface WorldData {
+    id: string;
+    title: string;
+    icon: any;
+    color: string;
+    description: string;
+    unlockLevel: number; // Legacy unlock check
+}
+
 export const SEASONAL_EVENTS = {
     active: true,
     id: 'black_friday_2025',
@@ -120,25 +177,15 @@ export const SEASONAL_EVENTS = {
     icon: '🛍️'
 };
 
-// --- World Data Structure ---
-export interface WorldData {
-    id: string;
-    title: string;
-    icon: any;
-    color: string;
-    description: string;
-    unlockLevel: number;
-}
-
 export const WORLDS_METADATA: WorldData[] = [
-    { id: 'basics', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "History of money and inflation explained simply.", unlockLevel: 1 },
-    { id: 'budget', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "Budgeting with 50/30/20 rule.", unlockLevel: 2 },
-    { id: 'savings', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "Compound interest and emergency funds.", unlockLevel: 3 },
-    { id: 'banking', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "Checking, savings, and safety.", unlockLevel: 5 },
-    { id: 'debt', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Good vs bad debt and credit scores.", unlockLevel: 8 },
-    { id: 'income', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes, gross vs net, side hustles.", unlockLevel: 12 },
-    { id: 'investing', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Stocks, ETFs, and risk.", unlockLevel: 15 },
-    { id: 'wealth', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net worth and long term wealth.", unlockLevel: 20 }
+    { id: 'world1', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "History of money and inflation explained simply.", unlockLevel: 1 },
+    { id: 'world2', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "Budgeting with 50/30/20 rule.", unlockLevel: 2 },
+    { id: 'world3', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "Compound interest and emergency funds.", unlockLevel: 3 },
+    { id: 'world4', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "Checking, savings, and safety.", unlockLevel: 5 },
+    { id: 'world5', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Good vs bad debt and credit scores.", unlockLevel: 8 },
+    { id: 'world6', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes, gross vs net, side hustles.", unlockLevel: 12 },
+    { id: 'world7', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Stocks, ETFs, and risk.", unlockLevel: 15 },
+    { id: 'world8', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net worth and long term wealth.", unlockLevel: 20 }
 ];
 
 // --- STOCK UNIVERSE ---
@@ -179,8 +226,6 @@ export const SHOP_ITEMS: ShopItem[] = [
 // --- Logic Helpers ---
 
 export const getXpForNextLevel = (level: number) => {
-    // Formula: Level = floor(sqrt(xp / 100)) + 1
-    // Inverse: XP = 100 * (Level - 1)^2
     return 100 * Math.pow(level, 2);
 };
 
@@ -278,6 +323,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
 
         completedLevels: [],
         masteredWorlds: [],
+        progress: {}, // New Progress Tracking
         inventory: [],
         knowledgeGems: [],
         joinedAt: new Date().toISOString(),
