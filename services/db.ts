@@ -14,7 +14,7 @@ import {
 import { UserState, checkStreak, createInitialUser } from './gamification';
 
 // Helper to convert Firestore Timestamps to ISO strings for the app
-const convertDocToUser = (data: any): UserState => {
+export const convertDocToUser = (data: any): UserState => {
     const user = { ...data };
     
     // Convert known Timestamp fields to strings

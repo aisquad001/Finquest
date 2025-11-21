@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -31,12 +30,13 @@ export interface UserState {
 
     // Streak 2.0
     streak: number;
-    streakLastDate: string; // ISO Date string of last activity
+    streakLastDate: string; // ISO Date string YYYY-MM-DD
     streakFreezes: number; // Mercy rule items
     
-    // Challenges 2.0
+    // Challenges & Rewards
     dailyChallenges: Challenge[];
     lastChallengeDate: string;
+    lastDailyChestClaim?: string; // ISO Date string YYYY-MM-DD
 
     // Progression
     completedLevels: string[]; // Format: "worldId_levelId"
@@ -176,13 +176,14 @@ export const SHOP_ITEMS: ShopItem[] = [
     { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 1500, category: 'outfit', description: 'Dress for the job you want.' },
 ];
 
-// --- Logic ---
+// --- Logic Helpers ---
 
 export const getXpForNextLevel = (level: number) => {
+    // Formula: Level = floor(sqrt(xp / 100)) + 1
+    // Inverse: XP = 100 * (Level - 1)^2
     return 100 * Math.pow(level, 2);
 };
 
-// CHALLENGE ENGINE 2.0
 export const generateDailyChallenges = (): Challenge[] => [
     { 
         id: `daily_easy_${Date.now()}`, 
@@ -219,53 +220,6 @@ export const generateDailyChallenges = (): Challenge[] => [
     },
 ];
 
-// STREAK LOGIC 2.0
-export const checkStreak = (user: UserState): { updatedUser: UserState, savedByFreeze: boolean, broken: boolean } => {
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Ensure valid date string, fallback if Firestore timestamp issue
-    const lastActiveDate = new Date(user.streakLastDate || new Date());
-    const lastActive = lastActiveDate.toISOString().split('T')[0];
-    
-    // Already active today
-    if (today === lastActive) {
-        return { updatedUser: user, savedByFreeze: false, broken: false };
-    }
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    // Streak continues
-    if (lastActive === yesterdayStr) {
-        return { 
-            updatedUser: { ...user, streak: user.streak + 1, streakLastDate: new Date().toISOString() }, 
-            savedByFreeze: false, 
-            broken: false 
-        };
-    }
-
-    // Streak Broken - Check Mercy
-    if (user.streakFreezes > 0) {
-        return {
-            updatedUser: { 
-                ...user, 
-                streakFreezes: user.streakFreezes - 1, 
-                streakLastDate: new Date().toISOString() // Keep streak alive
-            },
-            savedByFreeze: true,
-            broken: false
-        };
-    }
-
-    // Streak Lost
-    return {
-        updatedUser: { ...user, streak: 1, streakLastDate: new Date().toISOString() },
-        savedByFreeze: false, 
-        broken: true
-    };
-};
-
 export const getMockLeaderboard = (): LeaderboardEntry[] => [
     { rank: 1, name: "Elon Tusk", xp: 99000, avatar: "🚀", country: "Mars" },
     { rank: 2, name: "Jeff Bazookas", xp: 85000, avatar: "📦", country: "USA" },
@@ -274,16 +228,12 @@ export const getMockLeaderboard = (): LeaderboardEntry[] => [
     { rank: 5, name: "Satoshi", xp: 60000, avatar: "🤐", country: "JP" },
 ];
 
-// --- Helpers for Zoo ---
-
 export const generateStockHistory = (stock: Stock, days: number = 30) => {
     const data = [];
     let currentPrice = stock.price;
-    // Reverse engineer history based on current price
     for (let i = 0; i < days; i++) {
         data.unshift(currentPrice);
-        // Random walk backwards
-        const volatility = stock.risk * 0.01; // Higher risk = more volatility
+        const volatility = stock.risk * 0.01; 
         const change = 1 + (Math.random() * volatility * 2 - volatility);
         currentPrice = currentPrice / change;
     }
@@ -303,28 +253,28 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
         }
     });
     
-    // Base case if mostly cash
     if (totalValue === portfolio.cash) return 1;
-
     return Math.round(weightedRisk / (totalValue - portfolio.cash));
 };
 
 export const createInitialUser = (onboardingData: any): UserState => {
+    const today = new Date().toISOString().split('T')[0];
     return {
         nickname: onboardingData.nickname,
         avatar: onboardingData.avatar,
-        level: 1, // Reset to 1 for real accounts
-        xp: onboardingData.xp || 500, // Bonus included
+        level: 1, 
+        xp: onboardingData.xp || 500, 
         coins: 500,
         subscriptionStatus: 'free',
         referralCount: 0,
         
         streak: 1,
-        streakLastDate: new Date().toISOString(),
-        streakFreezes: 1, // Start with one mercy
+        streakLastDate: today,
+        streakFreezes: 1, 
 
         dailyChallenges: generateDailyChallenges(),
-        lastChallengeDate: new Date().toISOString(),
+        lastChallengeDate: today,
+        lastDailyChestClaim: '',
 
         completedLevels: [],
         masteredWorlds: [],
@@ -339,4 +289,38 @@ export const createInitialUser = (onboardingData: any): UserState => {
         },
         friends: []
     };
+};
+
+export const checkStreak = (user: UserState): { updatedUser: UserState; savedByFreeze: boolean; broken: boolean } => {
+    const today = new Date().toLocaleDateString('en-CA');
+    const lastActive = user.streakLastDate;
+    
+    if (lastActive === today) {
+        return { updatedUser: user, savedByFreeze: false, broken: false };
+    }
+
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    const yesterday = d.toLocaleDateString('en-CA');
+
+    const updatedUser = { ...user };
+    let savedByFreeze = false;
+    let broken = false;
+
+    if (lastActive === yesterday) {
+        updatedUser.streak += 1;
+        updatedUser.streakLastDate = today;
+    } else {
+        if (updatedUser.streakFreezes > 0) {
+            updatedUser.streakFreezes -= 1;
+            updatedUser.streakLastDate = today;
+            savedByFreeze = true;
+        } else {
+            updatedUser.streak = 1;
+            updatedUser.streakLastDate = today;
+            broken = true;
+        }
+    }
+
+    return { updatedUser, savedByFreeze, broken };
 };

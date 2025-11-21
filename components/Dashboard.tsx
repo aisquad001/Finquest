@@ -1,24 +1,17 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
 import { 
-    BoltIcon, 
-    CheckBadgeIcon, 
+    SparklesIcon, 
     LockClosedIcon, 
     StarIcon,
     ShoppingBagIcon,
     TrophyIcon,
-    GiftIcon,
-    FireIcon,
-    ChartBarIcon,
-    UserGroupIcon,
-    QrCodeIcon,
-    SparklesIcon
+    QrCodeIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -31,6 +24,7 @@ import {
     SEASONAL_EVENTS,
     Challenge
 } from '../services/gamification';
+import { claimDailyChest, devAddResources } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
@@ -51,52 +45,45 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [showChestModal, setShowChestModal] = useState(false);
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(null);
-    
-    // Challenges State
-    const completedChallengesCount = user.dailyChallenges.filter(c => c.completed).length;
-    const allChallengesCompleted = completedChallengesCount === user.dailyChallenges.length;
+    const [devClickCount, setDevClickCount] = useState(0);
 
     // Calculate XP Progress
     const nextLevelXp = getXpForNextLevel(user.level);
     const currentLevelBaseXp = getXpForNextLevel(user.level - 1);
     const levelProgress = Math.min(100, Math.max(0, ((user.xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
 
-    const handleChallengeClick = (challenge: Challenge) => {
-        if (challenge.completed) return;
-        
-        // For demo: auto-complete on click if it's not the hard one
-        if (challenge.difficulty !== 'hard') {
-             playSound('success');
-             onClaimReward(challenge.rewardXp, challenge.rewardCoins);
-             // Update local state would happen via parent, but we simulate here for UI feedback
-             challenge.completed = true; // Mutation for demo only
-             (window as any).confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    // Daily Chest Logic
+    const today = new Date().toLocaleDateString('en-CA');
+    const isChestReady = user.lastDailyChestClaim !== today;
+
+    const handleChestClick = () => {
+        if (isChestReady && user.uid) {
+            claimDailyChest(user.uid, user);
         } else {
-            alert("Go to Wall Street Zoo to complete this!");
-            onOpenZoo();
+            playSound('error');
+            alert("Come back tomorrow!");
         }
     };
 
     const handleBuy = (item: ShopItem) => {
-        if (user.coins >= item.cost) {
-            playSound('coin');
-            onBuyItem(item);
-            if (navigator.vibrate) navigator.vibrate(50);
-        } else {
+        // Prevent buying same item twice if it's unique (like outfit)
+        if (user.inventory.includes(item.id)) {
             playSound('error');
+            alert("You already own this!");
+            return;
         }
+        onBuyItem(item);
     };
 
-    const handleShareStreak = () => {
-        setShowSocialShare({
-            type: 'streak',
-            data: {
-                value: `${user.streak} DAYS`,
-                subtitle: 'Can you beat me?',
-                avatar: user.avatar,
-                nickname: user.nickname
+    // Dev Tool Trigger
+    const handleStreakClick = () => {
+        setDevClickCount(prev => prev + 1);
+        if (devClickCount + 1 >= 5) {
+            if (user.uid) {
+                devAddResources(user.uid);
+                setDevClickCount(0);
             }
-        });
+        }
     };
 
     const handleGenerateCode = () => {
@@ -119,8 +106,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
             {/* HEADER */}
             <div className="sticky top-8 z-50 px-4 pt-2 pb-2 bg-[#1a0b2e]/95 backdrop-blur-sm border-b border-white/5">
-                
-                {/* Top Row: Stats & Fire */}
                 <div className="flex items-center justify-between mb-4">
                     
                     {/* User Info */}
@@ -139,13 +124,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 )}
                              </div>
                              <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase mt-1">
-                                <span className="text-yellow-400">🪙 {user.coins.toLocaleString()}</span>
+                                <span className={`font-bold transition-colors ${user.coins < 1000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                                    🪙 {user.coins.toLocaleString()}
+                                </span>
                              </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                         {/* GO PRO BUTTON */}
                          {user.subscriptionStatus !== 'pro' && (
                             <button 
                                 onClick={onOpenPremium}
@@ -155,9 +141,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </button>
                          )}
 
-                        {/* GIANT STREAK FIRE */}
-                        <button onClick={handleShareStreak} className="flex flex-col items-center relative group">
-                            <div className={`text-5xl transition-transform group-hover:scale-110 drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
+                        {/* STREAK / DEV BUTTON */}
+                        <button onClick={handleStreakClick} className="flex flex-col items-center relative group active:scale-90 transition-transform">
+                            <div className={`text-5xl drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
                                 {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
                             </div>
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-black text-xl mt-2 pointer-events-none">
@@ -170,40 +156,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     </div>
                 </div>
 
-                {/* CHALLENGE CHEST WIDGET */}
-                <div 
-                    onClick={() => setShowChestModal(true)}
-                    className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-2xl p-1 cursor-pointer btn-3d group relative overflow-hidden"
+                {/* DAILY REWARD CHEST */}
+                <button 
+                    onClick={handleChestClick}
+                    disabled={!isChestReady}
+                    className={`w-full rounded-2xl p-1 btn-3d group relative overflow-hidden transition-all
+                        ${isChestReady ? 'bg-gradient-to-r from-indigo-900 to-purple-900 cursor-pointer' : 'bg-gray-800 cursor-not-allowed grayscale opacity-75'}
+                    `}
                 >
                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes-light.png')] opacity-10"></div>
                     <div className="flex items-center justify-between px-4 py-2 relative z-10">
                         <div className="flex items-center gap-3">
-                             <div className={`text-3xl transition-transform ${allChallengesCompleted ? 'animate-chest-shake' : 'group-hover:rotate-12'}`}>
-                                 {allChallengesCompleted ? '💰' : '🎁'}
+                             <div className={`text-3xl transition-transform ${isChestReady ? 'animate-bounce' : ''}`}>
+                                 🎁
                              </div>
                              <div className="text-left">
-                                 <div className="text-white font-game text-sm uppercase">Daily Loot</div>
+                                 <div className="text-white font-game text-sm uppercase">{isChestReady ? 'Daily Loot Ready!' : 'Loot Claimed'}</div>
                                  <div className="text-[10px] text-indigo-300 font-bold flex items-center gap-1">
-                                     {completedChallengesCount}/3 Complete
-                                     {allChallengesCompleted && <span className="text-neon-green">Ready!</span>}
+                                     {isChestReady ? 'Tap to open' : 'Refreshes tomorrow'}
                                  </div>
                              </div>
                         </div>
-                        {/* Progress Dots */}
-                        <div className="flex gap-1">
-                            {user.dailyChallenges.map((c, i) => (
-                                <div key={i} className={`w-2 h-2 rounded-full ${c.completed ? 'bg-neon-green shadow-neon' : 'bg-white/20'}`}></div>
-                            ))}
-                        </div>
                     </div>
-                    {/* Progress Bar Bottom */}
-                    <div className="h-1 w-full bg-black/20 mt-1">
-                        <div className="h-full bg-neon-green transition-all duration-500" style={{ width: `${(completedChallengesCount / 3) * 100}%` }}></div>
-                    </div>
-                </div>
+                </button>
             </div>
 
-            {/* MAIN SCROLL CONTENT */}
+            {/* MAIN CONTENT */}
             <div className="px-4 mt-6 space-y-8">
                 
                 {/* TABS */}
@@ -219,10 +197,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     ))}
                 </div>
 
-                {/* VIEW: MAP */}
+                {/* MAP TAB */}
                 {activeTab === 'map' && (
                     <div className="relative flex flex-col items-center gap-8 py-4">
-                         {/* WALL STREET ZOO CARD */}
+                        
+                        {/* ZOO BUTTON */}
                         <button 
                             onClick={onOpenZoo}
                             className={`w-full rounded-3xl p-[2px] btn-3d group transition-all
@@ -246,9 +225,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
                         </button>
 
-                        {/* WORLDS LIST */}
+                        {/* WORLDS */}
                         <div className="w-full space-y-6">
-                            {WORLDS_METADATA.map((world, index) => {
+                            {WORLDS_METADATA.map((world) => {
                                 const isUnlocked = user.level >= world.unlockLevel;
                                 const worldLevels = GET_WORLD_LEVELS(world.id);
                                 const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
@@ -285,7 +264,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             })}
                         </div>
 
-                         {/* SHOP CAROUSEL */}
+                         {/* SHOP */}
                          <div className="w-full pt-8 border-t border-white/10">
                             <div className="flex items-center justify-between px-2 mb-3">
                                 <h2 className="font-game text-xl text-white flex items-center gap-2">
@@ -294,24 +273,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 </h2>
                             </div>
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
-                                {SHOP_ITEMS.map(item => (
-                                    <div key={item.id} className="flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 border-neon-pink/30 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group">
-                                        <div className="text-4xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
-                                        <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
-                                        <button 
-                                            onClick={() => handleBuy(item)}
-                                            className="w-full mt-2 bg-white/10 hover:bg-neon-pink hover:text-black border border-white/20 text-white font-bold py-1 rounded-lg text-xs transition-all flex items-center justify-center gap-1"
-                                        >
-                                            <span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost}
-                                        </button>
-                                    </div>
-                                ))}
+                                {SHOP_ITEMS.map(item => {
+                                    const owned = user.inventory.includes(item.id);
+                                    return (
+                                        <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : 'border-neon-pink/30'}`}>
+                                            {owned && <div className="absolute top-2 right-2 bg-green-500 text-black text-[9px] font-bold px-1 rounded">OWNED</div>}
+                                            <div className="text-4xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
+                                            <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
+                                            <button 
+                                                onClick={() => !owned && handleBuy(item)}
+                                                disabled={owned}
+                                                className={`w-full mt-2 font-bold py-1 rounded-lg text-xs transition-all flex items-center justify-center gap-1 
+                                                    ${owned ? 'bg-transparent text-gray-500' : 'bg-white/10 hover:bg-neon-pink hover:text-black text-white border border-white/20'}
+                                                `}
+                                            >
+                                                {owned ? 'In Bag' : <><span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost}</>}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* VIEW: LEADERBOARD */}
+                {/* LEADERBOARD TAB */}
                 {activeTab === 'leaderboard' && (
                     <div className="bg-white/5 rounded-3xl border border-white/10 overflow-hidden">
                         <div className="bg-black/40 p-4 border-b border-white/10 flex justify-between items-center">
@@ -337,29 +323,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     </div>
                 )}
 
-                {/* VIEW: SOCIAL */}
+                {/* SOCIAL TAB */}
                 {activeTab === 'social' && (
                     <div className="text-center py-12 space-y-8">
                         <div>
                             <div className="text-6xl mb-4">👯‍♀️</div>
                             <h2 className="font-game text-2xl text-white mb-2">SQUAD GOALS</h2>
-                            <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo and earn 10,000 Coins!</p>
+                            <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo!</p>
                             
                             <button className="bg-neon-blue text-black font-game text-xl px-8 py-4 rounded-full btn-3d mb-4 w-full">
                                 INVITE FRIENDS
                             </button>
-                            <div className="text-xs text-gray-500 font-bold uppercase">Your Code: RICH-KID-99</div>
-                            <div className="text-xs text-gray-400 mt-2">{user.referralCount} Friends Joined</div>
                         </div>
 
-                        {/* PARENT LINKING SECTION */}
                         <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
                              <h2 className="font-game text-xl text-white mb-2 flex items-center justify-center gap-2">
                                  <QrCodeIcon className="w-6 h-6 text-neon-pink" />
                                  LINK PARENT
                              </h2>
                              <p className="text-gray-400 text-sm mb-6">
-                                 Unlock the FinQuest Debit Card and show off your mastery.
+                                 Unlock the FinQuest Debit Card.
                              </p>
                              
                              {!familyCode ? (
@@ -380,62 +363,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                         </div>
                     </div>
                 )}
-
             </div>
-
-            {/* CHALLENGE MODAL */}
-            {showChestModal && (
-                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
-                    <div className="bg-[#1a0b2e] w-full max-w-md rounded-3xl border-4 border-indigo-500 overflow-hidden relative">
-                        <button onClick={() => setShowChestModal(false)} className="absolute top-4 right-4 text-white z-20"><span className="text-2xl">✖</span></button>
-                        
-                        <div className="bg-indigo-900/50 p-8 text-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                            <div className="text-6xl mb-4 animate-bounce">{allChallengesCompleted ? '💰' : '🎁'}</div>
-                            <h2 className="font-game text-3xl text-white text-stroke-black">DAILY LOOT</h2>
-                            <p className="text-indigo-200 font-bold">Complete all 3 to unlock the chest!</p>
-                        </div>
-
-                        <div className="p-6 space-y-4">
-                            {user.dailyChallenges.map((quest) => (
-                                <button 
-                                    key={quest.id} 
-                                    onClick={() => handleChallengeClick(quest)}
-                                    disabled={quest.completed}
-                                    className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between text-left transition-all
-                                        ${quest.completed 
-                                            ? 'bg-green-500/10 border-green-500 opacity-50' 
-                                            : 'bg-white/5 border-white/10 hover:bg-white/10'
-                                        }
-                                    `}
-                                >
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded text-black ${quest.difficulty === 'easy' ? 'bg-green-400' : quest.difficulty === 'medium' ? 'bg-yellow-400' : 'bg-red-500'}`}>
-                                                {quest.difficulty}
-                                            </span>
-                                            <h4 className="font-bold text-white">{quest.title}</h4>
-                                        </div>
-                                        <p className="text-xs text-gray-400">{quest.description}</p>
-                                    </div>
-                                    <div className="flex flex-col items-end gap-1">
-                                        {quest.completed ? (
-                                            <CheckBadgeIcon className="w-8 h-8 text-green-500" />
-                                        ) : (
-                                            <>
-                                                <span className="text-xs font-bold text-neon-blue">+{quest.rewardXp} XP</span>
-                                                <span className="text-xs font-bold text-yellow-400">+{quest.rewardCoins} 🪙</span>
-                                            </>
-                                        )}
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* SOCIAL SHARE MODAL */}
+            
             {showSocialShare && (
                 <SocialShare 
                     type={showSocialShare.type} 
@@ -444,13 +373,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 />
             )}
             
-            {/* SECRET ADMIN LINK */}
             <div className="text-center py-8 opacity-10 hover:opacity-100 transition-opacity">
                  <button onClick={onOpenAdmin} className="text-[10px] font-mono uppercase text-white">
                      ⚡ Access God Mode
                  </button>
             </div>
-
         </div>
     );
 };
