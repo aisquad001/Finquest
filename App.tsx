@@ -9,6 +9,7 @@ import { LessonPlayer } from './components/LessonPlayer';
 import { WorldLevelMap } from './components/WorldLevelMap';
 import { Onboarding } from './components/Onboarding';
 import { WallStreetZoo } from './components/WallStreetZoo';
+import { PortalDashboard } from './components/PortalDashboard';
 import { playSound } from './services/audio';
 import { 
     UserState, 
@@ -31,9 +32,24 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(true);
   
   // Navigation State
-  const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo'>('dashboard');
+  // Checking URL for simple client-side routing to /portal
+  const isPortalRoute = window.location.pathname === '/portal';
+  const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo' | 'portal'>(
+      isPortalRoute ? 'portal' : 'dashboard'
+  );
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
+
+  // Theme Effect: Switch body class based on view
+  useEffect(() => {
+      if (view === 'portal') {
+          document.body.classList.add('portal-mode');
+          document.body.classList.remove('game-mode');
+      } else {
+          document.body.classList.add('game-mode');
+          document.body.classList.remove('portal-mode');
+      }
+  }, [view]);
 
   // Load progress & Streak Logic
   useEffect(() => {
@@ -44,21 +60,25 @@ const App: React.FC = () => {
         setUser(updatedUser);
         setShowOnboarding(false);
 
-        if (savedByFreeze) {
-            alert("❄️ STREAK FROZEN! Your streak was saved by a freeze item.");
-        } else if (broken) {
-            alert("💔 STREAK LOST! You missed a day. Start again!");
+        if (view !== 'portal') {
+            if (savedByFreeze) {
+                alert("❄️ STREAK FROZEN! Your streak was saved by a freeze item.");
+            } else if (broken) {
+                alert("💔 STREAK LOST! You missed a day. Start again!");
+            }
+
+            // Initial Notification Prompt (Simulated)
+            setTimeout(() => {
+                requestNotificationPermission().then(granted => {
+                    if (granted) scheduleDemoNotifications();
+                });
+            }, 3000);
         }
 
-        // Initial Notification Prompt (Simulated)
-        setTimeout(() => {
-            requestNotificationPermission().then(granted => {
-                if (granted) scheduleDemoNotifications();
-            });
-        }, 3000);
-
     } else {
-        setShowOnboarding(true);
+        if (view !== 'portal') {
+             setShowOnboarding(true);
+        }
     }
   }, []);
 
@@ -200,8 +220,6 @@ const App: React.FC = () => {
             ? { ...c, completed: true }
             : c
           );
-          // If hard challenge completed just now, award XP/Coins logic should ideally trigger here too
-          // For demo simplicity we assume the Dashboard logic handles the "Claiming" visual part
 
           return { 
               ...prev, 
@@ -210,6 +228,14 @@ const App: React.FC = () => {
           };
       });
   };
+
+  // Portal View Renders differently (no background effects)
+  if (view === 'portal') {
+      return <PortalDashboard childData={user} onExit={() => {
+          window.history.pushState({}, '', '/');
+          setView('dashboard');
+      }} />;
+  }
 
   if (showOnboarding) {
       return <Onboarding onComplete={handleOnboardingComplete} />;
@@ -263,6 +289,11 @@ const App: React.FC = () => {
                   onClose={handleCloseZoo}
               />
           )}
+      </div>
+      
+      {/* Secret Portal Link (Bottom Footer) */}
+      <div className="relative z-10 text-center pb-4 text-white/10 text-xs uppercase font-bold cursor-pointer hover:text-white/50 transition-colors">
+          <span onClick={() => { window.history.pushState({}, '', '/portal'); setView('portal'); }}>Teacher / Parent Portal</span>
       </div>
 
     </div>

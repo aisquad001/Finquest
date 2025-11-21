@@ -16,7 +16,8 @@ import {
     GiftIcon,
     FireIcon,
     ChartBarIcon,
-    UserGroupIcon
+    UserGroupIcon,
+    QrCodeIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -29,6 +30,7 @@ import {
     SEASONAL_EVENTS,
     Challenge
 } from '../services/gamification';
+import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
 
@@ -45,6 +47,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
     const [showChestModal, setShowChestModal] = useState(false);
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
+    const [familyCode, setFamilyCode] = useState<string | null>(null);
     
     // Challenges State
     const completedChallengesCount = user.dailyChallenges.filter(c => c.completed).length;
@@ -91,6 +94,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 nickname: user.nickname
             }
         });
+    };
+
+    const handleGenerateCode = () => {
+        playSound('pop');
+        setFamilyCode(generateLinkCode());
     };
 
     const zooUnlocked = user.level >= 20;
@@ -311,15 +319,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                 {/* VIEW: SOCIAL */}
                 {activeTab === 'social' && (
-                    <div className="text-center py-12">
-                        <div className="text-6xl mb-4">👯‍♀️</div>
-                        <h2 className="font-game text-2xl text-white mb-2">SQUAD GOALS</h2>
-                        <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo and earn 10,000 Coins!</p>
-                        
-                        <button className="bg-neon-blue text-black font-game text-xl px-8 py-4 rounded-full btn-3d mb-4 w-full">
-                            INVITE FRIENDS
-                        </button>
-                        <div className="text-xs text-gray-500 font-bold uppercase">Your Code: RICH-KID-99</div>
+                    <div className="text-center py-12 space-y-8">
+                        <div>
+                            <div className="text-6xl mb-4">👯‍♀️</div>
+                            <h2 className="font-game text-2xl text-white mb-2">SQUAD GOALS</h2>
+                            <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo and earn 10,000 Coins!</p>
+                            
+                            <button className="bg-neon-blue text-black font-game text-xl px-8 py-4 rounded-full btn-3d mb-4 w-full">
+                                INVITE FRIENDS
+                            </button>
+                            <div className="text-xs text-gray-500 font-bold uppercase">Your Code: RICH-KID-99</div>
+                        </div>
+
+                        {/* PARENT LINKING SECTION */}
+                        <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
+                             <h2 className="font-game text-xl text-white mb-2 flex items-center justify-center gap-2">
+                                 <QrCodeIcon className="w-6 h-6 text-neon-pink" />
+                                 LINK PARENT
+                             </h2>
+                             <p className="text-gray-400 text-sm mb-6">
+                                 Unlock the FinQuest Debit Card and show off your mastery.
+                             </p>
+                             
+                             {!familyCode ? (
+                                 <button 
+                                     onClick={handleGenerateCode}
+                                     className="w-full py-3 bg-white/10 hover:bg-neon-pink hover:text-white text-neon-pink font-bold rounded-xl border border-neon-pink/30 transition-all"
+                                 >
+                                     Generate Family Code
+                                 </button>
+                             ) : (
+                                 <div className="bg-black/40 p-4 rounded-xl animate-pop-in">
+                                     <div className="text-xs text-gray-500 uppercase font-bold mb-1">Give this to your parent</div>
+                                     <div className="font-mono text-3xl text-white font-bold tracking-widest select-all">
+                                         {familyCode}
+                                     </div>
+                                 </div>
+                             )}
+                        </div>
                     </div>
                 )}
 
