@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -17,8 +18,11 @@ import {
     ShopItem,
     WORLDS_METADATA,
     WorldData,
-    Portfolio
+    Portfolio,
+    checkStreak,
+    Challenge
 } from './services/gamification';
+import { requestNotificationPermission, scheduleDemoNotifications } from './services/notifications';
 import { GET_WORLD_LEVELS, GameLevel } from './services/content';
 
 const App: React.FC = () => {
@@ -31,12 +35,28 @@ const App: React.FC = () => {
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<GameLevel | null>(null);
 
-  // Load progress on mount
+  // Load progress & Streak Logic
   useEffect(() => {
     const loadedUser = loadUser();
     if (loadedUser) {
-        setUser(loadedUser);
+        // Run Streak Check Logic
+        const { updatedUser, savedByFreeze, broken } = checkStreak(loadedUser);
+        setUser(updatedUser);
         setShowOnboarding(false);
+
+        if (savedByFreeze) {
+            alert("❄️ STREAK FROZEN! Your streak was saved by a freeze item.");
+        } else if (broken) {
+            alert("💔 STREAK LOST! You missed a day. Start again!");
+        }
+
+        // Initial Notification Prompt (Simulated)
+        setTimeout(() => {
+            requestNotificationPermission().then(granted => {
+                if (granted) scheduleDemoNotifications();
+            });
+        }, 3000);
+
     } else {
         setShowOnboarding(true);
     }
@@ -53,6 +73,10 @@ const App: React.FC = () => {
       const newUser = createInitialUser(data);
       setUser(newUser);
       setShowOnboarding(false);
+      // Prompt for notifications
+      requestNotificationPermission().then(granted => {
+          if (granted) scheduleDemoNotifications();
+      });
   };
 
   // Navigation Handlers
@@ -78,7 +102,7 @@ const App: React.FC = () => {
   };
 
   const handleOpenZoo = () => {
-      if (user && user.level >= 20) { // Strict check, though user starts at 21 in this version
+      if (user && user.level >= 20) {
           setView('zoo');
           playSound('pop');
       } else {
@@ -110,11 +134,9 @@ const App: React.FC = () => {
           const newXp = prev.xp + xp;
           const newCoins = prev.coins + coins;
           
-          // Check for level up
           let newLevel = prev.level;
-          // Simple incremental check for demo purposes
+          // Simple check for demo level up
           if (newXp > prev.level * 500) { 
-             // In a real app, check against the quadratic formula
              newLevel += 1;
           }
 
@@ -122,12 +144,20 @@ const App: React.FC = () => {
             ? [...prev.completedLevels, activeLevel.id]
             : prev.completedLevels;
 
+          // Update Daily Challenge (Medium)
+          const updatedChallenges = prev.dailyChallenges.map(c => 
+              (c.difficulty === 'medium' && !c.completed) 
+              ? { ...c, completed: true } 
+              : c
+          );
+
           return {
               ...prev,
               xp: newXp,
               coins: newCoins,
               level: newLevel,
-              completedLevels: newCompletedLevels
+              completedLevels: newCompletedLevels,
+              dailyChallenges: updatedChallenges
           };
       });
 
@@ -148,9 +178,13 @@ const App: React.FC = () => {
   const handleBuyItem = (item: ShopItem) => {
       setUser(prev => {
           if (!prev) return null;
+          // Special logic for Streak Freeze
+          const newStreakFreezes = item.id === 'item_freeze' ? (prev.streakFreezes || 0) + 1 : prev.streakFreezes;
+          
           return {
               ...prev,
               coins: prev.coins - item.cost,
+              streakFreezes: newStreakFreezes,
               inventory: [...prev.inventory, item.id]
           };
       });
@@ -159,7 +193,21 @@ const App: React.FC = () => {
   const handleUpdatePortfolio = (newPortfolio: Portfolio) => {
       setUser(prev => {
           if (!prev) return null;
-          return { ...prev, portfolio: newPortfolio };
+          
+          // Update Daily Challenge (Hard) if a trade happened
+          const updatedChallenges = prev.dailyChallenges.map(c => 
+            (c.difficulty === 'hard' && !c.completed)
+            ? { ...c, completed: true }
+            : c
+          );
+          // If hard challenge completed just now, award XP/Coins logic should ideally trigger here too
+          // For demo simplicity we assume the Dashboard logic handles the "Claiming" visual part
+
+          return { 
+              ...prev, 
+              portfolio: newPortfolio,
+              dailyChallenges: updatedChallenges
+          };
       });
   };
 

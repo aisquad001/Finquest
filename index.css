@@ -1,5 +1,4 @@
 
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,17 +33,6 @@
   animation: float 4s ease-in-out infinite;
 }
 
-@keyframes float-delayed {
-  0% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-8px) rotate(-2deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
-}
-
-.animate-float-delayed {
-  animation: float-delayed 5s ease-in-out infinite;
-  animation-delay: 1s;
-}
-
 @keyframes popIn {
   0% { transform: scale(0); opacity: 0; }
   80% { transform: scale(1.1); opacity: 1; }
@@ -67,6 +55,29 @@
 @keyframes shimmer {
     0% { transform: translateX(-100%); }
     100% { transform: translateX(100%); }
+}
+
+@keyframes fire-flicker {
+    0%, 100% { transform: scale(1) rotate(-2deg); opacity: 1; filter: brightness(100%); }
+    25% { transform: scale(1.1) rotate(2deg); opacity: 0.9; filter: brightness(120%); }
+    50% { transform: scale(0.95) rotate(-1deg); opacity: 1; filter: brightness(100%); }
+    75% { transform: scale(1.05) rotate(1deg); opacity: 0.95; filter: brightness(110%); }
+}
+
+.animate-fire-flicker {
+    animation: fire-flicker 1.5s infinite ease-in-out;
+}
+
+@keyframes chest-shake {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg); }
+    50% { transform: rotate(0deg); }
+    75% { transform: rotate(-10deg); }
+    100% { transform: rotate(0deg); }
+}
+
+.animate-chest-shake {
+    animation: chest-shake 0.5s infinite;
 }
 
 /* Custom Scrollbar */

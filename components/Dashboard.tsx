@@ -1,23 +1,34 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState, useEffect } from 'react';
 import { Avatar } from './Avatar';
+import { SocialShare } from './SocialShare';
 import { 
     BoltIcon, 
-    CurrencyDollarIcon, 
     CheckBadgeIcon, 
     LockClosedIcon, 
     StarIcon,
     ShoppingBagIcon,
     TrophyIcon,
     GiftIcon,
-    ClockIcon,
     FireIcon,
-    ChartBarIcon
+    ChartBarIcon,
+    UserGroupIcon
 } from '@heroicons/react/24/solid';
-import { WORLDS_METADATA, Quest, ShopItem, LeaderboardEntry, UserState, getXpForNextLevel, getMockLeaderboard, generateDailyQuests, SHOP_ITEMS } from '../services/gamification';
+import { 
+    WORLDS_METADATA, 
+    ShopItem, 
+    LeaderboardEntry, 
+    UserState, 
+    getXpForNextLevel, 
+    getMockLeaderboard, 
+    SHOP_ITEMS,
+    SEASONAL_EVENTS,
+    Challenge
+} from '../services/gamification';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
 
@@ -26,61 +37,60 @@ interface DashboardProps {
     onOpenWorld: (worldId: string) => void;
     onClaimReward: (xp: number, coins: number) => void;
     onBuyItem: (item: ShopItem) => void;
-    onOpenZoo: () => void; // New prop
+    onOpenZoo: () => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo }) => {
-    const [activeTab, setActiveTab] = useState<'map' | 'leaderboard'>('map');
-    const [quests, setQuests] = useState<Quest[]>(generateDailyQuests());
+    const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
-    const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false);
+    const [showChestModal, setShowChestModal] = useState(false);
+    const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
+    
+    // Challenges State
+    const completedChallengesCount = user.dailyChallenges.filter(c => c.completed).length;
+    const allChallengesCompleted = completedChallengesCount === user.dailyChallenges.length;
 
     // Calculate XP Progress
     const nextLevelXp = getXpForNextLevel(user.level);
     const currentLevelBaseXp = getXpForNextLevel(user.level - 1);
     const levelProgress = Math.min(100, Math.max(0, ((user.xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
 
-    const handleQuestClaim = (questId: string) => {
-        setQuests(prev => prev.map(q => {
-            if (q.id === questId && !q.completed) {
-                playSound('success');
-                onClaimReward(q.rewardXp, q.rewardCoins);
-                
-                // Trigger confetti
-                (window as any).confetti({
-                    particleCount: 50,
-                    spread: 60,
-                    origin: { y: 0.7 }
-                });
-                
-                return { ...q, completed: true };
-            }
-            return q;
-        }));
-    };
-
-    const handleDailyReward = () => {
-        if (dailyRewardClaimed) return;
-        playSound('chest');
-        setDailyRewardClaimed(true);
-        onClaimReward(200, 500);
-        (window as any).confetti({
-             particleCount: 150,
-             spread: 100,
-             origin: { y: 0.5 },
-             colors: ['#FFFF00', '#FFA500']
-        });
+    const handleChallengeClick = (challenge: Challenge) => {
+        if (challenge.completed) return;
+        
+        // For demo: auto-complete on click if it's not the hard one
+        if (challenge.difficulty !== 'hard') {
+             playSound('success');
+             onClaimReward(challenge.rewardXp, challenge.rewardCoins);
+             // Update local state would happen via parent, but we simulate here for UI feedback
+             challenge.completed = true; // Mutation for demo only
+             (window as any).confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+        } else {
+            alert("Go to Wall Street Zoo to complete this!");
+            onOpenZoo();
+        }
     };
 
     const handleBuy = (item: ShopItem) => {
         if (user.coins >= item.cost) {
             playSound('coin');
             onBuyItem(item);
-            // Haptic feedback if available
             if (navigator.vibrate) navigator.vibrate(50);
         } else {
             playSound('error');
         }
+    };
+
+    const handleShareStreak = () => {
+        setShowSocialShare({
+            type: 'streak',
+            data: {
+                value: `${user.streak} DAYS`,
+                subtitle: 'Can you beat me?',
+                avatar: user.avatar,
+                nickname: user.nickname
+            }
+        });
     };
 
     const zooUnlocked = user.level >= 20;
@@ -88,257 +98,181 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     return (
         <div className="relative pb-24 max-w-md mx-auto md:max-w-2xl">
             
-            {/* FIXED HEADER */}
-            <div className="sticky top-0 z-50 px-4 pt-4 pb-2 bg-gradient-to-b from-[#2a1b3d] via-[#2a1b3d]/95 to-transparent backdrop-blur-sm">
+            {/* SEASONAL BANNER */}
+            {SEASONAL_EVENTS.active && (
+                <div className={`bg-gradient-to-r ${SEASONAL_EVENTS.themeColor} text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-pulse-fast cursor-pointer sticky top-0 z-[60]`}>
+                    <span className="text-lg">{SEASONAL_EVENTS.icon}</span>
+                    <span className="uppercase tracking-widest">{SEASONAL_EVENTS.title} LIVE!</span>
+                </div>
+            )}
+
+            {/* HEADER */}
+            <div className="sticky top-8 z-50 px-4 pt-2 pb-2 bg-[#1a0b2e]/95 backdrop-blur-sm border-b border-white/5">
                 
-                {/* Top Row: Stats */}
-                <div className="flex items-center justify-between mb-3 bg-black/40 p-2 rounded-full border border-white/10 shadow-lg">
-                    <div className="flex items-center gap-2 pl-1">
-                        <div className="relative">
+                {/* Top Row: Stats & Fire */}
+                <div className="flex items-center justify-between mb-4">
+                    
+                    {/* User Info */}
+                    <div className="flex items-center gap-3">
+                        <div className="relative group cursor-pointer" onClick={() => setShowSocialShare({type: 'levelup', data: { value: `LVL ${user.level}`, subtitle: 'Rising Star', avatar: user.avatar, nickname: user.nickname}})}>
                             <Avatar level={user.level} size="sm" customConfig={user.avatar} />
                             <div className="absolute -bottom-1 -right-1 bg-neon-blue text-black text-[10px] font-black px-1.5 rounded-full border border-white">
                                 {user.level}
                             </div>
                         </div>
                         <div>
-                             <div className="text-white font-bold text-sm leading-none">{user.nickname}</div>
-                             <div className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">
-                                {user.level < 5 ? 'Rookie' : user.level < 10 ? 'Hustler' : 'Boss'}
+                             <div className="text-white font-bold text-lg leading-none font-game">{user.nickname}</div>
+                             <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase mt-1">
+                                <span className="text-yellow-400">🪙 {user.coins.toLocaleString()}</span>
                              </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pr-3">
-                        <div className="flex flex-col items-end">
-                            <div className="flex items-center gap-1 text-neon-yellow font-black text-lg leading-none drop-shadow-md">
-                                <FireIcon className="w-5 h-5 animate-pulse" />
-                                {user.streak}
-                            </div>
-                            <div className="text-[9px] text-gray-400 font-bold uppercase">Streak</div>
-                        </div>
-                        <div className="h-8 w-[1px] bg-white/10"></div>
-                        <div className="flex flex-col items-end">
-                             <div className="flex items-center gap-1 text-white font-black text-lg leading-none">
-                                <span className="text-xl">🪙</span>
-                                {user.coins.toLocaleString()}
-                            </div>
-                             <div className="text-[9px] text-gray-400 font-bold uppercase">Coins</div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* XP Bar */}
-                <div className="relative h-5 bg-black rounded-full border border-white/10 overflow-hidden mb-2 shadow-inner">
-                    <div 
-                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-neon-pink to-purple-500 transition-all duration-1000 ease-out"
-                        style={{ width: `${levelProgress}%` }}
-                    >
-                        <div className="absolute inset-0 bg-white/20 w-full -translate-x-full animate-[shimmer_2s_infinite]"></div>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white tracking-widest drop-shadow-md">
-                        {user.xp} / {nextLevelXp} XP
-                    </div>
-                </div>
-
-                {/* Daily Reward Button */}
-                {!dailyRewardClaimed && (
-                    <button 
-                        onClick={handleDailyReward}
-                        className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 p-2 rounded-xl flex items-center justify-between shadow-lg btn-3d animate-pulse-fast mb-2 group"
-                    >
-                        <div className="flex items-center gap-3">
-                            <GiftIcon className="w-8 h-8 text-white group-hover:rotate-12 transition-transform" />
-                            <div className="text-left">
-                                <div className="text-black font-black text-sm uppercase">Daily Chest Ready!</div>
-                                <div className="text-black/70 text-[10px] font-bold">Tap to claim 500 Coins + XP</div>
-                            </div>
-                        </div>
-                        <div className="bg-white text-orange-600 px-3 py-1 rounded-lg font-black text-xs">OPEN</div>
+                    {/* GIANT STREAK FIRE */}
+                    <button onClick={handleShareStreak} className="flex flex-col items-center relative group">
+                         <div className={`text-5xl transition-transform group-hover:scale-110 drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
+                             {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
+                         </div>
+                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-black text-xl mt-2 pointer-events-none">
+                             {user.streak}
+                         </div>
+                         <div className="text-[9px] text-orange-400 font-black uppercase tracking-wider bg-black/50 px-2 rounded-full mt-[-5px]">
+                             Streak
+                         </div>
                     </button>
-                )}
+                </div>
+
+                {/* CHALLENGE CHEST WIDGET */}
+                <div 
+                    onClick={() => setShowChestModal(true)}
+                    className="bg-gradient-to-r from-indigo-900 to-purple-900 rounded-2xl p-1 cursor-pointer btn-3d group relative overflow-hidden"
+                >
+                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes-light.png')] opacity-10"></div>
+                    <div className="flex items-center justify-between px-4 py-2 relative z-10">
+                        <div className="flex items-center gap-3">
+                             <div className={`text-3xl transition-transform ${allChallengesCompleted ? 'animate-chest-shake' : 'group-hover:rotate-12'}`}>
+                                 {allChallengesCompleted ? '💰' : '🎁'}
+                             </div>
+                             <div className="text-left">
+                                 <div className="text-white font-game text-sm uppercase">Daily Loot</div>
+                                 <div className="text-[10px] text-indigo-300 font-bold flex items-center gap-1">
+                                     {completedChallengesCount}/3 Complete
+                                     {allChallengesCompleted && <span className="text-neon-green">Ready!</span>}
+                                 </div>
+                             </div>
+                        </div>
+                        {/* Progress Dots */}
+                        <div className="flex gap-1">
+                            {user.dailyChallenges.map((c, i) => (
+                                <div key={i} className={`w-2 h-2 rounded-full ${c.completed ? 'bg-neon-green shadow-neon' : 'bg-white/20'}`}></div>
+                            ))}
+                        </div>
+                    </div>
+                    {/* Progress Bar Bottom */}
+                    <div className="h-1 w-full bg-black/20 mt-1">
+                        <div className="h-full bg-neon-green transition-all duration-500" style={{ width: `${(completedChallengesCount / 3) * 100}%` }}></div>
+                    </div>
+                </div>
             </div>
 
             {/* MAIN SCROLL CONTENT */}
-            <div className="px-4 space-y-8">
+            <div className="px-4 mt-6 space-y-8">
                 
                 {/* TABS */}
-                <div className="flex justify-center gap-4 mb-6">
-                    <button 
-                        onClick={() => { playSound('click'); setActiveTab('map') }}
-                        className={`px-6 py-2 rounded-full font-game text-xl tracking-wide transition-all ${activeTab === 'map' ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)] scale-105' : 'bg-black/30 text-gray-500'}`}
-                    >
-                        MAP
-                    </button>
-                    <button 
-                         onClick={() => { playSound('click'); setActiveTab('leaderboard') }}
-                        className={`px-6 py-2 rounded-full font-game text-xl tracking-wide transition-all ${activeTab === 'leaderboard' ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)] scale-105' : 'bg-black/30 text-gray-500'}`}
-                    >
-                        RANKS
-                    </button>
+                <div className="flex justify-center gap-2 mb-6 p-1 bg-white/5 rounded-full border border-white/5">
+                    {['map', 'leaderboard', 'social'].map((t) => (
+                        <button 
+                            key={t}
+                            onClick={() => { playSound('click'); setActiveTab(t as any) }}
+                            className={`flex-1 py-2 rounded-full font-game text-sm uppercase tracking-wide transition-all ${activeTab === t ? 'bg-white text-black shadow-lg scale-105' : 'text-gray-500 hover:text-white'}`}
+                        >
+                            {t}
+                        </button>
+                    ))}
                 </div>
 
                 {/* VIEW: MAP */}
                 {activeTab === 'map' && (
-                    <>
-                        {/* HERO PROGRESS MAP */}
-                        <div className="relative flex flex-col items-center gap-8 py-8">
-                             {/* Vertical Line */}
-                            <div className="absolute top-0 bottom-0 left-1/2 w-4 bg-black/30 -translate-x-1/2 rounded-full">
-                                <div 
-                                    className="w-full bg-neon-green rounded-full transition-all duration-1000"
-                                    style={{ height: `${(user.completedLevels.length / (WORLDS_METADATA.length * 8)) * 100}%` }}
-                                ></div>
-                            </div>
-
-                            {/* WALL STREET ZOO ENTRY CARD (Floating Ad Style) */}
-                            <button 
-                                onClick={onOpenZoo}
-                                className={`relative w-full max-w-[300px] z-20 rounded-3xl p-1 p-[2px] btn-3d group transition-transform
-                                    ${zooUnlocked 
-                                        ? 'bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer' 
-                                        : 'bg-gray-700 cursor-not-allowed grayscale opacity-80'
-                                    }
-                                `}
-                            >
-                                <div className="bg-[#1a0b2e] rounded-[22px] p-4 flex items-center gap-4 h-full">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 ${zooUnlocked ? 'bg-white/10' : 'bg-black/50'}`}>
-                                        🦍
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <h3 className="font-game text-lg text-white leading-none mb-1 text-stroke-black">WALL STREET ZOO</h3>
-                                        <p className="text-[10px] text-gray-400 font-bold leading-tight">
-                                            {zooUnlocked ? 'Trade Stocks. Get Rich. No Cap.' : 'Unlocks at Level 20'}
-                                        </p>
-                                    </div>
-                                    {zooUnlocked ? (
-                                        <ChartBarIcon className="w-6 h-6 text-neon-green" />
-                                    ) : (
-                                        <LockClosedIcon className="w-6 h-6 text-gray-500" />
-                                    )}
+                    <div className="relative flex flex-col items-center gap-8 py-4">
+                         {/* WALL STREET ZOO CARD */}
+                        <button 
+                            onClick={onOpenZoo}
+                            className={`w-full rounded-3xl p-[2px] btn-3d group transition-all
+                                ${zooUnlocked 
+                                    ? 'bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer' 
+                                    : 'bg-gray-800 cursor-not-allowed grayscale opacity-80'
+                                }
+                            `}
+                        >
+                            <div className="bg-[#1a0b2e] rounded-[22px] p-4 flex items-center gap-4 h-full relative overflow-hidden">
+                                <div className="absolute right-0 bottom-0 opacity-20 text-6xl rotate-12 translate-x-4 translate-y-4">🦍</div>
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 ${zooUnlocked ? 'bg-white/10' : 'bg-black/50'}`}>
+                                    📈
                                 </div>
-                            </button>
+                                <div className="text-left flex-1 relative z-10">
+                                    <h3 className="font-game text-xl text-white leading-none mb-1 text-stroke-black">WALL STREET ZOO</h3>
+                                    <p className="text-[10px] text-gray-300 font-bold leading-tight">
+                                        {zooUnlocked ? 'Trade Stocks. Get Rich. No Cap.' : 'Unlocks at Level 20'}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
 
+                        {/* WORLDS LIST */}
+                        <div className="w-full space-y-6">
                             {WORLDS_METADATA.map((world, index) => {
                                 const isUnlocked = user.level >= world.unlockLevel;
-                                // Determine if world is fully complete or in progress
                                 const worldLevels = GET_WORLD_LEVELS(world.id);
                                 const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
                                 const isCompleted = completedInWorld === worldLevels.length;
-                                const progressPercent = (completedInWorld / worldLevels.length) * 100;
-                                
                                 const Icon = world.icon;
 
                                 return (
-                                    <div key={world.id} className="relative z-10 w-full flex justify-center">
-                                        {/* Level Indicator Bubble */}
-                                        <div className={`absolute left-4 md:left-20 top-1/2 -translate-y-1/2 text-xs font-bold ${isUnlocked ? 'text-white' : 'text-gray-600'}`}>
-                                            LVL {world.unlockLevel}
+                                    <button
+                                        key={world.id}
+                                        onClick={() => isUnlocked && onOpenWorld(world.id)}
+                                        disabled={!isUnlocked}
+                                        className={`
+                                            w-full relative h-24 rounded-3xl border-4 transition-all duration-300 flex items-center px-4 gap-4
+                                            ${isUnlocked
+                                                ? `${world.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.1)] btn-3d` 
+                                                : 'bg-black border-gray-800 opacity-60 grayscale'
+                                            }
+                                        `}
+                                    >
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white ${isUnlocked ? 'bg-black/20' : 'bg-transparent'}`}>
+                                            {isUnlocked ? <Icon className="w-8 h-8" /> : <LockClosedIcon className="w-6 h-6 text-gray-500" />}
                                         </div>
-
-                                        <button
-                                            onClick={() => isUnlocked && onOpenWorld(world.id)}
-                                            disabled={!isUnlocked}
-                                            className={`
-                                                group relative w-64 h-24 rounded-3xl border-4 transition-all duration-300 flex items-center px-4 gap-4
-                                                ${isUnlocked
-                                                    ? `${world.color} border-white shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:scale-105 btn-3d` 
-                                                    : 'bg-black border-gray-800 opacity-60 grayscale'
-                                                }
-                                            `}
-                                        >
-                                            <div className={`
-                                                w-12 h-12 rounded-xl flex items-center justify-center text-white
-                                                ${isUnlocked ? 'bg-black/20' : 'bg-transparent'}
-                                            `}>
-                                                {isUnlocked ? <Icon className="w-8 h-8" /> : <LockClosedIcon className="w-6 h-6 text-gray-500" />}
-                                            </div>
-                                            
-                                            <div className="flex-1 text-left">
-                                                <h3 className={`font-game text-lg leading-none mb-1 ${isUnlocked ? 'text-white text-stroke-black' : 'text-gray-500'}`}>
-                                                    {world.title}
-                                                </h3>
-                                                
-                                                {isUnlocked && (
-                                                    <div className="w-full h-2 bg-black/30 rounded-full mt-1 overflow-hidden">
-                                                        <div className="h-full bg-white" style={{ width: `${progressPercent}%` }}></div>
-                                                    </div>
-                                                )}
-                                                
-                                                {isCompleted && <div className="text-[10px] font-bold text-green-400 flex items-center gap-1 mt-1"><CheckBadgeIcon className="w-3 h-3"/> 100% DONE</div>}
-                                                {!isUnlocked && <div className="text-[10px] font-bold text-gray-500 mt-1">LOCKED</div>}
-                                            </div>
-
-                                            {/* Completion Stars */}
-                                            {isCompleted && (
-                                                <div className="absolute -top-2 -right-2 flex">
-                                                    <StarIcon className="w-6 h-6 text-yellow-400 drop-shadow-md" />
-                                                </div>
+                                        <div className="flex-1 text-left">
+                                            <h3 className={`font-game text-lg leading-none mb-1 ${isUnlocked ? 'text-white text-stroke-black' : 'text-gray-500'}`}>
+                                                {world.title}
+                                            </h3>
+                                            {isUnlocked && (
+                                                <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/{worldLevels.length} Levels</div>
                                             )}
-                                        </button>
-                                    </div>
+                                        </div>
+                                        {isCompleted && <StarIcon className="w-8 h-8 text-yellow-400 drop-shadow-md" />}
+                                    </button>
                                 );
                             })}
                         </div>
 
-                        {/* ACTIVE QUESTS */}
-                        <div className="bg-white/5 rounded-3xl p-5 border border-white/10">
-                            <div className="flex items-center gap-2 mb-4">
-                                <CheckBadgeIcon className="w-6 h-6 text-neon-green" />
-                                <h2 className="font-game text-xl text-white">TODAY'S QUESTS</h2>
-                            </div>
-                            <div className="space-y-3">
-                                {quests.map(quest => (
-                                    <div key={quest.id} className="bg-black/40 p-3 rounded-xl border border-white/5 flex items-center justify-between">
-                                        <div>
-                                            <h4 className="font-bold text-sm text-white">{quest.title}</h4>
-                                            <p className="text-xs text-gray-400 mb-2">{quest.description}</p>
-                                            <div className="flex items-center gap-2 text-[10px] font-bold">
-                                                <span className="text-neon-blue flex items-center gap-0.5"><BoltIcon className="w-3 h-3"/> {quest.rewardXp} XP</span>
-                                                <span className="text-yellow-400 flex items-center gap-0.5">🪙 {quest.rewardCoins}</span>
-                                            </div>
-                                        </div>
-                                        {quest.completed ? (
-                                            <div className="bg-green-500/20 text-green-400 px-3 py-1 rounded-lg text-xs font-black uppercase border border-green-500/50">
-                                                CLAIMED
-                                            </div>
-                                        ) : (
-                                            <button 
-                                                onClick={() => handleQuestClaim(quest.id)} // Simulate progress for demo
-                                                className="bg-neon-blue text-black px-4 py-2 rounded-lg text-xs font-black uppercase btn-3d hover:bg-cyan-300"
-                                            >
-                                                GO
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* SHOP CAROUSEL */}
-                        <div className="pt-4">
+                         {/* SHOP CAROUSEL */}
+                         <div className="w-full pt-8 border-t border-white/10">
                             <div className="flex items-center justify-between px-2 mb-3">
                                 <h2 className="font-game text-xl text-white flex items-center gap-2">
                                     <ShoppingBagIcon className="w-6 h-6 text-neon-pink" />
                                     ITEM SHOP
                                 </h2>
-                                <span className="text-xs font-bold text-neon-yellow animate-pulse">New Stock!</span>
                             </div>
-                            
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
                                 {SHOP_ITEMS.map(item => (
-                                    <div key={item.id} className="flex-shrink-0 w-40 snap-start bg-[#1e112a] border-2 border-neon-pink/30 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group">
-                                        {item.limitedTime && (
-                                            <div className="absolute top-0 left-0 w-full bg-red-600 text-white text-[8px] font-black py-0.5 uppercase tracking-widest">
-                                                Limited Time
-                                            </div>
-                                        )}
-                                        <div className="text-5xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
-                                        <div className="font-game text-white text-lg leading-none mb-1">{item.name}</div>
-                                        <div className="text-[10px] text-gray-400 mb-3 h-8 leading-tight">{item.description}</div>
-                                        
+                                    <div key={item.id} className="flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 border-neon-pink/30 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group">
+                                        <div className="text-4xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
+                                        <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
                                         <button 
                                             onClick={() => handleBuy(item)}
-                                            className="w-full bg-white/10 hover:bg-neon-pink hover:text-black border border-white/20 text-white font-bold py-2 rounded-lg text-xs transition-all flex items-center justify-center gap-1"
+                                            className="w-full mt-2 bg-white/10 hover:bg-neon-pink hover:text-black border border-white/20 text-white font-bold py-1 rounded-lg text-xs transition-all flex items-center justify-center gap-1"
                                         >
                                             <span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost}
                                         </button>
@@ -346,7 +280,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 ))}
                             </div>
                         </div>
-                    </>
+                    </div>
                 )}
 
                 {/* VIEW: LEADERBOARD */}
@@ -355,48 +289,103 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                         <div className="bg-black/40 p-4 border-b border-white/10 flex justify-between items-center">
                              <h2 className="font-game text-xl text-white flex items-center gap-2">
                                 <TrophyIcon className="w-6 h-6 text-yellow-400" />
-                                GLOBAL TOP 100
+                                TOP PLAYERS
                             </h2>
-                            <span className="text-xs font-mono text-gray-400">Resets in 2d 14h</span>
+                            <span className="text-xs font-mono text-gray-400">Resets Weekly</span>
                         </div>
-                        
                         <div className="divide-y divide-white/5">
                             {leaderboard.map((entry) => (
                                 <div key={entry.rank} className={`flex items-center p-4 ${entry.rank === 1 ? 'bg-yellow-400/10' : ''}`}>
-                                    <div className={`w-8 text-center font-black text-lg ${entry.rank === 1 ? 'text-yellow-400 text-2xl' : entry.rank === 2 ? 'text-gray-300' : entry.rank === 3 ? 'text-orange-400' : 'text-gray-500'}`}>
-                                        {entry.rank}
-                                    </div>
-                                    <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center text-xl border border-white/10 mx-3">
-                                        {entry.avatar}
-                                    </div>
+                                    <div className="font-black text-lg text-white w-8">{entry.rank}</div>
+                                    <div className="text-2xl mr-4">{entry.avatar}</div>
                                     <div className="flex-1">
                                         <div className="font-bold text-white">{entry.name}</div>
                                         <div className="text-xs text-gray-500">{entry.country}</div>
                                     </div>
-                                    <div className="font-mono font-bold text-neon-green">
-                                        {entry.xp.toLocaleString()} XP
-                                    </div>
+                                    <div className="font-mono font-bold text-neon-green">{entry.xp.toLocaleString()} XP</div>
                                 </div>
                             ))}
-                            {/* User Rank (Fixed at bottom if list was long, but here inline) */}
-                            <div className="flex items-center p-4 bg-neon-blue/10 border-t-2 border-neon-blue/30">
-                                <div className="w-8 text-center font-black text-lg text-white">99</div>
-                                <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center text-xl border border-white/10 mx-3">
-                                    {user.avatar.emoji}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="font-bold text-white">{user.nickname} (You)</div>
-                                    <div className="text-xs text-neon-blue font-bold">RISING STAR</div>
-                                </div>
-                                <div className="font-mono font-bold text-white">
-                                    {user.xp.toLocaleString()} XP
-                                </div>
-                            </div>
                         </div>
                     </div>
                 )}
 
+                {/* VIEW: SOCIAL */}
+                {activeTab === 'social' && (
+                    <div className="text-center py-12">
+                        <div className="text-6xl mb-4">👯‍♀️</div>
+                        <h2 className="font-game text-2xl text-white mb-2">SQUAD GOALS</h2>
+                        <p className="text-gray-400 mb-8 px-8">Invite your friends to compete in Wall Street Zoo and earn 10,000 Coins!</p>
+                        
+                        <button className="bg-neon-blue text-black font-game text-xl px-8 py-4 rounded-full btn-3d mb-4 w-full">
+                            INVITE FRIENDS
+                        </button>
+                        <div className="text-xs text-gray-500 font-bold uppercase">Your Code: RICH-KID-99</div>
+                    </div>
+                )}
+
             </div>
+
+            {/* CHALLENGE MODAL */}
+            {showChestModal && (
+                <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-6">
+                    <div className="bg-[#1a0b2e] w-full max-w-md rounded-3xl border-4 border-indigo-500 overflow-hidden relative">
+                        <button onClick={() => setShowChestModal(false)} className="absolute top-4 right-4 text-white z-20"><span className="text-2xl">✖</span></button>
+                        
+                        <div className="bg-indigo-900/50 p-8 text-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                            <div className="text-6xl mb-4 animate-bounce">{allChallengesCompleted ? '💰' : '🎁'}</div>
+                            <h2 className="font-game text-3xl text-white text-stroke-black">DAILY LOOT</h2>
+                            <p className="text-indigo-200 font-bold">Complete all 3 to unlock the chest!</p>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {user.dailyChallenges.map((quest) => (
+                                <button 
+                                    key={quest.id} 
+                                    onClick={() => handleChallengeClick(quest)}
+                                    disabled={quest.completed}
+                                    className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between text-left transition-all
+                                        ${quest.completed 
+                                            ? 'bg-green-500/10 border-green-500 opacity-50' 
+                                            : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                        }
+                                    `}
+                                >
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded text-black ${quest.difficulty === 'easy' ? 'bg-green-400' : quest.difficulty === 'medium' ? 'bg-yellow-400' : 'bg-red-500'}`}>
+                                                {quest.difficulty}
+                                            </span>
+                                            <h4 className="font-bold text-white">{quest.title}</h4>
+                                        </div>
+                                        <p className="text-xs text-gray-400">{quest.description}</p>
+                                    </div>
+                                    <div className="flex flex-col items-end gap-1">
+                                        {quest.completed ? (
+                                            <CheckBadgeIcon className="w-8 h-8 text-green-500" />
+                                        ) : (
+                                            <>
+                                                <span className="text-xs font-bold text-neon-blue">+{quest.rewardXp} XP</span>
+                                                <span className="text-xs font-bold text-yellow-400">+{quest.rewardCoins} 🪙</span>
+                                            </>
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SOCIAL SHARE MODAL */}
+            {showSocialShare && (
+                <SocialShare 
+                    type={showSocialShare.type} 
+                    data={showSocialShare.data} 
+                    onClose={() => setShowSocialShare(null)} 
+                />
+            )}
+
         </div>
     );
 };

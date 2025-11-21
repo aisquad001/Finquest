@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -22,14 +23,26 @@ export interface UserState {
     level: number;
     xp: number;
     coins: number;
+    
+    // Streak 2.0
     streak: number;
-    streakLastDate: string; // ISO Date string
+    streakLastDate: string; // ISO Date string of last activity
+    streakFreezes: number; // Mercy rule items
+    
+    // Challenges 2.0
+    dailyChallenges: Challenge[];
+    lastChallengeDate: string;
+
+    // Progression
     completedLevels: string[]; // Format: "worldId_levelId"
     masteredWorlds: string[]; // Format: "worldId"
     inventory: string[];
     joinedAt: string;
     knowledgeGems: string[]; // Collected gems
+    
+    // Features
     portfolio: Portfolio; // Wall Street Zoo Data
+    friends: string[]; // Friend IDs
 }
 
 export interface Portfolio {
@@ -61,15 +74,15 @@ export interface Stock {
     whyMoved: string; // Funny explainer
 }
 
-export interface Quest {
+export interface Challenge {
     id: string;
     title: string;
     description: string;
+    difficulty: 'easy' | 'medium' | 'hard';
     rewardXp: number;
     rewardCoins: number;
     progress: number;
     total: number;
-    type: 'daily' | 'weekly';
     completed: boolean;
 }
 
@@ -91,6 +104,16 @@ export interface LeaderboardEntry {
     isUser?: boolean;
     country?: string;
 }
+
+export const SEASONAL_EVENTS = {
+    active: true,
+    id: 'black_friday_2025',
+    title: 'Black Friday Survivor',
+    description: 'Survive the sales! 2x XP on Budgeting lessons.',
+    themeColor: 'from-black via-red-900 to-black',
+    accentColor: 'text-red-500',
+    icon: '🛍️'
+};
 
 // --- World Data Structure ---
 export interface WorldData {
@@ -141,11 +164,11 @@ export const STOCK_UNIVERSE: Stock[] = [
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
+    { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', description: 'Miss a day without losing your streak.', limitedTime: false },
     { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', description: 'Double XP for 24 hours', limitedTime: true },
     { id: 'item_pet_lambo', name: 'Golden Lambo', emoji: '🏎️', cost: 5000, category: 'pet', description: 'Flex on them haters', limitedTime: true },
     { id: 'item_pet_doge', name: 'Doge', emoji: '🐕', cost: 800, category: 'pet', description: 'Much wow. Such finance.' },
     { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 1500, category: 'outfit', description: 'Dress for the job you want.' },
-    { id: 'item_hint', name: 'Quiz Hint', emoji: '💡', cost: 400, category: 'powerup', description: 'Reveal one answer.' },
 ];
 
 // --- Logic ---
@@ -154,11 +177,86 @@ export const getXpForNextLevel = (level: number) => {
     return 100 * Math.pow(level, 2);
 };
 
-export const generateDailyQuests = (): Quest[] => [
-    { id: 'q1', title: 'Daily Grind', description: 'Complete 1 lesson', rewardXp: 300, rewardCoins: 100, progress: 0, total: 1, type: 'daily', completed: false },
-    { id: 'q2', title: 'Quiz Whiz', description: 'Score 100% on a boss fight', rewardXp: 500, rewardCoins: 200, progress: 0, total: 1, type: 'daily', completed: false },
-    { id: 'q3', title: 'Big Spender', description: 'Buy an item from the shop', rewardXp: 200, rewardCoins: 50, progress: 0, total: 1, type: 'daily', completed: false },
+// CHALLENGE ENGINE 2.0
+export const generateDailyChallenges = (): Challenge[] => [
+    { 
+        id: `daily_easy_${Date.now()}`, 
+        title: 'Show Up', 
+        description: 'Log in to the app (Easy W)', 
+        difficulty: 'easy',
+        rewardXp: 50, 
+        rewardCoins: 100, 
+        progress: 1, 
+        total: 1, 
+        completed: true 
+    },
+    { 
+        id: `daily_med_${Date.now()}`, 
+        title: 'Brain Gainz', 
+        description: 'Complete 1 lesson or quiz', 
+        difficulty: 'medium',
+        rewardXp: 300, 
+        rewardCoins: 500, 
+        progress: 0, 
+        total: 1, 
+        completed: false 
+    },
+    { 
+        id: `daily_hard_${Date.now()}`, 
+        title: 'Wolf of Wall St', 
+        description: 'Execute a trade in the Zoo', 
+        difficulty: 'hard',
+        rewardXp: 1000, 
+        rewardCoins: 2000, 
+        progress: 0, 
+        total: 1, 
+        completed: false 
+    },
 ];
+
+// STREAK LOGIC 2.0
+export const checkStreak = (user: UserState): { updatedUser: UserState, savedByFreeze: boolean, broken: boolean } => {
+    const today = new Date().toISOString().split('T')[0];
+    const lastActive = user.streakLastDate.split('T')[0];
+    
+    // Already active today
+    if (today === lastActive) {
+        return { updatedUser: user, savedByFreeze: false, broken: false };
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Streak continues
+    if (lastActive === yesterdayStr) {
+        return { 
+            updatedUser: { ...user, streak: user.streak + 1, streakLastDate: new Date().toISOString() }, 
+            savedByFreeze: false, 
+            broken: false 
+        };
+    }
+
+    // Streak Broken - Check Mercy
+    if (user.streakFreezes > 0) {
+        return {
+            updatedUser: { 
+                ...user, 
+                streakFreezes: user.streakFreezes - 1, 
+                streakLastDate: new Date().toISOString() // Keep streak alive
+            },
+            savedByFreeze: true,
+            broken: false
+        };
+    }
+
+    // Streak Lost
+    return {
+        updatedUser: { ...user, streak: 1, streakLastDate: new Date().toISOString() },
+        savedByFreeze: false,
+        broken: true
+    };
+};
 
 export const getMockLeaderboard = (): LeaderboardEntry[] => [
     { rank: 1, name: "Elon Tusk", xp: 99000, avatar: "🚀", country: "Mars" },
@@ -205,7 +303,7 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
 
 // --- Persistence (Mock Firebase) ---
 
-const DB_KEY = 'finquest_db_v3'; // Bump version
+const DB_KEY = 'finquest_db_v4'; // Bump version for new schema
 
 export const saveUser = (user: UserState) => {
     localStorage.setItem(DB_KEY, JSON.stringify(user));
@@ -220,11 +318,17 @@ export const createInitialUser = (onboardingData: any): UserState => {
     return {
         nickname: onboardingData.nickname,
         avatar: onboardingData.avatar,
-        level: 21, // Start at 21 to unlock Zoo immediately for demo
+        level: 21,
         xp: onboardingData.xp || 0,
-        coins: 500, // Bonus
+        coins: 500,
+        
         streak: 1,
         streakLastDate: new Date().toISOString(),
+        streakFreezes: 1, // Start with one mercy
+
+        dailyChallenges: generateDailyChallenges(),
+        lastChallengeDate: new Date().toISOString(),
+
         completedLevels: [],
         masteredWorlds: [],
         inventory: [],
@@ -235,6 +339,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
             holdings: {},
             transactions: [],
             history: [{ date: new Date().toISOString(), netWorth: 100000 }]
-        }
+        },
+        friends: []
     };
 };
