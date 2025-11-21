@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -59,13 +60,12 @@ export const signInAsGuest = async () => {
         console.log("[Auth] Guest Sign In Success:", result.user.uid);
         return result.user;
     } catch (error: any) {
-        // If the API key is technically present but invalid (e.g. blocked or wrong), catch it
-        if (error.code === 'auth/api-key-not-valid' || error.message?.includes('api-key-not-valid')) {
-            console.warn("[Auth] API Key Rejected. Switching to Mock Guest.");
-            return createMockUser();
-        }
         console.error("Guest Sign In Error:", error);
-        throw error;
+        
+        // Fallback to Mock User for ANY error during guest login
+        // This ensures the user can play the game even if Firebase is misconfigured or blocked
+        console.warn("[Auth] Falling back to Mock Guest due to error.");
+        return createMockUser();
     }
 };
 
@@ -82,6 +82,9 @@ export const logout = async () => {
 
 // Helper to create a fake user for demo mode
 const createMockUser = (): User => {
+    // Ensure UID is consistent for "Guest" session until cleared? 
+    // Actually, better to generate a new one or store it? 
+    // App.tsx handles storage of the session ID, here we just create a new identity object.
     const uid = `mock_guest_${Date.now()}`;
     return {
         uid,
