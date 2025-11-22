@@ -42,6 +42,8 @@ import {
     deleteDocument,
     batchWrite
 } from '../services/db';
+import { db } from '../services/firebase';
+import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
 import { playSound } from '../services/audio';
 import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
@@ -274,24 +276,34 @@ const ContentCMS = () => {
     };
 
     const handleSeedDB = async () => {
-        if (!confirm("Reset and Seed Database with default content? This ensures all 384 lessons are loaded.")) return;
+        if (!confirm("This will DELETE all current lessons and load 384 default ones. Continue?")) return;
         setIsUploading(true);
+
         try {
-             const res = await fetch("https://files.catbox.moe/4p3h7k.json");
-             const data = await res.json();
-             if (Array.isArray(data)) {
-                 // Process in chunks of 400 to be safe with Firestore batch limit (500)
-                 const chunkSize = 400;
-                 for (let i = 0; i < data.length; i += chunkSize) {
-                     const chunk = data.slice(i, i + chunkSize);
-                     await batchWrite('lessons', chunk);
-                 }
-                 alert(`Success! ${data.length} lessons seeded into database.`);
-                 playSound('levelup');
-             }
-        } catch(e: any) {
-            console.error(e);
-            alert("Error seeding database: " + e.message);
+            // 1. Delete all existing lessons
+            const lessonsRef = collection(db, "lessons");
+            const snapshot = await getDocs(lessonsRef);
+            const batch = writeBatch(db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+
+            // 2. Load the full 384-lesson JSON from this permanent link
+            const response = await fetch("https://files.catbox.moe/4p3h7k.json");
+            const defaultLessons = await response.json();
+
+            // 3. Write all 384 lessons
+            const batch2 = writeBatch(db);
+            defaultLessons.forEach((lesson: any) => {
+                const docRef = doc(db, "lessons", lesson.id);
+                batch2.set(docRef, lesson);
+            });
+            await batch2.commit();
+
+            alert("SUCCESS: 384 lessons seeded! Refresh the page.");
+            playSound('levelup');
+        } catch (error: any) {
+            console.error(error);
+            alert("Error seeding DB: " + error.message);
         }
         setIsUploading(false);
     };
