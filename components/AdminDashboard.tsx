@@ -280,32 +280,64 @@ const ContentCMS = () => {
         setIsUploading(true);
 
         try {
-            // 1. Delete all existing lessons
             const lessonsRef = collection(db, "lessons");
+            
+            // 1. DELETE EXISTING (Chunked to avoid batch limits)
             const snapshot = await getDocs(lessonsRef);
-            const batch = writeBatch(db);
-            snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
+            console.log(`Found ${snapshot.size} existing lessons to delete.`);
+            
+            const deleteBatches = [];
+            let currentDeleteBatch = writeBatch(db);
+            let deleteCount = 0;
 
-            // 2. Load the full 384-lesson JSON from this permanent link
+            snapshot.docs.forEach((doc) => {
+                currentDeleteBatch.delete(doc.ref);
+                deleteCount++;
+                if (deleteCount % 400 === 0) {
+                    deleteBatches.push(currentDeleteBatch.commit());
+                    currentDeleteBatch = writeBatch(db);
+                }
+            });
+            if (deleteCount % 400 !== 0) {
+                deleteBatches.push(currentDeleteBatch.commit());
+            }
+            await Promise.all(deleteBatches);
+            console.log("Deletion complete.");
+
+            // 2. FETCH NEW DATA
             const response = await fetch("https://files.catbox.moe/4p3h7k.json");
+            if (!response.ok) throw new Error("Failed to fetch JSON file");
             const defaultLessons = await response.json();
+            console.log(`Fetched ${defaultLessons.length} lessons.`);
 
-            // 3. Write all 384 lessons
-            const batch2 = writeBatch(db);
+            // 3. WRITE NEW DATA (Chunked)
+            const writeBatches = [];
+            let currentWriteBatch = writeBatch(db);
+            let writeCount = 0;
+
             defaultLessons.forEach((lesson: any) => {
                 const docRef = doc(db, "lessons", lesson.id);
-                batch2.set(docRef, lesson);
+                currentWriteBatch.set(docRef, lesson);
+                writeCount++;
+                if (writeCount % 400 === 0) {
+                    writeBatches.push(currentWriteBatch.commit());
+                    currentWriteBatch = writeBatch(db);
+                }
             });
-            await batch2.commit();
+            if (writeCount % 400 !== 0) {
+                writeBatches.push(currentWriteBatch.commit());
+            }
+            await Promise.all(writeBatches);
 
-            alert("SUCCESS: 384 lessons seeded! Refresh the page.");
+            alert(`SUCCESS: ${defaultLessons.length} lessons seeded! Refresh the page.`);
             playSound('levelup');
+            
         } catch (error: any) {
-            console.error(error);
+            console.error("Seed DB Error:", error);
             alert("Error seeding DB: " + error.message);
+        } finally {
+            setIsUploading(false);
         }
-        setIsUploading(false);
     };
 
     const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
