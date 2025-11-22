@@ -3,7 +3,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
     UserGroupIcon, 
     ChartBarIcon, 
@@ -30,19 +30,40 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
     const [linkedChild, setLinkedChild] = useState<UserState | null>(initialData);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleConnect = async () => {
-        if (!linkCode || linkCode.length < 6) {
-            alert("Please enter a valid 6-digit code.");
+    // Check for URL Code on Mount for Auto-Login
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        if (code) {
+            setLinkCode(code);
+            handleConnect(code);
+        }
+    }, []);
+
+    const handleConnect = async (manualCode?: string) => {
+        const codeToUse = manualCode || linkCode;
+        
+        if (!codeToUse || codeToUse.length < 6) {
+            if (!manualCode) alert("Please enter a valid 6-digit code."); // Only alert on manual press
             return;
         }
+        
         setIsLoading(true);
-        const child = await fetchChildByCode(linkCode.toUpperCase());
-        if (child) {
-            setLinkedChild(child);
-        } else {
-            alert("Invalid code. Please ask your teen to generate a new one in the app.");
+        try {
+            const child = await fetchChildByCode(codeToUse.toUpperCase());
+            if (child) {
+                setLinkedChild(child);
+                // Clean URL without reload
+                window.history.replaceState({}, '', '/portal');
+            } else {
+                if (!manualCode) alert("Invalid magic link code."); // Only alert if it was auto-attempt
+                else alert("Invalid code. Please ask your teen to generate a new one in the app.");
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     // LOGIN VIEW
@@ -72,7 +93,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
                             <p className="text-xs text-slate-400 mt-2">Get this code from your teen's app settings (Social Tab).</p>
                         </div>
                         <button 
-                            onClick={handleConnect}
+                            onClick={() => handleConnect()}
                             disabled={isLoading}
                             className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md disabled:opacity-50"
                         >
@@ -88,7 +109,6 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
     }
 
     const alerts = getInterventions(linkedChild);
-    const riskScore = 4; // Derived mock
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-800 font-sans">

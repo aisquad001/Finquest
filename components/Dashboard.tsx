@@ -18,7 +18,8 @@ import {
     ExclamationTriangleIcon,
     BoltIcon,
     ArrowRightOnRectangleIcon,
-    PencilSquareIcon
+    PencilSquareIcon,
+    LinkIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -142,6 +143,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             navigator.clipboard.writeText(shareData.url);
             playSound('coin');
             alert("Link copied! Share it to get rich.");
+        }
+    };
+
+    const handleShareParentLink = async () => {
+        if (!familyCode) return;
+        const shareData = {
+            title: "Racked Parent Portal",
+            text: `Login to approve my allowance on Racked! Code: ${familyCode}`,
+            url: `${window.location.origin}/portal?code=${familyCode}`
+        };
+        
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log("Share cancelled");
+            }
+        } else {
+            navigator.clipboard.writeText(shareData.url);
+            playSound('coin');
+            alert("Magic Link copied! Send it to your parent.");
         }
     };
 
@@ -547,6 +569,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                      <div className="text-[10px] text-gray-400 mt-2">
                                          They can visit <span className="text-white font-bold">racked.gg/portal</span>
                                      </div>
+                                     <button 
+                                         onClick={handleShareParentLink}
+                                         className="w-full mt-4 py-2 bg-neon-blue text-black font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-400 transition-colors"
+                                     >
+                                         <LinkIcon className="w-4 h-4" /> Share Login Link
+                                     </button>
                                  </div>
                              )}
                         </div>
