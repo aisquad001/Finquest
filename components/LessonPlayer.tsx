@@ -230,6 +230,84 @@ const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void
     );
 };
 
+const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
+    const [revealed, setRevealed] = useState(false);
+    const [animating, setAnimating] = useState(false);
+
+    const handleCalculate = () => {
+        setAnimating(true);
+        playSound('click');
+        setTimeout(() => {
+            setRevealed(true);
+            setAnimating(false);
+            playSound('kaching');
+            (window as any).confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
+        }, 800);
+    };
+
+    return (
+        <div className="flex flex-col h-full p-6 justify-center items-center text-center">
+            <h3 className="font-game text-3xl text-white mb-8 text-shadow-neon text-stroke-black leading-tight drop-shadow-lg">
+                {lesson.title}
+            </h3>
+            
+            <div className="bg-white text-black p-6 rounded-3xl border-[6px] border-black shadow-[8px_8px_0px_rgba(0,0,0,0.5)] w-full max-w-md mb-8 transform -rotate-1 relative">
+                <div className="absolute -top-6 -right-6 text-5xl animate-bounce filter drop-shadow-md">🧮</div>
+                
+                <div className="mb-6">
+                     <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">The Scenario</div>
+                     <p className="text-xl font-black font-body leading-tight">{lesson.content.label}</p>
+                </div>
+                
+                <div className="h-28 flex items-center justify-center mb-6 bg-gray-100 rounded-2xl border-4 border-gray-300 inner-shadow relative overflow-hidden">
+                    {animating ? (
+                         <div className="flex flex-col items-center animate-pulse">
+                             <span className="text-4xl">⚙️</span>
+                             <span className="text-xs font-bold mt-1 text-gray-500">CRUNCHING NUMBERS...</span>
+                         </div>
+                    ) : revealed ? (
+                         <motion.div 
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1.2, opacity: 1, rotate: [0, -5, 5, 0] }}
+                            className="flex flex-col items-center"
+                         >
+                            <span className="text-4xl font-black text-green-600 drop-shadow-sm">
+                                {lesson.content.resultLabel?.match(/\$[\d,]+/) || lesson.content.resultLabel?.split(' ')[0] || '$$$'}
+                            </span>
+                         </motion.div>
+                    ) : (
+                        <span className="text-6xl text-gray-300 font-black">?</span>
+                    )}
+                </div>
+
+                {!revealed ? (
+                    <button 
+                        onClick={handleCalculate}
+                        disabled={animating}
+                        className="w-full py-4 bg-orange-500 text-white font-game text-2xl rounded-xl border-b-[6px] border-orange-800 active:border-b-0 active:translate-y-1.5 transition-all hover:brightness-110"
+                    >
+                        RUN THE MATH
+                    </button>
+                ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                         <p className="text-lg font-bold mb-4 text-gray-800 leading-snug">{lesson.content.resultLabel}</p>
+                    </motion.div>
+                )}
+            </div>
+
+            {revealed && (
+                 <motion.button 
+                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    onClick={onNext} 
+                    className="px-12 py-4 bg-neon-green text-black font-game text-2xl rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all shadow-xl hover:scale-105"
+                >
+                    MIND BLOWN 🤯
+                </motion.button>
+            )}
+        </div>
+    );
+};
+
 // --- MAIN COMPONENT ---
 
 export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onComplete }) => {
@@ -419,15 +497,21 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                             ))}
                         </div>
                     ) : (
-                         <div className="h-4 w-full bg-gray-800 rounded-full overflow-hidden border-2 border-white/20 shadow-inner relative">
-                             <motion.div 
-                                className="h-full bg-gradient-to-r from-neon-green to-emerald-500"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
-                                transition={{ type: "spring", stiffness: 50 }}
-                             ></motion.div>
-                             <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white uppercase tracking-widest">
-                                 Progress {Math.round(((currentIndex + 1) / lessons.length) * 100)}%
+                         <div className="w-full mr-2 relative">
+                             <div className="h-6 w-full bg-gray-900 rounded-full border-[3px] border-black shadow-[2px_2px_0px_rgba(255,255,255,0.2)] overflow-hidden relative transform -skew-x-6">
+                                 <motion.div 
+                                    className="h-full bg-gradient-to-r from-neon-green to-yellow-400 relative"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
+                                    transition={{ type: "spring", stiffness: 60 }}
+                                 >
+                                     {/* Striped Pattern Overlay */}
+                                     <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzhhYWGMYAEYB8RmROaABADeOQ8CXl/xfgAAAABJRU5ErkJggg==')] opacity-20"></div>
+                                 </motion.div>
+                             </div>
+                             {/* Floating Percent Tag */}
+                             <div className="absolute -top-3 right-0 bg-white text-black border-2 border-black text-[10px] font-black px-1.5 py-0.5 rounded rotate-6 shadow-sm z-10">
+                                 {Math.round(((currentIndex + 1) / lessons.length) * 100)}%
                              </div>
                          </div>
                     )}
@@ -511,7 +595,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         {currentLesson.type === 'swipe' && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'drag_drop' && <DragDropView lesson={currentLesson} onNext={(e) => handleLessonComplete(150, 50, e)} />}
                         {currentLesson.type === 'tap_lie' && <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
-                        {currentLesson.type === 'calculator' && <div onClick={(e) => handleLessonComplete(100, 50, e)}>Calc (Placeholder)</div>}
+                        {currentLesson.type === 'calculator' && <CalculatorView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} />}
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 20, e)} />}
                         {(currentLesson.type === 'video' || currentLesson.type === 'info') && (
                             <div className="flex flex-col h-full p-6 pt-12 items-center text-center">
