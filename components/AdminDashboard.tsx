@@ -29,7 +29,8 @@ import {
     UserState,
     SHOP_ITEMS,
     Lesson,
-    Stock
+    Stock,
+    LessonType
 } from '../services/gamification';
 import { 
     subscribeToAllUsers,
@@ -220,6 +221,21 @@ const ContentCMS = () => {
     const [editForm, setEditForm] = useState<Partial<Lesson>>({});
     const [isUploading, setIsUploading] = useState(false);
 
+    // Helper for form fields
+    const InputField = ({ label, value, onChange, type = "text", placeholder = "", disabled = false }: any) => (
+        <div className="mb-3">
+            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">{label}</label>
+            <input 
+                className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none disabled:opacity-50"
+                type={type}
+                value={value || ''}
+                onChange={onChange}
+                placeholder={placeholder}
+                disabled={disabled}
+            />
+        </div>
+    );
+
     // Listen to live content
     useEffect(() => {
         const unsub = subscribeToCollection('lessons', (data) => setLessons(data as Lesson[]));
@@ -228,12 +244,15 @@ const ContentCMS = () => {
 
     const handleEdit = (lesson: Lesson) => {
         setEditingId(lesson.id);
-        setEditForm(lesson);
+        setEditForm(JSON.parse(JSON.stringify(lesson))); // Deep copy
     };
 
     const handleSave = async () => {
-        if (!editingId || !editForm.title) return;
-        await saveDoc('lessons', editingId, editForm);
+        if (!editingId || !editForm.id || !editForm.title) {
+            alert("Missing required fields (ID, Title)");
+            return;
+        }
+        await saveDoc('lessons', editForm.id, editForm);
         setEditingId(null);
         playSound('success');
     };
@@ -263,6 +282,132 @@ const ContentCMS = () => {
         setIsUploading(false);
     };
 
+    // Dynamic Content Fields Renderer
+    const renderContentFields = () => {
+        const type = editForm.type || 'info';
+        const content = editForm.content || {};
+
+        const updateContent = (key: string, val: any) => {
+            setEditForm(prev => ({ ...prev, content: { ...prev.content, [key]: val } }));
+        };
+
+        switch (type) {
+            case 'swipe':
+                return (
+                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
+                            <span>Swipe Cards</span>
+                            <button onClick={() => updateContent('cards', [...(content.cards || []), { text: '', isRight: true, label: '' }])} className="text-blue-400">+ Add Card</button>
+                        </div>
+                        {(content.cards || []).map((card: any, i: number) => (
+                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
+                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1 focus:border-blue-500 outline-none" placeholder="Card Text" value={card.text || ''} onChange={e => {
+                                    const newCards = [...(content.cards || [])];
+                                    newCards[i] = { ...card, text: e.target.value };
+                                    updateContent('cards', newCards);
+                                }} />
+                                <select className="bg-slate-700 text-white text-xs rounded p-1" value={card.isRight ? 'true' : 'false'} onChange={e => {
+                                    const newCards = [...(content.cards || [])];
+                                    newCards[i] = { ...card, isRight: e.target.value === 'true' };
+                                    updateContent('cards', newCards);
+                                }}>
+                                    <option value="true">Right (Correct)</option>
+                                    <option value="false">Left (Wrong)</option>
+                                </select>
+                                <input className="w-20 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Label" value={card.label || ''} onChange={e => {
+                                    const newCards = [...(content.cards || [])];
+                                    newCards[i] = { ...card, label: e.target.value };
+                                    updateContent('cards', newCards);
+                                }} />
+                                <button onClick={() => updateContent('cards', content.cards.filter((_: any, idx: number) => idx !== i))} className="text-red-500 hover:text-red-400 font-bold">X</button>
+                            </div>
+                        ))}
+                    </div>
+                );
+            case 'tap_lie':
+                return (
+                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
+                            <span>Statements (Find the Lie)</span>
+                            <button onClick={() => updateContent('statements', [...(content.statements || []), { text: '', isLie: false }])} className="text-blue-400">+ Add Statement</button>
+                        </div>
+                        {(content.statements || []).map((stmt: any, i: number) => (
+                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
+                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1 focus:border-blue-500 outline-none" placeholder="Statement Text" value={stmt.text || ''} onChange={e => {
+                                    const newStmts = [...(content.statements || [])];
+                                    newStmts[i] = { ...stmt, text: e.target.value };
+                                    updateContent('statements', newStmts);
+                                }} />
+                                <label className="flex items-center gap-1 text-xs text-white">
+                                    <input type="checkbox" checked={stmt.isLie || false} onChange={e => {
+                                         const newStmts = [...(content.statements || [])];
+                                         newStmts[i] = { ...stmt, isLie: e.target.checked };
+                                         updateContent('statements', newStmts);
+                                    }} /> Is Lie?
+                                </label>
+                                <button onClick={() => updateContent('statements', content.statements.filter((_: any, idx: number) => idx !== i))} className="text-red-500 hover:text-red-400 font-bold">X</button>
+                            </div>
+                        ))}
+                    </div>
+                );
+            case 'meme':
+                return (
+                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
+                         <InputField label="Image URL" value={content.imageUrl} onChange={(e: any) => updateContent('imageUrl', e.target.value)} />
+                         <InputField label="Top Text" value={content.topText} onChange={(e: any) => updateContent('topText', e.target.value)} />
+                         <InputField label="Bottom Text" value={content.bottomText} onChange={(e: any) => updateContent('bottomText', e.target.value)} />
+                         <InputField label="Explanation" value={content.explanation} onChange={(e: any) => updateContent('explanation', e.target.value)} />
+                    </div>
+                );
+            case 'calculator':
+                return (
+                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <InputField label="Description Label" value={content.label} onChange={(e: any) => updateContent('label', e.target.value)} placeholder="If you invest..." />
+                        <InputField label="Result Label" value={content.resultLabel} onChange={(e: any) => updateContent('resultLabel', e.target.value)} placeholder="You will have..." />
+                        <InputField label="Formula (static 'auto' for now)" value={content.formula} onChange={(e: any) => updateContent('formula', e.target.value)} />
+                    </div>
+                );
+            case 'drag_drop':
+                return (
+                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div className="mb-2">
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Buckets (Comma Separated)</label>
+                            <input className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-xs" value={(content.buckets || []).join(', ')} onChange={e => updateContent('buckets', e.target.value.split(',').map(s => s.trim()))} />
+                        </div>
+                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
+                            <span>Draggable Items</span>
+                            <button onClick={() => updateContent('items', [...(content.items || []), { id: Date.now().toString(), text: '', category: '' }])} className="text-blue-400">+ Add Item</button>
+                        </div>
+                         {(content.items || []).map((item: any, i: number) => (
+                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
+                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Text" value={item.text || ''} onChange={e => {
+                                    const newItems = [...(content.items || [])];
+                                    newItems[i] = { ...item, text: e.target.value };
+                                    updateContent('items', newItems);
+                                }} />
+                                <input className="w-24 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Category" value={item.category || ''} onChange={e => {
+                                    const newItems = [...(content.items || [])];
+                                    newItems[i] = { ...item, category: e.target.value };
+                                    updateContent('items', newItems);
+                                }} />
+                                <button onClick={() => updateContent('items', content.items.filter((_: any, idx: number) => idx !== i))} className="text-red-500 font-bold">X</button>
+                            </div>
+                        ))}
+                    </div>
+                );
+            case 'info':
+            case 'video':
+            default:
+                return (
+                     <div className="space-y-2">
+                         <label className="block text-xs font-bold text-gray-400 uppercase">Main Text (Markdown supported)</label>
+                         <textarea className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white h-32 text-sm" value={content.text || ''} onChange={e => updateContent('text', e.target.value)} />
+                         {type === 'video' && <InputField label="Video URL" value={content.videoUrl} onChange={(e: any) => updateContent('videoUrl', e.target.value)} />}
+                     </div>
+                );
+        }
+    };
+
     return (
         <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
@@ -274,7 +419,20 @@ const ContentCMS = () => {
                         {isUploading ? "Uploading..." : "Bulk Upload JSON"}
                         <input type="file" className="hidden" accept=".json" onChange={handleBulkUpload} disabled={isUploading} />
                     </label>
-                    <button onClick={() => { setEditingId('new'); setEditForm({}); }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2">
+                    <button onClick={() => { 
+                        setEditingId('new'); 
+                        setEditForm({ 
+                            id: `world1_l1_${Date.now().toString().slice(-4)}`, 
+                            worldId: 'world1', 
+                            levelId: 'world1_l1', 
+                            order: 1, 
+                            type: 'info', 
+                            title: '', 
+                            xpReward: 100, 
+                            coinReward: 50,
+                            content: {} 
+                        }); 
+                    }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2">
                         <PlusIcon className="w-5 h-5" /> Add New
                     </button>
                 </div>
@@ -283,45 +441,93 @@ const ContentCMS = () => {
             {/* Edit Modal */}
             {editingId && (
                 <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <h3 className="text-xl font-bold text-white mb-4">{editingId === 'new' ? 'Create Lesson' : 'Edit Lesson'}</h3>
-                        <div className="space-y-4">
-                            <input className="w-full bg-slate-800 p-3 rounded text-white" placeholder="Lesson ID (e.g. world1_l1_les0)" value={editForm.id || ''} onChange={e => setEditForm({...editForm, id: e.target.value})} disabled={editingId !== 'new'} />
-                            <input className="w-full bg-slate-800 p-3 rounded text-white" placeholder="Title" value={editForm.title || ''} onChange={e => setEditForm({...editForm, title: e.target.value})} />
-                            <input className="w-full bg-slate-800 p-3 rounded text-white" placeholder="XP Reward" type="number" value={editForm.xpReward || ''} onChange={e => setEditForm({...editForm, xpReward: Number(e.target.value)})} />
-                            <textarea className="w-full bg-slate-800 p-3 rounded text-white h-40 font-mono text-xs" placeholder="Content JSON (raw)" value={JSON.stringify(editForm.content, null, 2)} onChange={e => { try { setEditForm({...editForm, content: JSON.parse(e.target.value)}); } catch {} }} />
+                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">{editingId === 'new' ? 'Create New Lesson' : 'Edit Lesson'}</h3>
+                            <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-white">✕</button>
                         </div>
-                        <div className="flex justify-end gap-4 mt-6">
-                            <button onClick={() => setEditingId(null)} className="text-slate-400">Cancel</button>
-                            <button onClick={handleSave} className="bg-green-600 text-white px-6 py-2 rounded font-bold">Save Changes</button>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <InputField label="Lesson ID" value={editForm.id} onChange={(e: any) => setEditForm({...editForm, id: e.target.value})} disabled={editingId !== 'new'} placeholder="world1_l1_uniqueId" />
+                            <InputField label="Title" value={editForm.title} onChange={(e: any) => setEditForm({...editForm, title: e.target.value})} placeholder="Lesson Title" />
+                            
+                            <div className="mb-3">
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">World</label>
+                                <select 
+                                    className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white outline-none"
+                                    value={editForm.worldId || 'world1'}
+                                    onChange={e => setEditForm({...editForm, worldId: e.target.value})}
+                                >
+                                    {WORLDS_METADATA.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="mb-3">
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Lesson Type</label>
+                                <select 
+                                    className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white outline-none"
+                                    value={editForm.type || 'info'}
+                                    onChange={e => setEditForm({...editForm, type: e.target.value as LessonType, content: {} })}
+                                >
+                                    <option value="info">Info / Text</option>
+                                    <option value="video">Video</option>
+                                    <option value="swipe">Swipe Cards</option>
+                                    <option value="drag_drop">Drag & Drop</option>
+                                    <option value="tap_lie">Tap the Lie (Poll)</option>
+                                    <option value="calculator">Calculator</option>
+                                    <option value="meme">Meme Reveal</option>
+                                </select>
+                            </div>
+
+                            <InputField label="Level (1-8)" type="number" value={parseInt(editForm.levelId?.split('_l')[1] || '1')} onChange={(e: any) => setEditForm({...editForm, levelId: `${editForm.worldId}_l${e.target.value}`})} />
+                            <InputField label="Order" type="number" value={editForm.order} onChange={(e: any) => setEditForm({...editForm, order: Number(e.target.value)})} />
+                            
+                            <InputField label="XP Reward" type="number" value={editForm.xpReward} onChange={(e: any) => setEditForm({...editForm, xpReward: Number(e.target.value)})} />
+                            <InputField label="Coin Reward" type="number" value={editForm.coinReward} onChange={(e: any) => setEditForm({...editForm, coinReward: Number(e.target.value)})} />
+                        </div>
+
+                        <div className="mt-4 border-t border-slate-700 pt-4">
+                            <h4 className="text-sm font-bold text-white mb-3">Content Configuration ({editForm.type})</h4>
+                            {renderContentFields()}
+                        </div>
+
+                        <div className="flex justify-end gap-4 mt-6 border-t border-slate-700 pt-4">
+                            <button onClick={() => setEditingId(null)} className="px-4 py-2 text-slate-400 font-bold hover:text-white">Cancel</button>
+                            <button onClick={handleSave} className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold shadow-lg">
+                                Save Changes
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
 
             {/* List */}
-            <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
                 <table className="w-full text-left text-sm text-slate-400">
                     <thead className="bg-slate-900 text-white font-bold uppercase text-xs">
                         <tr>
                             <th className="p-4">ID</th>
                             <th className="p-4">Title</th>
                             <th className="p-4">Type</th>
+                            <th className="p-4">Rewards</th>
                             <th className="p-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
                         {lessons.length === 0 ? (
-                            <tr><td colSpan={4} className="p-8 text-center text-slate-500">No custom content loaded. Use Bulk Upload.</td></tr>
+                            <tr><td colSpan={5} className="p-8 text-center text-slate-500 italic">No custom content loaded. Use Bulk Upload or Add New.</td></tr>
                         ) : (
                             lessons.map(l => (
-                                <tr key={l.id} className="hover:bg-slate-700/50">
-                                    <td className="p-4 font-mono text-xs">{l.id}</td>
+                                <tr key={l.id} className="hover:bg-slate-700/50 transition-colors">
+                                    <td className="p-4 font-mono text-xs text-slate-500">{l.id}</td>
                                     <td className="p-4 font-bold text-white">{l.title}</td>
-                                    <td className="p-4"><span className="bg-blue-900 text-blue-300 px-2 py-1 rounded text-xs uppercase">{l.type}</span></td>
+                                    <td className="p-4"><span className="bg-blue-900/50 border border-blue-500/30 text-blue-300 px-2 py-1 rounded text-xs uppercase font-bold">{l.type}</span></td>
+                                    <td className="p-4 text-xs">
+                                        <span className="text-neon-green font-bold">{l.xpReward} XP</span> • <span className="text-yellow-400">{l.coinReward} Coins</span>
+                                    </td>
                                     <td className="p-4 text-right flex justify-end gap-2">
-                                        <button onClick={() => handleEdit(l)} className="p-2 hover:text-blue-400"><PencilSquareIcon className="w-4 h-4"/></button>
-                                        <button onClick={() => handleDelete(l.id)} className="p-2 hover:text-red-400"><TrashIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => handleEdit(l)} className="p-2 bg-slate-700 rounded hover:bg-blue-600 hover:text-white transition-colors" title="Edit"><PencilSquareIcon className="w-4 h-4"/></button>
+                                        <button onClick={() => handleDelete(l.id)} className="p-2 bg-slate-700 rounded hover:bg-red-600 hover:text-white transition-colors" title="Delete"><TrashIcon className="w-4 h-4"/></button>
                                     </td>
                                 </tr>
                             ))
