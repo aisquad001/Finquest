@@ -22,7 +22,8 @@ import {
     TrashIcon,
     PlusIcon,
     CloudArrowUpIcon,
-    CloudArrowDownIcon
+    CloudArrowDownIcon,
+    XMarkIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -43,7 +44,7 @@ import {
     batchWrite
 } from '../services/db';
 import { db } from '../services/firebase';
-import { collection, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
 import { playSound } from '../services/audio';
 import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
@@ -217,418 +218,396 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
     );
 };
 
-// 3. CONTENT CMS (Fully Editable)
+// 3. CONTENT CMS (REBUILT & ROBUST)
 const ContentCMS = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [searchTerm, setSearchTerm] = useState("");
+    
+    // Editor State
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Lesson>>({});
-    const [isUploading, setIsUploading] = useState(false);
 
-    // Helper for form fields
-    const InputField = ({ label, value, onChange, type = "text", placeholder = "", disabled = false }: any) => (
-        <div className="mb-3">
-            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">{label}</label>
-            <input 
-                className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white focus:border-blue-500 outline-none disabled:opacity-50"
-                type={type}
-                value={value || ''}
-                onChange={onChange}
-                placeholder={placeholder}
-                disabled={disabled}
-            />
-        </div>
-    );
-
-    // Listen to live content
+    // 1. REAL-TIME SUBSCRIPTION
     useEffect(() => {
-        // Subscribe to 'lessons' collection
-        const unsub = subscribeToCollection('lessons', (data) => {
-            // Sort lessons by WorldId then Order for clean display
-            const sorted = (data as Lesson[]).sort((a, b) => {
+        const q = collection(db, "lessons");
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lesson));
+            // Sort: World -> Level -> Order
+            const sorted = data.sort((a, b) => {
                 if (a.worldId !== b.worldId) return a.worldId.localeCompare(b.worldId);
                 return (a.order || 0) - (b.order || 0);
             });
             setLessons(sorted);
+            setLoading(false);
+        }, (error) => {
+            console.error("CMS Subscription Error:", error);
+            setLoading(false);
         });
-        return () => unsub();
+        return () => unsubscribe();
     }, []);
 
-    const handleEdit = (lesson: Lesson) => {
-        setEditingId(lesson.id);
-        setEditForm(JSON.parse(JSON.stringify(lesson))); // Deep copy
-    };
-
-    const handleSave = async () => {
-        if (!editingId || !editForm.id || !editForm.title) {
-            alert("Missing required fields (ID, Title)");
-            return;
-        }
-        await saveDoc('lessons', editForm.id, editForm);
-        setEditingId(null);
-        playSound('success');
-    };
-
-    const handleDelete = async (id: string) => {
-        if (confirm("Delete this lesson?")) {
-            await deleteDocument('lessons', id);
-            playSound('error');
-        }
-    };
-
+    // 2. SEED FUNCTION (NUCLEAR)
     const handleSeedDB = async () => {
-        if (!confirm("This will DELETE all current lessons and load 384 default ones. Continue?")) return;
-        setIsUploading(true);
-
+        if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and replace them with the default 384 lessons. This cannot be undone. Continue?")) return;
+        
+        setIsProcessing(true);
         try {
-            const lessonsRef = collection(db, "lessons");
-            
-            // 1. DELETE EXISTING (Chunked to avoid batch limits)
-            const snapshot = await getDocs(lessonsRef);
-            console.log(`Found ${snapshot.size} existing lessons to delete.`);
-            
-            const deleteBatches = [];
-            let currentDeleteBatch = writeBatch(db);
+            // A. DELETE ALL EXISTING
+            const snapshot = await getDocs(collection(db, "lessons"));
+            const totalToDelete = snapshot.size;
+            console.log(`Deleting ${totalToDelete} existing records...`);
+
+            const deleteBatches: Promise<void>[] = [];
+            let deleteBatch = writeBatch(db);
             let deleteCount = 0;
 
             snapshot.docs.forEach((doc) => {
-                currentDeleteBatch.delete(doc.ref);
+                deleteBatch.delete(doc.ref);
                 deleteCount++;
                 if (deleteCount % 400 === 0) {
-                    deleteBatches.push(currentDeleteBatch.commit());
-                    currentDeleteBatch = writeBatch(db);
+                    deleteBatches.push(deleteBatch.commit());
+                    deleteBatch = writeBatch(db);
                 }
             });
-            if (deleteCount % 400 !== 0) {
-                deleteBatches.push(currentDeleteBatch.commit());
-            }
+            if (deleteCount % 400 !== 0) deleteBatches.push(deleteBatch.commit());
             await Promise.all(deleteBatches);
-            console.log("Deletion complete.");
 
-            // 2. FETCH NEW DATA
-            const response = await fetch("https://files.catbox.moe/4p3h7k.json");
-            if (!response.ok) throw new Error("Failed to fetch JSON file");
-            const defaultLessons = await response.json();
-            console.log(`Fetched ${defaultLessons.length} lessons.`);
+            // B. FETCH NEW DATA
+            console.log("Downloading seed data...");
+            const res = await fetch("https://files.catbox.moe/4p3h7k.json");
+            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+            const seedData = await res.json();
+            
+            if (!Array.isArray(seedData)) throw new Error("Invalid JSON format: Expected array");
 
-            // 3. WRITE NEW DATA (Chunked)
-            const writeBatches = [];
-            let currentWriteBatch = writeBatch(db);
+            // C. WRITE NEW DATA
+            console.log(`Writing ${seedData.length} records...`);
+            const writeBatches: Promise<void>[] = [];
+            let writeBatchInst = writeBatch(db);
             let writeCount = 0;
 
-            defaultLessons.forEach((lesson: any) => {
-                const docRef = doc(db, "lessons", lesson.id);
-                currentWriteBatch.set(docRef, lesson);
+            for (const item of seedData) {
+                const ref = doc(db, "lessons", item.id);
+                writeBatchInst.set(ref, item);
                 writeCount++;
                 if (writeCount % 400 === 0) {
-                    writeBatches.push(currentWriteBatch.commit());
-                    currentWriteBatch = writeBatch(db);
+                    writeBatches.push(writeBatchInst.commit());
+                    writeBatchInst = writeBatch(db);
                 }
-            });
-            if (writeCount % 400 !== 0) {
-                writeBatches.push(currentWriteBatch.commit());
             }
+            if (writeCount % 400 !== 0) writeBatches.push(writeBatchInst.commit());
             await Promise.all(writeBatches);
 
-            alert(`SUCCESS: ${defaultLessons.length} lessons seeded! Refresh the page.`);
+            alert(`✅ SUCCESS: Database seeded with ${writeCount} lessons!`);
             playSound('levelup');
-            
-        } catch (error: any) {
-            console.error("Seed DB Error:", error);
-            alert("Error seeding DB: " + error.message);
+
+        } catch (e: any) {
+            console.error(e);
+            alert(`❌ ERROR: ${e.message}`);
+            playSound('error');
         } finally {
-            setIsUploading(false);
+            setIsProcessing(false);
+        }
+    };
+
+    // 3. CRUD ACTIONS
+    const handleDelete = async (id: string) => {
+        if (!confirm(`Delete lesson ${id}?`)) return;
+        try {
+            await deleteDoc(doc(db, "lessons", id));
+            playSound('pop');
+        } catch (e) {
+            alert("Error deleting: " + e);
+        }
+    };
+
+    const openEditor = (lesson?: Lesson) => {
+        if (lesson) {
+            setEditForm(JSON.parse(JSON.stringify(lesson))); // Deep copy
+        } else {
+            // Defaults for new
+            setEditForm({
+                id: `world1_l1_${Date.now()}`,
+                worldId: 'world1',
+                levelId: 'world1_l1',
+                order: lessons.length + 1,
+                title: 'New Lesson',
+                type: 'info',
+                xpReward: 100,
+                coinReward: 50,
+                content: { text: '' }
+            });
+        }
+        setIsEditorOpen(true);
+    };
+
+    const handleSave = async () => {
+        if (!editForm.id || !editForm.title) {
+            alert("ID and Title are required.");
+            return;
+        }
+        setIsProcessing(true);
+        try {
+            await setDoc(doc(db, "lessons", editForm.id), editForm);
+            setIsEditorOpen(false);
+            playSound('success');
+        } catch (e: any) {
+            alert("Save failed: " + e.message);
+        } finally {
+            setIsProcessing(false);
         }
     };
 
     const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        setIsUploading(true);
+        
+        if (!confirm(`Upload ${file.name}? This will merge/overwrite existing IDs.`)) return;
+
+        setIsProcessing(true);
         try {
             const text = await file.text();
             const json = JSON.parse(text);
-            if (Array.isArray(json)) {
-                await batchWrite('lessons', json);
-                alert(`Success! Uploaded ${json.length} records.`);
-                playSound('levelup');
-            }
-        } catch (err) {
-            alert("Invalid JSON file.");
-        }
-        setIsUploading(false);
-    };
+            if (!Array.isArray(json)) throw new Error("JSON must be an array of lessons");
 
-    // Dynamic Content Fields Renderer
-    const renderContentFields = () => {
-        const type = editForm.type || 'info';
-        const content = editForm.content || {};
+            const batches: Promise<void>[] = [];
+            let batch = writeBatch(db);
+            let count = 0;
 
-        const updateContent = (key: string, val: any) => {
-            setEditForm(prev => ({ ...prev, content: { ...prev.content, [key]: val } }));
-        };
+            json.forEach(item => {
+                if (!item.id) return;
+                batch.set(doc(db, "lessons", item.id), item, { merge: true });
+                count++;
+                if (count % 400 === 0) {
+                    batches.push(batch.commit());
+                    batch = writeBatch(db);
+                }
+            });
+            if (count % 400 !== 0) batches.push(batch.commit());
+            await Promise.all(batches);
 
-        switch (type) {
-            case 'swipe':
-                return (
-                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
-                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
-                            <span>Swipe Cards</span>
-                            <button onClick={() => updateContent('cards', [...(content.cards || []), { text: '', isRight: true, label: '' }])} className="text-blue-400">+ Add Card</button>
-                        </div>
-                        {(content.cards || []).map((card: any, i: number) => (
-                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
-                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1 focus:border-blue-500 outline-none" placeholder="Card Text" value={card.text || ''} onChange={e => {
-                                    const newCards = [...(content.cards || [])];
-                                    newCards[i] = { ...card, text: e.target.value };
-                                    updateContent('cards', newCards);
-                                }} />
-                                <select className="bg-slate-700 text-white text-xs rounded p-1" value={card.isRight ? 'true' : 'false'} onChange={e => {
-                                    const newCards = [...(content.cards || [])];
-                                    newCards[i] = { ...card, isRight: e.target.value === 'true' };
-                                    updateContent('cards', newCards);
-                                }}>
-                                    <option value="true">Right (Correct)</option>
-                                    <option value="false">Left (Wrong)</option>
-                                </select>
-                                <input className="w-20 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Label" value={card.label || ''} onChange={e => {
-                                    const newCards = [...(content.cards || [])];
-                                    newCards[i] = { ...card, label: e.target.value };
-                                    updateContent('cards', newCards);
-                                }} />
-                                <button onClick={() => updateContent('cards', content.cards.filter((_: any, idx: number) => idx !== i))} className="text-red-500 hover:text-red-400 font-bold">X</button>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'tap_lie':
-                return (
-                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
-                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
-                            <span>Statements (Find the Lie)</span>
-                            <button onClick={() => updateContent('statements', [...(content.statements || []), { text: '', isLie: false }])} className="text-blue-400">+ Add Statement</button>
-                        </div>
-                        {(content.statements || []).map((stmt: any, i: number) => (
-                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
-                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1 focus:border-blue-500 outline-none" placeholder="Statement Text" value={stmt.text || ''} onChange={e => {
-                                    const newStmts = [...(content.statements || [])];
-                                    newStmts[i] = { ...stmt, text: e.target.value };
-                                    updateContent('statements', newStmts);
-                                }} />
-                                <label className="flex items-center gap-1 text-xs text-white">
-                                    <input type="checkbox" checked={stmt.isLie || false} onChange={e => {
-                                         const newStmts = [...(content.statements || [])];
-                                         newStmts[i] = { ...stmt, isLie: e.target.checked };
-                                         updateContent('statements', newStmts);
-                                    }} /> Is Lie?
-                                </label>
-                                <button onClick={() => updateContent('statements', content.statements.filter((_: any, idx: number) => idx !== i))} className="text-red-500 hover:text-red-400 font-bold">X</button>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'meme':
-                return (
-                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
-                         <InputField label="Image URL" value={content.imageUrl} onChange={(e: any) => updateContent('imageUrl', e.target.value)} />
-                         <InputField label="Top Text" value={content.topText} onChange={(e: any) => updateContent('topText', e.target.value)} />
-                         <InputField label="Bottom Text" value={content.bottomText} onChange={(e: any) => updateContent('bottomText', e.target.value)} />
-                         <InputField label="Explanation" value={content.explanation} onChange={(e: any) => updateContent('explanation', e.target.value)} />
-                    </div>
-                );
-            case 'calculator':
-                return (
-                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
-                        <InputField label="Description Label" value={content.label} onChange={(e: any) => updateContent('label', e.target.value)} placeholder="If you invest..." />
-                        <InputField label="Result Label" value={content.resultLabel} onChange={(e: any) => updateContent('resultLabel', e.target.value)} placeholder="You will have..." />
-                        <InputField label="Formula (static 'auto' for now)" value={content.formula} onChange={(e: any) => updateContent('formula', e.target.value)} />
-                    </div>
-                );
-            case 'drag_drop':
-                return (
-                    <div className="space-y-2 bg-slate-800/50 p-3 rounded border border-slate-700">
-                        <div className="mb-2">
-                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Buckets (Comma Separated)</label>
-                            <input className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-xs" value={(content.buckets || []).join(', ')} onChange={e => updateContent('buckets', e.target.value.split(',').map(s => s.trim()))} />
-                        </div>
-                        <div className="text-xs font-bold text-gray-400 uppercase flex justify-between">
-                            <span>Draggable Items</span>
-                            <button onClick={() => updateContent('items', [...(content.items || []), { id: Date.now().toString(), text: '', category: '' }])} className="text-blue-400">+ Add Item</button>
-                        </div>
-                         {(content.items || []).map((item: any, i: number) => (
-                            <div key={i} className="flex gap-2 items-center bg-slate-900 p-2 rounded border border-slate-700">
-                                <input className="flex-1 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Text" value={item.text || ''} onChange={e => {
-                                    const newItems = [...(content.items || [])];
-                                    newItems[i] = { ...item, text: e.target.value };
-                                    updateContent('items', newItems);
-                                }} />
-                                <input className="w-24 bg-transparent border-b border-slate-600 text-white text-xs p-1" placeholder="Category" value={item.category || ''} onChange={e => {
-                                    const newItems = [...(content.items || [])];
-                                    newItems[i] = { ...item, category: e.target.value };
-                                    updateContent('items', newItems);
-                                }} />
-                                <button onClick={() => updateContent('items', content.items.filter((_: any, idx: number) => idx !== i))} className="text-red-500 font-bold">X</button>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case 'info':
-            case 'video':
-            default:
-                return (
-                     <div className="space-y-2">
-                         <label className="block text-xs font-bold text-gray-400 uppercase">Main Text (Markdown supported)</label>
-                         <textarea className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white h-32 text-sm" value={content.text || ''} onChange={e => updateContent('text', e.target.value)} />
-                         {type === 'video' && <InputField label="Video URL" value={content.videoUrl} onChange={(e: any) => updateContent('videoUrl', e.target.value)} />}
-                     </div>
-                );
+            alert(`✅ Uploaded ${count} lessons successfully.`);
+            playSound('levelup');
+        } catch (err: any) {
+            alert("Upload failed: " + err.message);
+        } finally {
+            setIsProcessing(false);
+            e.target.value = ''; // Reset input
         }
     };
 
+    // Filter Logic
+    const filteredLessons = lessons.filter(l => 
+        l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        l.id.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    // --- RENDER ---
     return (
-        <div className="p-8 animate-pop-in h-full overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-game text-white">Content CMS</h2>
-                <div className="flex gap-4">
-                    <a href="https://files.catbox.moe/4p3h7k.json" download className="text-xs text-blue-400 underline self-center font-bold">Download Template</a>
-                    
-                    <button 
-                        onClick={handleSeedDB}
-                        disabled={isUploading}
-                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 disabled:opacity-50 shadow-lg"
+        <div className="p-6 h-full flex flex-col animate-pop-in">
+            {/* TOP BAR */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h2 className="text-3xl font-game text-white">Content CMS</h2>
+                    <p className="text-slate-400 text-sm">Manage all game lessons and levels.</p>
+                </div>
+                
+                <div className="flex flex-wrap gap-3">
+                    <a 
+                        href="https://files.catbox.moe/4p3h7k.json" 
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl flex items-center gap-2"
                     >
-                        <CloudArrowDownIcon className="w-5 h-5" />
-                        {isUploading ? "Seeding..." : "Seed DB"}
-                    </button>
+                        <CloudArrowDownIcon className="w-4 h-4" /> Template
+                    </a>
 
-                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-lg">
-                        <CloudArrowUpIcon className="w-5 h-5" />
-                        Bulk Upload
-                        <input type="file" className="hidden" accept=".json" onChange={handleBulkUpload} disabled={isUploading} />
+                    <label className={`px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+                        <CloudArrowUpIcon className="w-4 h-4" /> Bulk Upload
+                        <input type="file" className="hidden" accept=".json" onChange={handleBulkUpload} disabled={isProcessing} />
                     </label>
 
-                    <button onClick={() => { 
-                        setEditingId('new'); 
-                        setEditForm({ 
-                            id: `world1_l1_${Date.now().toString().slice(-4)}`, 
-                            worldId: 'world1', 
-                            levelId: 'world1_l1', 
-                            order: 1, 
-                            type: 'info', 
-                            title: '', 
-                            xpReward: 100, 
-                            coinReward: 50,
-                            content: {} 
-                        }); 
-                    }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-lg">
-                        <PlusIcon className="w-5 h-5" /> Add New
+                    <button 
+                        onClick={handleSeedDB}
+                        disabled={isProcessing}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg disabled:opacity-50"
+                    >
+                        <FireIcon className="w-4 h-4" /> {isProcessing ? "Processing..." : "Seed Default DB"}
+                    </button>
+
+                    <button 
+                        onClick={() => openEditor()}
+                        className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg"
+                    >
+                        <PlusIcon className="w-4 h-4" /> Add New
                     </button>
                 </div>
             </div>
 
-            {/* Edit Modal */}
-            {editingId && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white">{editingId === 'new' ? 'Create New Lesson' : 'Edit Lesson'}</h3>
-                            <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-white">✕</button>
-                        </div>
+            {/* SEARCH */}
+            <div className="mb-4">
+                <input 
+                    type="text" 
+                    placeholder="Search by Title or ID..." 
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                    value={searchTerm}
+                    onChange={e => setSearchTerm(e.target.value)}
+                />
+            </div>
+
+            {/* TABLE */}
+            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden flex flex-col shadow-xl">
+                <div className="overflow-x-auto flex-1">
+                    <table className="w-full text-left text-sm text-slate-400">
+                        <thead className="bg-slate-900 text-white font-bold uppercase text-xs sticky top-0 z-10">
+                            <tr>
+                                <th className="p-4">ID</th>
+                                <th className="p-4">World</th>
+                                <th className="p-4">Level</th>
+                                <th className="p-4">Title</th>
+                                <th className="p-4">Type</th>
+                                <th className="p-4">XP</th>
+                                <th className="p-4">Coins</th>
+                                <th className="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-700">
+                            {loading ? (
+                                <tr><td colSpan={8} className="p-8 text-center animate-pulse">Loading content...</td></tr>
+                            ) : filteredLessons.length === 0 ? (
+                                <tr>
+                                    <td colSpan={8} className="p-12 text-center">
+                                        <div className="text-xl font-bold text-white mb-2">No Content Found</div>
+                                        <p className="mb-4">The database is empty.</p>
+                                        <button onClick={handleSeedDB} className="text-purple-400 underline font-bold hover:text-purple-300">Click here to Seed DB</button>
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredLessons.map(l => (
+                                    <tr key={l.id} className="hover:bg-slate-700/50 transition-colors">
+                                        <td className="p-4 font-mono text-xs text-slate-500">{l.id}</td>
+                                        <td className="p-4 text-xs">{l.worldId}</td>
+                                        <td className="p-4 text-xs">{l.levelId?.split('_l')[1] || '-'}</td>
+                                        <td className="p-4 font-bold text-white max-w-xs truncate" title={l.title}>{l.title}</td>
+                                        <td className="p-4"><span className="bg-slate-900 border border-slate-600 px-2 py-1 rounded text-[10px] uppercase font-bold">{l.type}</span></td>
+                                        <td className="p-4 text-green-400 font-bold">{l.xpReward}</td>
+                                        <td className="p-4 text-yellow-400 font-bold">{l.coinReward}</td>
+                                        <td className="p-4 text-right flex justify-end gap-2">
+                                            <button onClick={() => openEditor(l)} className="p-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded transition-colors"><PencilSquareIcon className="w-4 h-4"/></button>
+                                            <button onClick={() => handleDelete(l.id)} className="p-2 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded transition-colors"><TrashIcon className="w-4 h-4"/></button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="p-2 bg-slate-900 text-xs text-slate-500 text-center border-t border-slate-700">
+                    Showing {filteredLessons.length} lessons
+                </div>
+            </div>
+
+            {/* EDIT MODAL */}
+            {isEditorOpen && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-slate-900 w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
                         
-                        <div className="grid grid-cols-2 gap-4">
-                            <InputField label="Lesson ID" value={editForm.id} onChange={(e: any) => setEditForm({...editForm, id: e.target.value})} disabled={editingId !== 'new'} placeholder="world1_l1_uniqueId" />
-                            <InputField label="Title" value={editForm.title} onChange={(e: any) => setEditForm({...editForm, title: e.target.value})} placeholder="Lesson Title" />
-                            
-                            <div className="mb-3">
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">World</label>
-                                <select 
-                                    className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white outline-none"
-                                    value={editForm.worldId || 'world1'}
-                                    onChange={e => setEditForm({...editForm, worldId: e.target.value})}
-                                >
-                                    {WORLDS_METADATA.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
-                                </select>
-                            </div>
-
-                            <div className="mb-3">
-                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Lesson Type</label>
-                                <select 
-                                    className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white outline-none"
-                                    value={editForm.type || 'info'}
-                                    onChange={e => setEditForm({...editForm, type: e.target.value as LessonType, content: {} })}
-                                >
-                                    <option value="info">Info / Text</option>
-                                    <option value="video">Video</option>
-                                    <option value="swipe">Swipe Cards</option>
-                                    <option value="drag_drop">Drag & Drop</option>
-                                    <option value="tap_lie">Tap the Lie (Poll)</option>
-                                    <option value="calculator">Calculator</option>
-                                    <option value="meme">Meme Reveal</option>
-                                </select>
-                            </div>
-
-                            <InputField label="Level (1-8)" type="number" value={parseInt(editForm.levelId?.split('_l')[1] || '1')} onChange={(e: any) => setEditForm({...editForm, levelId: `${editForm.worldId}_l${e.target.value}`})} />
-                            <InputField label="Order" type="number" value={editForm.order} onChange={(e: any) => setEditForm({...editForm, order: Number(e.target.value)})} />
-                            
-                            <InputField label="XP Reward" type="number" value={editForm.xpReward} onChange={(e: any) => setEditForm({...editForm, xpReward: Number(e.target.value)})} />
-                            <InputField label="Coin Reward" type="number" value={editForm.coinReward} onChange={(e: any) => setEditForm({...editForm, coinReward: Number(e.target.value)})} />
+                        {/* Header */}
+                        <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
+                            <h3 className="font-bold text-white text-lg">
+                                {lessons.find(l => l.id === editForm.id) ? 'Edit Lesson' : 'Create New Lesson'}
+                            </h3>
+                            <button onClick={() => setIsEditorOpen(false)} className="text-slate-400 hover:text-white"><XMarkIcon className="w-6 h-6"/></button>
                         </div>
 
-                        <div className="mt-4 border-t border-slate-700 pt-4">
-                            <h4 className="text-sm font-bold text-white mb-3">Content Configuration ({editForm.type})</h4>
-                            {renderContentFields()}
+                        {/* Form Body */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">ID (Unique)</label>
+                                    <input className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" 
+                                        value={editForm.id} 
+                                        onChange={e => setEditForm({...editForm, id: e.target.value})}
+                                        disabled={!!lessons.find(l => l.id === editForm.id)}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Title</label>
+                                    <input className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" 
+                                        value={editForm.title} 
+                                        onChange={e => setEditForm({...editForm, title: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">World</label>
+                                    <select className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm"
+                                        value={editForm.worldId}
+                                        onChange={e => setEditForm({...editForm, worldId: e.target.value})}
+                                    >
+                                        {WORLDS_METADATA.map(w => <option key={w.id} value={w.id}>{w.title}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Type</label>
+                                    <select className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm"
+                                        value={editForm.type}
+                                        onChange={e => setEditForm({...editForm, type: e.target.value as any})}
+                                    >
+                                        <option value="info">Info</option>
+                                        <option value="video">Video</option>
+                                        <option value="swipe">Swipe</option>
+                                        <option value="tap_lie">Tap Lie</option>
+                                        <option value="drag_drop">Drag Drop</option>
+                                        <option value="calculator">Calculator</option>
+                                        <option value="meme">Meme</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">XP Reward</label>
+                                    <input type="number" className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" 
+                                        value={editForm.xpReward} 
+                                        onChange={e => setEditForm({...editForm, xpReward: Number(e.target.value)})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1">Coin Reward</label>
+                                    <input type="number" className="w-full bg-slate-800 border border-slate-600 rounded p-2 text-white text-sm" 
+                                        value={editForm.coinReward} 
+                                        onChange={e => setEditForm({...editForm, coinReward: Number(e.target.value)})}
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div className="border-t border-slate-700 pt-4">
+                                <h4 className="font-bold text-white mb-2">Content JSON</h4>
+                                <p className="text-xs text-slate-400 mb-2">Edit the content object directly for maximum control.</p>
+                                <textarea 
+                                    className="w-full h-48 bg-black/50 border border-slate-600 rounded p-3 text-green-400 font-mono text-xs"
+                                    value={JSON.stringify(editForm.content || {}, null, 2)}
+                                    onChange={(e) => {
+                                        try {
+                                            const parsed = JSON.parse(e.target.value);
+                                            setEditForm({...editForm, content: parsed});
+                                        } catch (err) {
+                                            // allow typing invalid json temporarily
+                                        }
+                                    }}
+                                />
+                            </div>
                         </div>
 
-                        <div className="flex justify-end gap-4 mt-6 border-t border-slate-700 pt-4">
-                            <button onClick={() => setEditingId(null)} className="px-4 py-2 text-slate-400 font-bold hover:text-white">Cancel</button>
-                            <button onClick={handleSave} className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg font-bold shadow-lg">
-                                Save Changes
+                        {/* Footer */}
+                        <div className="p-4 border-t border-slate-700 bg-slate-800 flex justify-end gap-3">
+                            <button onClick={() => setIsEditorOpen(false)} className="px-4 py-2 text-slate-400 font-bold hover:text-white">Cancel</button>
+                            <button onClick={handleSave} disabled={isProcessing} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow-lg disabled:opacity-50">
+                                {isProcessing ? "Saving..." : "Save Changes"}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
-
-            {/* List */}
-            <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden shadow-xl">
-                <table className="w-full text-left text-sm text-slate-400">
-                    <thead className="bg-slate-900 text-white font-bold uppercase text-xs">
-                        <tr>
-                            <th className="p-4">ID</th>
-                            <th className="p-4">World</th>
-                            <th className="p-4">Level</th>
-                            <th className="p-4">Title</th>
-                            <th className="p-4">Type</th>
-                            <th className="p-4">XP</th>
-                            <th className="p-4">Coins</th>
-                            <th className="p-4 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-700">
-                        {lessons.length === 0 ? (
-                            <tr><td colSpan={8} className="p-8 text-center text-slate-500 italic">
-                                No custom content loaded. 
-                                <button onClick={handleSeedDB} className="ml-2 text-purple-400 underline font-bold">Seed Default Content</button>
-                            </td></tr>
-                        ) : (
-                            lessons.map(l => (
-                                <tr key={l.id} className="hover:bg-slate-700/50 transition-colors">
-                                    <td className="p-4 font-mono text-xs text-slate-500">{l.id}</td>
-                                    <td className="p-4 text-xs text-slate-300">{l.worldId}</td>
-                                    <td className="p-4 text-xs text-slate-300">{l.levelId ? l.levelId.split('_l')[1] : '-'}</td>
-                                    <td className="p-4 font-bold text-white">{l.title}</td>
-                                    <td className="p-4"><span className="bg-blue-900/50 border border-blue-500/30 text-blue-300 px-2 py-1 rounded text-xs uppercase font-bold">{l.type}</span></td>
-                                    <td className="p-4 text-neon-green font-bold">{l.xpReward}</td>
-                                    <td className="p-4 text-yellow-400 font-bold">{l.coinReward}</td>
-                                    <td className="p-4 text-right flex justify-end gap-2">
-                                        <button onClick={() => handleEdit(l)} className="p-2 bg-slate-700 rounded hover:bg-blue-600 hover:text-white transition-colors" title="Edit"><PencilSquareIcon className="w-4 h-4"/></button>
-                                        <button onClick={() => handleDelete(l.id)} className="p-2 bg-slate-700 rounded hover:bg-red-600 hover:text-white transition-colors" title="Delete"><TrashIcon className="w-4 h-4"/></button>
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
-            </div>
         </div>
     );
 };
