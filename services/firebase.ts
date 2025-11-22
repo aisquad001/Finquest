@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -19,18 +20,16 @@ import { getAnalytics, isSupported } from 'firebase/analytics';
 // ------------------------------------------------------------------
 // FIREBASE CONFIGURATION
 // ------------------------------------------------------------------
+// Hardcoded to ensure stability on production without env vars
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyDR2GIy-E11dUptoi2LAzsHWdAJn_IoNR0",
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "finquest-453823206066.firebaseapp.com",
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "finquest-453823206066",
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "finquest-453823206066.firebasestorage.app",
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "583622846504",
-  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:583622846504:web:257545b9ff0eb9d408ed1d",
+  apiKey: "AIzaSyDR2GIy-E11dUptoi2LAzsHWdAJn_IoNR0",
+  authDomain: "finquest-453823206066.firebaseapp.com",
+  projectId: "finquest-453823206066",
+  storageBucket: "finquest-453823206066.firebasestorage.app",
+  messagingSenderId: "583622846504",
+  appId: "1:583622846504:web:257545b9ff0eb9d408ed1d",
   measurementId: "G-M29LK595L7"
 };
-
-// Check if configuration is valid (Real keys do not contain "PASTE_")
-const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("PASTE_");
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
@@ -51,49 +50,53 @@ appleProvider.addScope('name');
 
 export const signInWithGoogle = async () => {
     try {
-        if (!isConfigValid) {
-            console.error("Firebase Config Invalid");
-            alert("⚠️ CONFIG ERROR: Check services/firebase.ts");
-            throw new Error("Firebase not configured.");
-        }
         console.log("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
     } catch (error: any) {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.error(`[Auth] Google Sign In Error (${errorCode}):`, errorMessage);
+        console.error("Google Sign In Error:", error);
+        const currentDomain = window.location.hostname;
+
+        // HELPFUL ERROR HANDLING FOR USER
+        if (error.code === 'auth/unauthorized-domain') {
+            const msg = `⛔ DOMAIN BLOCKED: ${currentDomain}\n\nTo fix this:\n1. Go to Firebase Console > Authentication > Settings > Authorized Domains\n2. Add "${currentDomain}" to the list.`;
+            alert(msg);
+            throw new Error("Domain not authorized. See alert for instructions.");
+        } else if (error.code === 'auth/popup-closed-by-user') {
+            console.log("User closed popup");
+            throw new Error("Login cancelled.");
+        } else if (error.code === 'auth/operation-not-allowed') {
+            alert("Google Login is disabled. Enable it in Firebase Console.");
+            throw new Error("Google provider disabled.");
+        }
+        
         throw error;
     }
 };
 
 export const signInWithApple = async () => {
     try {
-        if (!isConfigValid) {
-            console.error("Firebase Config Invalid");
-            throw new Error("Firebase not configured.");
-        }
         console.log("[Auth] Starting Apple Sign In...");
         const result = await signInWithPopup(auth, appleProvider);
         return result.user;
     } catch (error: any) {
         console.error(`[Auth] Apple Sign In Error:`, error.message);
+        alert(`Apple Login Failed: ${error.message}`);
         throw error;
     }
 };
 
 export const signInAsGuest = async () => {
     try {
-        if (!isConfigValid) {
-            console.warn("[Auth] Invalid API Key. Switching to Mock Guest.");
-            return createMockUser();
-        }
-
         console.log("[Auth] Starting Guest Sign In (Anonymous)...");
         const result = await signInAnonymously(auth);
         return result.user;
     } catch (error: any) {
         console.error("Guest Sign In Error:", error);
+        // If guest auth fails (usually due to it not being enabled in console), fall back to mock
+        if (error.code === 'auth/operation-not-allowed') {
+             alert("Guest Mode is disabled in Firebase Console. Enabling Mock Mode.");
+        }
         console.warn("[Auth] Falling back to Mock Guest due to error.");
         return createMockUser();
     }
@@ -102,9 +105,7 @@ export const signInAsGuest = async () => {
 export const logout = async () => {
     try {
         localStorage.removeItem('racked_mock_session_uid');
-        if (isConfigValid) {
-            await firebaseSignOut(auth);
-        }
+        await firebaseSignOut(auth);
     } catch (error) {
         console.error("Sign Out Error:", error);
     }

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -37,6 +38,7 @@ const App: React.FC = () => {
   
   // Domain Check State
   const [domainStatus, setDomainStatus] = useState<'correct' | 'old' | 'localhost'>('correct');
+  const [isTargetReady, setIsTargetReady] = useState(false);
 
   // Navigation State
   const isPortalRoute = window.location.pathname === '/portal';
@@ -56,17 +58,35 @@ const App: React.FC = () => {
       const host = window.location.hostname;
       
       // 1. Force HTTPS on production
-      if (window.location.protocol === 'http:' && host !== 'localhost') {
+      if (window.location.protocol === 'http:' && host !== 'localhost' && !host.includes('127.0.0.1')) {
           window.location.href = window.location.href.replace('http:', 'https:');
       }
 
       // 2. Check Domain Status
       if (host === 'racked.gg' || host === 'www.racked.gg') {
          setDomainStatus('correct');
-      } else if (host === 'localhost') {
+      } else if (host === 'localhost' || host.includes('127.0.0.1')) {
          setDomainStatus('localhost');
       } else {
          setDomainStatus('old');
+
+         // 3. Active DNS Check for Migration
+         const checkTarget = async () => {
+             try {
+                 // Attempt to fetch root with no-cors to check network reachability (opaque response = success)
+                 await fetch('https://racked.gg', { mode: 'no-cors', cache: 'reload' });
+                 setIsTargetReady(true);
+                 console.log("Target domain is reachable!");
+             } catch (e) {
+                 console.log("Target domain DNS still propagating...", e);
+                 setIsTargetReady(false);
+             }
+         };
+         
+         // Check immediately and then every 15s
+         checkTarget();
+         const interval = setInterval(checkTarget, 15000);
+         return () => clearInterval(interval);
       }
   }, []);
 
@@ -273,11 +293,25 @@ const App: React.FC = () => {
       {/* DOMAIN MIGRATION BANNER - Shows only on old URL */}
       {domainStatus === 'old' && (
           <div 
-            className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-neon-pink to-purple-600 text-white text-center font-game text-xs md:text-sm py-3 shadow-[0_0_20px_rgba(255,0,184,0.6)] cursor-pointer animate-pulse border-b-2 border-white flex items-center justify-center gap-2"
-            onClick={() => window.location.href = 'https://racked.gg'}
+            className={`fixed top-0 left-0 right-0 z-[9999] text-white text-center font-game text-xs md:text-sm py-3 shadow-[0_0_20px_rgba(0,0,0,0.4)] cursor-pointer border-b-2 border-white flex items-center justify-center gap-2 transition-colors duration-500
+                ${isTargetReady ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:brightness-110' : 'bg-gray-800 text-gray-400 cursor-wait'}
+            `}
+            onClick={() => {
+                if (isTargetReady) window.location.href = 'https://racked.gg';
+                else alert("DNS for racked.gg is still propagating. This usually takes 1-2 hours, but can take up to 24h. Please try again later!");
+            }}
           >
-              <span>🚀 RACKED.GG IS LIVE!</span>
-              <span className="bg-white text-neon-pink px-2 py-0.5 rounded text-[10px]">TAP TO SWITCH</span>
+              {isTargetReady ? (
+                  <>
+                      <span className="animate-pulse">🚀 RACKED.GG IS READY!</span>
+                      <span className="bg-white text-green-600 px-2 py-0.5 rounded text-[10px] font-black">TAP TO SWITCH</span>
+                  </>
+              ) : (
+                  <>
+                      <span>⏳ WAITING FOR DNS (RACKED.GG)...</span>
+                      <span className="text-[10px] opacity-70 hidden md:inline">Checking connectivity...</span>
+                  </>
+              )}
           </div>
       )}
 

@@ -93,6 +93,12 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     } catch (e: any) {
         console.error("Auth failed in Onboarding:", e);
         setIsSigningUp(false);
+        
+        // Avoid double alerting if the service already handled the alert
+        if (e.message?.includes('Domain not authorized') || e.message?.includes('Login cancelled')) {
+            return;
+        }
+
         alert("Sign in failed. " + (e.message || "Please try again."));
     }
   };
