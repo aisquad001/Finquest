@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { db } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+
 // POLYGON.IO Integration Note:
 // In a real production build, you would fetch from: https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/...
 // For this "Live-Ready" demo, we implement a robust simulation engine that mimics real market behavior
@@ -17,6 +20,7 @@ export interface StockAsset {
     changePercent: number;
     volatility: number; // 0-1: How much it moves
     logo: string; // Emoji or URL
+    active?: boolean;
 }
 
 export const ASSET_LIST: StockAsset[] = [
@@ -51,6 +55,32 @@ export const ASSET_LIST: StockAsset[] = [
 
 // Simulation State
 let marketState = [...ASSET_LIST];
+
+// Setup Listener for Admin Overrides
+let overrideListenerSet = false;
+if (!overrideListenerSet) {
+    try {
+        onSnapshot(doc(db, 'zoo_config', 'market_state'), (snap) => {
+            if (snap.exists()) {
+                const data = snap.data();
+                // Apply global market events
+                if (data.event === 'crash') {
+                    marketState = marketState.map(s => ({...s, price: s.price * 0.8, changePercent: -20}));
+                } else if (data.event === 'moon') {
+                    marketState = marketState.map(s => ({...s, price: s.price * 1.5, changePercent: 50}));
+                }
+            }
+        }, (error) => {
+            // Suppress permission errors in console for non-admin users
+            if (error.code !== 'permission-denied') {
+                console.warn("Zoo config sync warning:", error.message);
+            }
+        });
+        overrideListenerSet = true;
+    } catch(e) {
+        console.warn("Offline mode: Zoo config not synced.");
+    }
+}
 
 export const getMarketData = () => {
     return marketState;

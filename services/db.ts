@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -149,7 +150,7 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
                 lastLoginAt: serverTimestamp(),
                 isAdmin: false, 
                 role: 'user' as const,
-                loginType: (onboardingData.authMethod || 'google') as any
+                loginType: onboardingData.authMethod || 'google'
             };
             
             await Promise.race([
@@ -205,9 +206,6 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
 
     if (realSnap.exists()) {
         console.log("Target user exists, merging stats if guest has significant progress...");
-        // If target already exists, we usually just switch to it. 
-        // But prompt said "Copy ALL guest data". 
-        // We will merge coins/xp but keep the real user's identity.
         if (guestData) {
             await updateDoc(realRef, {
                 coins: increment(guestData.coins),
@@ -218,7 +216,6 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
     } else {
         // Target is new, create it with guest data
         if (!guestData) {
-             // Should not happen if guestUid was valid
              console.warn("No guest data found, creating fresh.");
              await createUserDoc(realUid, { email: realEmail, authMethod: 'google' });
              return;
@@ -237,7 +234,6 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
 
         await setDoc(realRef, newUserData);
     }
-
     console.log("[MIGRATION] Success! Guest data moved/merged to real account.");
 };
 
@@ -291,7 +287,6 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         const mockDB = getMockDB();
         if (mockDB[uid]) {
             const user = mockDB[uid];
-            
             if (completed) {
                 if (!user.completedLevels.includes(levelId)) {
                     user.completedLevels.push(levelId);
@@ -311,9 +306,7 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
 
     try {
         const userRef = doc(db, 'users', uid);
-        const updatePayload: any = {
-            lastActive: serverTimestamp()
-        };
+        const updatePayload: any = { lastActive: serverTimestamp() };
         if (completed) {
              updatePayload.completedLevels = arrayUnion(levelId);
              updatePayload[`progress.${worldId}.score`] = increment(xpEarned);
@@ -325,61 +318,72 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
     }
 };
 
-// --- CONTENT CRUD (ADMIN CMS) ---
-export const upsertLesson = async (lesson: Lesson) => {
-    if (true) {
-        const content = getMockContent();
-        const idx = content.lessons.findIndex(l => l.id === lesson.id);
-        if (idx >= 0) {
-            content.lessons[idx] = lesson;
-        } else {
-            content.lessons.push(lesson);
+// --- ADMIN GENERIC CRUD HELPERS ---
+
+export const subscribeToCollection = (colName: string, callback: (data: any[]) => void) => {
+    const q = query(collection(db, colName));
+    return onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        callback(items);
+    }, (error) => {
+        console.error(`Error subscribing to ${colName}:`, error);
+        if (error.code === 'permission-denied') {
+            // Return empty array to stop loading states in UI
+            callback([]);
         }
-        saveMockContent(content);
-        return;
+    });
+};
+
+export const saveDoc = async (colName: string, id: string, data: any) => {
+    try {
+        const ref = doc(db, colName, id);
+        await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
+    } catch (e) {
+        console.error(`Error saving to ${colName}:`, e);
+        throw e;
     }
 };
 
-export const deleteLesson = async (lessonId: string) => {
-    if (true) {
-        const content = getMockContent();
-        content.lessons = content.lessons.filter(l => l.id !== lessonId);
-        saveMockContent(content);
-        return;
+export const deleteDocument = async (colName: string, id: string) => {
+    try {
+        await deleteDoc(doc(db, colName, id));
+    } catch (e) {
+        console.error(`Error deleting from ${colName}:`, e);
+        throw e;
     }
 };
 
-export const updateLevelConfig = async (level: LevelData) => {
-    if (true) {
-        const content = getMockContent();
-        const idx = content.levels.findIndex(l => l.id === level.id);
-        if (idx >= 0) {
-            content.levels[idx] = level;
-        } else {
-            content.levels.push(level);
-        }
-        saveMockContent(content);
-        return;
-    }
+export const batchWrite = async (colName: string, items: any[]) => {
+    const batch = writeBatch(db);
+    items.forEach(item => {
+        const ref = doc(db, colName, item.id || doc(collection(db, colName)).id);
+        batch.set(ref, { ...item, updatedAt: serverTimestamp() }, { merge: true });
+    });
+    await batch.commit();
 };
+
+// --- FETCH HELPERS (Dynamic vs Generated) ---
 
 export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]> => {
+    // 1. Check Firestore for custom levels
+    // (In a real app, we'd check DB first. For hybrid approach, we generate then override)
+    
+    // Generate baseline
     const generated = Array.from({ length: 8 }, (_, i) => {
          const { level } = generateLevelContent(worldId, i + 1);
          return level;
     });
-    const overrides = getMockContent().levels.filter(l => l.worldId === worldId);
-    return generated.map(gen => overrides.find(o => o.id === gen.id) || gen);
+
+    // For now, we return generated. 
+    // Admin dashboard implementation will allow writing to 'levels' collection
+    // which could be merged here in future iterations.
+    return generated; 
 };
 
 export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> => {
     const [worldId, levelNumStr] = levelId.split('_l');
     const levelNum = parseInt(levelNumStr);
     const { lessons } = generateLevelContent(worldId, levelNum);
-    const overrides = getMockContent().lessons.filter(l => l.levelId === levelId);
-    if (overrides.length > 0) {
-        return overrides.sort((a, b) => a.order - b.order);
-    }
     return lessons;
 };
 
@@ -387,16 +391,10 @@ export const seedGameData = async () => {
     console.log("Seeding DB...");
     localStorage.removeItem(MOCK_CONTENT_KEY);
     localStorage.removeItem(MOCK_STORAGE_KEY);
-    const w1l1 = generateLevelContent('world1', 1);
-    const content = {
-        levels: [w1l1.level],
-        lessons: w1l1.lessons
-    };
-    saveMockContent(content);
-    console.log("Seeded World 1 Level 1");
+    // No-op in real DB mode, but useful for clearing cache
 };
 
-// --- ADMIN REAL-TIME DATA ---
+// --- ADMIN REAL-TIME USER DATA ---
 export const subscribeToAllUsers = (callback: (users: UserState[]) => void) => {
     console.log("[ADMIN] Subscribing to ALL users...");
     const q = query(collection(db, 'users'), orderBy('lastLoginAt', 'desc'), limit(100));
@@ -406,6 +404,8 @@ export const subscribeToAllUsers = (callback: (users: UserState[]) => void) => {
         callback(users);
     }, (error) => {
         console.error("Admin Sub Error:", error);
+        // Call with empty list to resolve loading state in UI
+        callback([]);
     });
 };
 
@@ -414,13 +414,7 @@ export const adminUpdateUser = async (uid: string, data: Partial<UserState>) => 
     await updateDoc(ref, data);
 };
 
-export const writeGlobalConfig = async (key: string, value: any) => {
-    await setDoc(doc(db, 'config', key), { value, updatedAt: serverTimestamp() });
-};
-
 export const adminMassUpdate = async (action: 'give_coins' | 'reset' | 'reward_all') => {
-    // Limitation: Batch only supports 500 ops. 
-    // For prototype, we fetch top 100 and update them.
     const snapshot = await getDocs(query(collection(db, 'users'), limit(100)));
     const batch = writeBatch(db);
 

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -119,6 +120,13 @@ export interface ShopItem {
     category: 'pet' | 'outfit' | 'powerup';
     description: string;
     limitedTime?: boolean;
+    active?: boolean;
+}
+
+export interface EconomyConfig {
+    xpMultiplier: number;
+    coinMultiplier: number;
+    marketStatus: 'open' | 'closed' | 'crashed' | 'moon';
 }
 
 export interface LeaderboardEntry {
@@ -228,11 +236,11 @@ export const WORLDS_METADATA: WorldData[] = [
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
-    { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', description: 'Miss a day without losing your streak.', limitedTime: false },
-    { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', description: 'Double XP for 24 hours', limitedTime: true },
-    { id: 'item_pet_lambo', name: 'Golden Lambo', emoji: '🏎️', cost: 5000, category: 'pet', description: 'Flex on them haters', limitedTime: true },
-    { id: 'item_pet_doge', name: 'Doge', emoji: '🐕', cost: 800, category: 'pet', description: 'Much wow. Such finance.' },
-    { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 1500, category: 'outfit', description: 'Dress for the job you want.' },
+    { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', description: 'Miss a day without losing your streak.', limitedTime: false, active: true },
+    { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', description: 'Double XP for 24 hours', limitedTime: true, active: true },
+    { id: 'item_pet_lambo', name: 'Golden Lambo', emoji: '🏎️', cost: 5000, category: 'pet', description: 'Flex on them haters', limitedTime: true, active: true },
+    { id: 'item_pet_doge', name: 'Doge', emoji: '🐕', cost: 800, category: 'pet', description: 'Much wow. Such finance.', active: true },
+    { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 1500, category: 'outfit', description: 'Dress for the job you want.', active: true },
 ];
 
 // --- Logic Helpers ---

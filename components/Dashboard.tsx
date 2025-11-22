@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -14,9 +15,9 @@ import {
     QrCodeIcon,
     UserPlusIcon,
     ShareIcon,
-    ArrowRightOnRectangleIcon,
     ExclamationTriangleIcon,
-    BoltIcon
+    BoltIcon,
+    ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -28,12 +29,12 @@ import {
     SHOP_ITEMS,
     SEASONAL_EVENTS
 } from '../services/gamification';
-import { claimDailyChest, devAddResources } from '../services/gameLogic';
+import { claimDailyChest } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
 import { signInWithGoogle, logout } from '../services/firebase';
-import { migrateGuestToReal } from '../services/db';
+import { migrateGuestToReal, subscribeToCollection } from '../services/db';
 
 interface DashboardProps {
     user: UserState;
@@ -51,6 +52,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(null);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
+    const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); // Initialize with default
     
     // Admin Secret Trigger
     const avatarPressTimer = useRef<any>(null);
@@ -67,6 +69,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             e.preventDefault();
             setInstallPrompt(e);
         });
+    }, []);
+
+    // Shop Sync Logic
+    useEffect(() => {
+        const unsub = subscribeToCollection('shop_items', (items) => {
+            if (items.length > 0) {
+                setShopItems(items as ShopItem[]);
+            }
+        });
+        return () => unsub();
     }, []);
 
     const handleInstall = () => {
@@ -406,7 +418,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 </h2>
                             </div>
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
-                                {SHOP_ITEMS.map(item => {
+                                {shopItems.filter(i => i.active !== false).map(item => {
                                     const owned = user.inventory.includes(item.id);
                                     return (
                                         <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : 'border-neon-pink/30'}`}>
