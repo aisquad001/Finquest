@@ -335,6 +335,33 @@ const ContentCMS = () => {
         }
     };
 
+    const handleDownloadTemplate = () => {
+        let dataToExport = lessons;
+
+        if (dataToExport.length === 0) {
+            const generated: Lesson[] = [];
+            WORLDS_METADATA.forEach(world => {
+                for (let l = 1; l <= 8; l++) {
+                    const { lessons } = generateLevelContent(world.id, l);
+                    generated.push(...lessons);
+                }
+            });
+            dataToExport = generated;
+        }
+
+        const jsonString = JSON.stringify(dataToExport, null, 2);
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `racked_cms_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        playSound('pop');
+    };
+
     // 3. CRUD ACTIONS
     const handleDelete = async (id: string) => {
         if (!confirm(`Delete lesson ${id}?`)) return;
@@ -438,14 +465,12 @@ const ContentCMS = () => {
                 </div>
                 
                 <div className="flex flex-wrap gap-3">
-                    <a 
-                        href="https://files.catbox.moe/4p3h7k.json" 
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl flex items-center gap-2"
+                    <button 
+                        onClick={handleDownloadTemplate}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg"
                     >
                         <CloudArrowDownIcon className="w-4 h-4" /> Template
-                    </a>
+                    </button>
 
                     <label className={`px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
                         <CloudArrowUpIcon className="w-4 h-4" /> Bulk Upload
