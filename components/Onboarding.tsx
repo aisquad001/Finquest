@@ -4,93 +4,110 @@
  */
 import React, { useState } from 'react';
 import { playSound } from '../services/audio';
-import { Avatar } from './Avatar';
 
 interface OnboardingProps {
   onComplete: (data: any) => void;
 }
 
 export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
-  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAuthAction = async (method: 'google' | 'guest') => {
-    if (isSigningUp) return;
-    
-    setIsSigningUp(true);
-    playSound('click');
-
-    try {
-        // Just pass the method up. App.tsx handles the heavy lifting/logic.
-        await onComplete({ authMethod: method });
-    } catch (e: any) {
-        console.error("Auth failed in Onboarding:", e);
-        setIsSigningUp(false);
-        
-        // Clean user alerts
-        const msg = e.message || "Unknown error";
-        if (!msg.includes('cancelled') && !msg.includes('closed')) {
-            alert("Login Failed: " + msg);
-        }
-    }
+  const handleAuth = async (method: 'google' | 'guest') => {
+      if (isLoading) return;
+      setIsLoading(true);
+      playSound('click');
+      try {
+          await onComplete({ authMethod: method });
+      } catch (e) {
+          setIsLoading(false);
+          console.error(e);
+      }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#1a0b2e] text-white font-body h-dvh w-full overflow-hidden flex flex-col items-center justify-center p-6">
+    <div className="fixed inset-0 z-[999] flex flex-col items-center justify-center bg-black font-body overflow-hidden selection:bg-neon-pink selection:text-white">
          
-         {/* Background FX */}
-         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 pointer-events-none"></div>
-         <div className="absolute top-[-20%] left-[-20%] w-[600px] h-[600px] bg-neon-purple/20 rounded-full blur-[120px] pointer-events-none"></div>
-         <div className="absolute bottom-[-20%] right-[-20%] w-[600px] h-[600px] bg-neon-blue/20 rounded-full blur-[120px] pointer-events-none"></div>
+         {/* 1. Background Gradient #00ff88 -> #ff00b8 */}
+         <div className="absolute inset-0 bg-gradient-to-br from-[#00ff88] via-[#1a0b2e] to-[#ff00b8] opacity-90"></div>
+         
+         {/* Dark Overlay for contrast */}
+         <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px]"></div>
 
-         <div className="relative z-10 text-center max-w-md w-full">
+         {/* Floating Coins Animation */}
+         <div className="absolute inset-0 pointer-events-none">
+             {[...Array(20)].map((_, i) => (
+                 <div 
+                    key={i}
+                    className="absolute text-4xl opacity-40 animate-float"
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        animationDuration: `${4 + Math.random() * 6}s`,
+                        animationDelay: `${Math.random() * 5}s`
+                    }}
+                 >
+                    {Math.random() > 0.6 ? '💰' : (Math.random() > 0.5 ? '💎' : '🪙')}
+                 </div>
+             ))}
+         </div>
+
+         {/* Main Content */}
+         <div className="relative z-10 w-full max-w-md px-6 flex flex-col items-center text-center h-full justify-end pb-16">
              
-             <div className="relative w-40 h-40 mx-auto mb-8">
-                <div className="absolute inset-0 bg-neon-green/20 blur-3xl rounded-full animate-pulse"></div>
-                <div className="relative z-10 text-9xl animate-float">💸</div>
-                <div className="absolute top-0 right-0 text-6xl animate-bounce delay-700">🚀</div>
-                <div className="absolute bottom-0 left-0 text-5xl animate-bounce delay-1000">💎</div>
+             {/* Logo / Hero Area */}
+             <div className="flex-1 flex flex-col items-center justify-center w-full slide-enter">
+                 <div className="relative mb-6 group cursor-pointer transform transition-transform hover:scale-110" onClick={() => playSound('pop')}>
+                    <div className="absolute inset-0 bg-white blur-[60px] opacity-30 rounded-full animate-pulse"></div>
+                    <div className="text-[120px] animate-bounce drop-shadow-2xl filter brightness-110">
+                        💸
+                    </div>
+                 </div>
+                 
+                 <h1 className="font-game text-[5.5rem] leading-none text-white mb-6 drop-shadow-[0_8px_0_rgba(0,0,0,0.4)] tracking-tighter italic -rotate-3 text-stroke-black">
+                    RACKED
+                 </h1>
+                 
+                 <div className="space-y-3 mb-10">
+                    <h2 className="text-3xl font-black text-white leading-tight">
+                        Level up your <br/>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#00ff88] drop-shadow-md">
+                            money game
+                        </span>
+                    </h2>
+                    <p className="text-lg text-white/90 font-bold tracking-wide">
+                        Turn allowance into an empire 💰
+                    </p>
+                 </div>
              </div>
 
-             <h1 className="font-game text-6xl mb-2 text-stroke-black text-white leading-tight drop-shadow-neon">
-                RACKED
-             </h1>
-             <p className="text-xl mb-12 text-gray-300 font-bold">The only game where you get rich IRL.</p>
-             
-             <div className="space-y-4 w-full">
-                {/* Google Button */}
-                <button 
-                    onClick={() => handleAuthAction('google')}
-                    disabled={isSigningUp}
-                    className="w-full py-4 bg-white text-black font-game text-xl rounded-2xl border-b-[6px] border-gray-300 hover:bg-gray-100 active:border-b-0 active:translate-y-1.5 transition-all shadow-xl flex items-center justify-center gap-3"
-                >
-                    {isSigningUp ? (
-                        <span className="animate-pulse">LOADING...</span>
+             {/* Buttons Area */}
+             <div className="w-full space-y-4 slide-enter" style={{ animationDelay: '0.2s' }}>
+                 <button 
+                    onClick={() => handleAuth('google')}
+                    disabled={isLoading}
+                    className="w-full py-5 bg-white hover:bg-gray-100 text-black font-black text-xl rounded-full shadow-[0_0_50px_rgba(255,255,255,0.5)] flex items-center justify-center gap-3 transition-all active:scale-95 relative overflow-hidden group"
+                 >
+                    {isLoading ? (
+                        <span className="animate-pulse">CONNECTING...</span>
                     ) : (
                         <>
-                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6" />
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-6 h-6" alt="G" />
                             CONTINUE WITH GOOGLE
                         </>
                     )}
-                </button>
+                 </button>
 
-                <div className="relative py-4">
-                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
-                     <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1a0b2e] px-2 text-gray-500 font-bold">or</span></div>
-                </div>
-                
-                {/* Guest Button */}
-                <button 
-                    onClick={() => handleAuthAction('guest')}
-                    disabled={isSigningUp}
-                    className="w-full py-4 bg-transparent border-2 border-white/20 text-white/70 font-bold rounded-2xl hover:bg-white/5 hover:text-white hover:border-white active:scale-95 transition-all"
-                >
-                    PLAY AS GUEST
-                </button>
-
-                <p className="text-[10px] text-gray-500 mt-4">
-                    By continuing, you agree to get rich or die trying. <br/>
-                    Guest accounts are not saved across devices.
-                </p>
+                 <button 
+                    onClick={() => handleAuth('guest')}
+                    disabled={isLoading}
+                    className="w-full py-4 bg-black/20 border-2 border-white/40 text-white font-bold text-lg rounded-full hover:bg-white/10 hover:border-white active:scale-95 transition-all backdrop-blur-md"
+                 >
+                    Play as Guest
+                 </button>
+                 
+                 <p className="text-xs text-white/70 font-bold mt-4 drop-shadow-md">
+                     Your progress saves forever when you sign in
+                 </p>
              </div>
          </div>
     </div>

@@ -103,6 +103,7 @@ const App: React.FC = () => {
                  await createUserDoc(firebaseUser.uid, { 
                      email: firebaseUser.email, 
                      photoURL: firebaseUser.photoURL,
+                     displayName: firebaseUser.displayName,
                      authMethod: firebaseUser.isAnonymous ? 'guest' : 'google'
                  });
                  // If successful, syncUser will pick up the new doc
