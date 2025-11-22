@@ -22,8 +22,8 @@ import { UserState, checkStreak, createInitialUser, LevelData, Lesson, WORLDS_ME
 import { generateLevelContent } from './contentGenerator';
 
 // --- MOCK DB HELPERS ---
-const MOCK_STORAGE_KEY = 'finquest_mock_users';
-const MOCK_CONTENT_KEY = 'finquest_mock_content';
+const MOCK_STORAGE_KEY = 'racked_mock_users';
+const MOCK_CONTENT_KEY = 'racked_mock_content';
 
 const getMockDB = (): Record<string, UserState> => {
     try {

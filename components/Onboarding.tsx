@@ -114,14 +114,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                      </div>
 
                      <h1 className="font-game text-5xl mb-4 text-stroke-black text-white leading-tight drop-shadow-neon">
-                        FROM <span className="text-gray-400 line-through">BROKE</span><br/>
-                        TO <span className="text-neon-yellow">BALLER</span>
+                        WELCOME TO<br/>
+                        <span className="text-neon-yellow">RACKED</span>
                      </h1>
-                     <p className="text-xl mb-12 text-gray-300">Turn your allowance into an empire. No cap.</p>
+                     <p className="text-xl mb-12 text-gray-300">The only game where you actually get rich. No cap.</p>
                      
                      <div className="animate-bounce w-full">
                         <button onClick={handleNext} className="w-full max-w-xs py-4 bg-neon-pink text-white font-game text-2xl rounded-full border-b-[6px] border-[#b30082] active:border-b-0 active:translate-y-1.5 transition-all shadow-lg">
-                            GET RICH ⬇
+                            GET RACKED ⬇
                         </button>
                      </div>
                 </div>
@@ -156,7 +156,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                                 type="text" 
                                 value={referralCode}
                                 onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                                placeholder="CASHKING69"
+                                placeholder="STACKSZN"
                                 className="w-full p-3 rounded-xl bg-white/5 border border-white/10 text-center text-lg font-mono font-bold placeholder-white/20 focus:outline-none focus:border-neon-green transition-all"
                             />
                             {referralCode.length > 3 && <div className="text-center text-xs text-neon-green mt-1 font-bold">Code Applied! +1000 XP Bonus</div>}

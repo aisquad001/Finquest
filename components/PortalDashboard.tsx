@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -38,7 +37,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                             🛡️
                         </div>
                     </div>
-                    <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">FinQuest Parent Portal</h1>
+                    <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">Racked Parent Portal</h1>
                     <p className="text-slate-500 text-center mb-8">Track progress, manage allowance, and secure their financial future.</p>
                     
                     <div className="space-y-4">
@@ -77,7 +76,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
             <nav className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">🛡️</div>
-                    <span className="font-bold text-xl text-slate-900 tracking-tight">FinQuest Portal</span>
+                    <span className="font-bold text-xl text-slate-900 tracking-tight">Racked Portal</span>
                 </div>
                 <div className="flex items-center gap-4">
                     <div className="hidden md:flex items-center gap-2 text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
@@ -230,7 +229,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                                 <div className="relative w-80 h-48 bg-gradient-to-br from-slate-800 to-black rounded-2xl shadow-2xl p-6 text-white flex flex-col justify-between overflow-hidden">
                                     <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/graphy.png')]"></div>
                                     <div className="relative z-10 flex justify-between items-start">
-                                        <span className="font-bold tracking-wider">FinQuest</span>
+                                        <span className="font-bold tracking-wider">Racked</span>
                                         <div className="w-8 h-8 bg-white/20 rounded-full"></div>
                                     </div>
                                     <div className="relative z-10 font-mono text-lg tracking-widest opacity-80">•••• •••• •••• 4209</div>
@@ -245,7 +244,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                                 <div className="flex-1 text-center md:text-left">
                                     <h3 className="text-2xl font-bold text-slate-900 mb-2">Real Money Mode <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded uppercase align-middle ml-2">Phase 1</span></h3>
                                     <p className="text-slate-500 mb-6">
-                                        Link a funding source to enable the FinQuest Debit Card. Controls allow you to lock the card instantly.
+                                        Link a funding source to enable the Racked Debit Card. Controls allow you to lock the card instantly.
                                     </p>
                                     <button className="w-full md:w-auto bg-slate-900 text-white font-bold py-3 px-6 rounded-lg hover:bg-black transition-colors">
                                         Activate Card (Requires ID)
@@ -341,7 +340,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                                 <div>
                                     <div className="w-32 border-b border-slate-400 mb-2"></div>
                                     <div className="text-xs text-slate-400 uppercase">Signature</div>
-                                    <div className="text-sm font-bold font-serif italic">FinQuest Academy</div>
+                                    <div className="text-sm font-bold font-serif italic">Racked Academy</div>
                                 </div>
                             </div>
                             

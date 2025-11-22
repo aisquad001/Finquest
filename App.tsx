@@ -62,7 +62,8 @@ const App: React.FC = () => {
                   if (granted) scheduleDemoNotifications();
               });
           } else {
-              const mockUid = localStorage.getItem('finquest_mock_session_uid');
+              // Check for mock session (Rebranded to racked_)
+              const mockUid = localStorage.getItem('racked_mock_session_uid');
               if (mockUid) {
                   console.log("Restoring Mock Session:", mockUid);
                   unsubscribeSync = syncUser(mockUid);
@@ -187,12 +188,12 @@ const App: React.FC = () => {
                   console.log("Auth successful. Creating/Fetching profile for:", firebaseUser.uid);
                   await createUserDoc(firebaseUser.uid, { 
                       ...data, 
-                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app`,
+                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@racked.gg`,
                       photoURL: firebaseUser.photoURL 
                   });
 
                   if (firebaseUser.uid.startsWith('mock_')) {
-                      localStorage.setItem('finquest_mock_session_uid', firebaseUser.uid);
+                      localStorage.setItem('racked_mock_session_uid', firebaseUser.uid);
                       syncUser(firebaseUser.uid);
                   }
                   // Only hide onboarding after successful DB operations
@@ -233,7 +234,7 @@ const App: React.FC = () => {
           <div className="min-h-screen bg-[#1a0b2e] flex items-center justify-center">
               <div className="flex flex-col items-center animate-pulse">
                   <div className="text-6xl mb-4 animate-bounce">💸</div>
-                  <h2 className="font-game text-white text-2xl">SYNCING RICHES...</h2>
+                  <h2 className="font-game text-white text-2xl">RACKING UP...</h2>
               </div>
           </div>
       );

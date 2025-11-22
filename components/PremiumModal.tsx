@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -45,7 +44,7 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onUpgrade }
                         onClick={() => setView('pro')}
                         className={`flex-1 py-4 font-game text-lg uppercase tracking-wider transition-colors ${view === 'pro' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-black/40 text-gray-500'}`}
                     >
-                        FinQuest Pro
+                        Racked Pro
                     </button>
                     <button 
                         onClick={() => setView('coins')}

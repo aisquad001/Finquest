@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -279,7 +278,7 @@ export const getMockLeaderboard = (): LeaderboardEntry[] => [
     { rank: 4, name: "DiamondHands", xp: 68000, avatar: "🦍", country: "WSB", netWorth: 120000 },
     { rank: 5, name: "Satoshi", xp: 60000, avatar: "🤐", country: "JP", netWorth: 100000 },
     { rank: 6, name: "Warren Buffet", xp: 55000, avatar: "🍔", country: "USA", netWorth: 90000 },
-    { rank: 7, name: "FinQuest God", xp: 50000, avatar: "👑", country: "App", netWorth: 85000 },
+    { rank: 7, name: "Racked God", xp: 50000, avatar: "👑", country: "App", netWorth: 85000 },
 ];
 
 export const calculateRiskScore = (portfolio: Portfolio): number => {

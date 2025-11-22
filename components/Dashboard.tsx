@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -159,7 +158,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 onClick={onOpenPremium}
                                 className="hidden sm:flex items-center gap-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xs px-3 py-1.5 rounded-full hover:scale-105 transition-transform animate-pulse"
                             >
-                                <SparklesIcon className="w-3 h-3" /> GO PRO
+                                <SparklesIcon className="w-3 h-3" /> RACKED PRO
                             </button>
                          )}
 
@@ -396,7 +395,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                  PARENT LINK
                              </h2>
                              <p className="text-gray-400 text-sm mb-6">
-                                 Unlock the FinQuest Debit Card.
+                                 Unlock the Racked Debit Card.
                              </p>
                              
                              {!familyCode ? (
