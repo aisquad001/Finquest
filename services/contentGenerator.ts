@@ -40,36 +40,36 @@ class SeededRNG {
 // --- CONTENT LIBRARIES ---
 
 const BOSS_NAMES: Record<string, string[]> = {
-    world1: ["The Inflation Monster", "Dr. Devaluation", "The Cash Burner", "ATM Goblin", "The Shrinkflator", "Zero-Balance Zombie", "The Price Hiker", "Fiat Phantom"],
-    world2: ["Budget Beach Bum", "Impulse Buy Kraken", "Subscription Sea Monster", "Prom Night Predator", "The Frappuccino Fiend", "Sale Siren", "One-Click Clicker", "Overdraft Orca"],
-    world3: ["Compound Interest Crusher", "The Late Starter", "Savings Saboteur", "The Daily Spender", "Emergency Fund Eater", "Yield Yapper", "The Uninvested", "Cash Drag Dragon"],
-    world4: ["Bank Fee Bandit", "Identity Thief", "The Phisher", "Minimum Balance Minotaur", "Direct Deposit Demon", "Overdraft Ogre", "Check Fraud Chimp", "The Uninsured"],
-    world5: ["The Credit Demon", "Payday Loan Shark", "Maxed-Out Mummy", "APR Assassin", "Minimum Payment Mantis", "Collection Agent Chaos", "Credit Score Crusher", "Debt Snowball Yeti"],
-    world6: ["Taxman Titan", "Side Hustle Hater", "Gross Income Ghoul", "Deduction Destroyer", "Audit Alien", "W-2 Wraith", "The Unpaid Intern", "Gig Economy Gargoyle"],
-    world7: ["Meme Stock Casino Dealer", "The Bear Market", "Crypto Casino Pit Boss", "Panic Seller", "FOMO Phantom", "Rug Pull Rex", "Day Trade Dino", "Margin Call Marauder"],
-    world8: ["The Retirement Reaper", "Inflation Inquisitor", "Social Security Skeleton", "The 401k Killer", "Estate Tax Evil", "Lifestyle Creep", "Golden Handcuff Golem", "The Unprepared"]
+    world1: ["Allowance Goblin", "The Cash Burner", "Zero-Balance Zombie", "The Price Hiker", "Fiat Phantom"],
+    world2: ["Shein Haul Hydra", "Impulse Buy Kraken", "Subscription Sea Monster", "Prom Night Predator", "The Frappuccino Fiend"],
+    world3: ["Compound Interest Crusher", "Savings Saboteur", "The Daily Spender", "Yield Yapper", "Cash Drag Dragon"],
+    world4: ["Bank Fee Bandit", "Identity Thief", "Minimum Balance Minotaur", "Overdraft Ogre", "Check Fraud Chimp"],
+    world5: ["Credit Card Kraken", "Payday Loan Shark", "Klarna Trap King", "APR Assassin", "Debt Snowball Yeti"],
+    world6: ["Taxman Titan", "Side Hustle Hater", "Gross Income Ghoul", "W-2 Wraith", "Gig Economy Gargoyle"],
+    world7: ["Index Fund Angel", "Meme Stock Casino Dealer", "Rug Pull Rex", "Day Trade Dino", "FOMO Phantom"],
+    world8: ["The Retirement Reaper", "Inflation Inquisitor", "Social Security Skeleton", "Golden Handcuff Golem", "Lifestyle Creep"]
 };
 
 const BOSS_EMOJIS: Record<string, string[]> = {
-    world1: ["🎈", "📉", "💸", "🏦", "🔥"],
-    world2: ["🐙", "🏖️", "☕", "🛍️", "📱"],
-    world3: ["❄️", "⏳", "🧱", "🪵", "🐖"],
-    world4: ["🔓", "🧛", "🕵️", "🕸️", "🐀"],
-    world5: ["👹", "🦈", "💳", "⛓️", "🩸"],
-    world6: ["👨‍💼", "🧛‍♂️", "📝", "🔨", "💼"],
-    world7: ["🎰", "🐻", "📉", "🚽", "🤡"],
-    world8: ["💀", "🕰️", "📉", "🏚️", "🕯️"]
+    world1: ["👺", "💸", "🚮", "🌡️"],
+    world2: ["🛍️", "💅", "🥤", "👗"],
+    world3: ["⏳", "📉", "🛑", "🧊"],
+    world4: ["🏦", "🕵️", "🐀", "🕸️"],
+    world5: ["💳", "🦈", "⛓️", "🩸"],
+    world6: ["🧛", "📝", "💼", "📉"],
+    world7: ["🎰", "🐻", "🤡", "📉"],
+    world8: ["💀", "👴", "⚰️", "🥀"]
 };
 
 const BOSS_TRASH_TALK: Record<string, string[]> = {
-    world1: ["Your dollar is worth nothing here!", "I eat purchasing power for breakfast!", "Try saving now, loser!", "Prices just went up 10%!", "Money is an illusion!"],
-    world2: ["But it's on sale!", "Treat yourself... to poverty!", "You NEED that $8 coffee!", "Budgeting is for nerds!", "One more swipe won't hurt!"],
-    world3: ["Time is running out!", "0.01% interest is plenty!", "Why save when you can spend?", "Future you can deal with being broke!", "Compound interest is a myth!"],
-    world4: ["I see your password is 'password123'!", "Your identity is mine!", "Monthly maintenance fees engaged!", "Where's your FDIC insurance now?", "Account frozen!"],
-    world5: ["29% APR activates now!", "Minimum payments forever!", "Your credit score is dropping!", "I own your future income!", "You can't escape the compound debt!"],
-    world6: ["The IRS is watching!", "That's not a deductible!", "Work harder, earn less!", "Taxes take half!", "Your side hustle is a joke!"],
-    world7: ["Buy high, sell low!", "It's going to the moon, trust me!", "Rug pull incoming!", "Diamond hands? More like paper hands!", "This isn't investment, it's a casino!"],
-    world8: ["You'll work until you're 90!", "Social Security is empty!", "Inflation ate your nest egg!", "Too late to start now!", "Welcome to the poor house!"]
+    world1: ["Hand over the $20, kid!", "Your Fortnite skins won’t save you.", "I eat purchasing power for breakfast!", "Prices just went up 10%!"],
+    world2: ["One more top won’t hurt.", "Free shipping = free debt.", "Treat yourself... to poverty!", "But it's on sale!"],
+    world3: ["Time is running out!", "Why save when you can spend?", "Future you can deal with being broke!", "YOLO means You Only Lose Once!"],
+    world4: ["I see your password is 'password123'!", "Monthly maintenance fees engaged!", "Overdraft fee: $35. Cry about it."],
+    world5: ["29% interest tastes like freedom.", "Minimum payment = forever payment.", "Klarna now, cry later.", "I own your future income!"],
+    world6: ["The IRS is watching!", "Work harder, earn less!", "Your side hustle is a joke!", "Taxes take half!"],
+    world7: ["Boring = rich? No, boring = boring!", "It's going to the moon, trust me!", "Rug pull incoming!", "Diamond hands? More like paper hands!"],
+    world8: ["No Roth IRA? I’m coming for you at 65.", "Social Security is empty!", "Welcome to the poor house!"]
 };
 
 // NEW: Detailed Question Database for Boss Battles
@@ -157,7 +157,7 @@ const BOSS_QUESTIONS_DB: Record<string, Array<{ q: string, o: string[], a: numbe
 };
 
 const SCENARIOS = [
-    { text: "Spending $50 on Doordash", isRight: false, label: "L" },
+    { text: "Buying AirPods Pro 2 instead of lunch", isRight: false, label: "Starving" },
     { text: "Cooking at home", isRight: true, label: "W" },
     { text: "Buying V-Bucks on sale", isRight: false, label: "Bait" },
     { text: "Investing birthday money", isRight: true, label: "Smart" },
@@ -165,8 +165,10 @@ const SCENARIOS = [
     { text: "Using a student discount", isRight: true, label: "Hack" },
     { text: "Buying brand new textbooks", isRight: false, label: "Ripoff" },
     { text: "Renting textbooks", isRight: true, label: "Savvy" },
-    { text: "Impulse buying at 2AM", isRight: false, label: "Regret" },
-    { text: "Waiting 24h before buying", isRight: true, label: "Control" }
+    { text: "Buying Shein haul on credit", isRight: false, label: "Trap" },
+    { text: "Waiting 24h before buying", isRight: true, label: "Control" },
+    { text: "Buying generic brand cereal", isRight: true, label: "Big Brain" },
+    { text: "Spending $50 on DoorDash", isRight: false, label: "Broke" }
 ];
 
 const MEME_TEMPLATES = [
@@ -174,8 +176,106 @@ const MEME_TEMPLATES = [
     { url: "https://i.imgflip.com/4t0m5.jpg", top: "ME EXPLAINING STOCKS", bottom: "TO MY MOM" },
     { url: "https://i.imgflip.com/2wifvo.jpg", top: "USING CREDIT CARD", bottom: "FUTURE ME'S PROBLEM" },
     { url: "https://i.imgflip.com/26am.jpg", top: "WAITING FOR PAYDAY", bottom: "LIKE..." },
-    { url: "https://i.imgflip.com/1jwhww.jpg", top: "WHEN THE DIP", bottom: "KEEPS DIPPING" }
+    { url: "https://i.imgflip.com/1jwhww.jpg", top: "WHEN THE DIP", bottom: "KEEPS DIPPING" },
+    { url: "https://i.imgflip.com/30b1gx.jpg", top: "REJECTING SAVINGS", bottom: "CHASING TIKTOK TRENDS" },
+    { url: "https://i.imgflip.com/1g8my4.jpg", top: "ME IGNORING BUDGET", bottom: "DURING SHEIN SALE" }
 ];
+
+// --- UNIQUE LESSON OVERRIDES ---
+// These are exact matches from the "Gold Standard" JSON
+const STATIC_LESSON_OVERRIDES: Record<string, Partial<Lesson>> = {
+    // World 1 Level 1
+    "world1_l1_les0": {
+        type: 'swipe',
+        title: "AirPods or Food?",
+        content: { cards: [
+            { text: "Buying AirPods Pro 2 instead of lunch", isRight: false, label: "Starving" },
+            { text: "Cooking at home", isRight: true, label: "Smart" },
+            { text: "You won’t die without AirPods Pro 2 😂", isRight: true, label: "Fact" }
+        ]}
+    },
+    "world1_l1_les1": {
+        type: 'tap_lie',
+        title: "Tap the LIE",
+        content: { statements: [
+            { text: "Money grows on trees", isLie: true },
+            { text: "Inflation exists", isLie: false },
+            { text: "Savings matter", isLie: false }
+        ]}
+    },
+    "world1_l1_les2": {
+        type: 'meme',
+        title: "Drake on Money",
+        content: {
+            imageUrl: "https://i.imgflip.com/30b1gx.jpg",
+            topText: "REJECTING SAVINGS",
+            bottomText: "CHASING TIKTOK TRENDS",
+            explanation: "Save first, scroll second."
+        }
+    },
+    "world1_l1_les3": {
+        type: 'calculator',
+        title: "$10 Allowance Magic",
+        content: {
+            label: "$10/month at 8% from age 14 → 18",
+            formula: "auto",
+            resultLabel: "$720 from lunch money. Start now."
+        }
+    },
+    "world1_l1_les4": {
+        type: 'info',
+        title: "Inflation Sneak Attack",
+        content: { text: "Your $10 boba was $5 in 2020. That’s **Inflation** eating your allowance 🥷" }
+    },
+
+    // World 1 Level 2
+    "world1_l2_les0": {
+        type: 'swipe',
+        title: "School Lunch or Skin?",
+        content: { cards: [
+            { text: "Buying a Skin instead of lunch", isRight: false, label: "Hungry" },
+            { text: "Eating real food", isRight: true, label: "Fuel" }
+        ]}
+    },
+    
+    // World 2 Level 1
+    "world2_l1_les0": {
+        type: 'drag_drop',
+        title: "50/30/20 Buckets",
+        content: {
+            buckets: ["Needs", "Wants", "Savings"],
+            items: [
+                { id: "r1", text: "Rent", category: "Needs" },
+                { id: "r2", text: "Stanley Cup", category: "Wants" },
+                { id: "r3", text: "Netflix", category: "Wants" },
+                { id: "r4", text: "Emergency Fund", category: "Savings" }
+            ]
+        }
+    },
+
+    // World 5 Level 1
+    "world5_l1_les0": {
+        type: 'meme',
+        title: "Klarna Trap",
+        content: {
+            imageUrl: "https://i.imgflip.com/1g8my4.jpg",
+            topText: "KLARNA 0% INTEREST",
+            bottomText: "29% AFTER 4 PAYMENTS",
+            explanation: "That’s not shopping, that’s a subscription to regret 💀"
+        }
+    },
+    
+    // World 7 Level 1
+    "world7_l1_les0": {
+        type: 'swipe',
+        title: "Stocks or Savings?",
+        content: { cards: [
+            { text: "Savings Account (0.01%)", isRight: false, label: "Slow" },
+            { text: "S&P 500 (10% avg)", isRight: true, label: "Fast" },
+            { text: "Copying smart kids", isRight: true, label: "A+" }
+        ]}
+    }
+};
 
 // --- GENERATION LOGIC ---
 
@@ -193,7 +293,6 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const worldTrashTalk = BOSS_TRASH_TALK[worldId] || BOSS_TRASH_TALK['world1'];
     const bossIntro = rng.pick(worldTrashTalk);
 
-    // FIXED: Use the detailed question DB instead of generic loop
     const worldQs = BOSS_QUESTIONS_DB[worldId] || BOSS_QUESTIONS_DB['world1'];
     
     // Ensure we have enough pool, duplicate if needed to avoid crash on small pools
@@ -225,14 +324,36 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const lessons: Lesson[] = [];
     const lessonTypes: LessonType[] = ['swipe', 'meme', 'tap_lie', 'drag_drop', 'calculator', 'info'];
     
+    // Deterministic shuffle based on seed
     const shuffledTypes = [...lessonTypes].sort(() => 0.5 - rng.next());
 
     for (let i = 0; i < 6; i++) {
+        const lessonId = `${levelId}_les${i}`;
+        
+        // CHECK FOR OVERRIDE FIRST
+        if (STATIC_LESSON_OVERRIDES[lessonId]) {
+            const override = STATIC_LESSON_OVERRIDES[lessonId];
+            lessons.push({
+                id: lessonId,
+                worldId,
+                levelId,
+                order: i,
+                type: override.type || 'info',
+                title: override.title || 'Bonus Lesson',
+                xpReward: 150 + (i * 10),
+                coinReward: 75 + (i * 5),
+                popularity: (rng.next() * 50 + 10).toFixed(1) + "k",
+                content: override.content || { text: "Bonus Content" }
+            } as Lesson);
+            continue;
+        }
+
+        // PROCEDURAL FALLBACK
         const type = shuffledTypes[i % shuffledTypes.length];
         const popularity = (rng.next() * 30 + 5).toFixed(1) + "k";
         
         lessons.push({
-            id: `${levelId}_les${i}`,
+            id: lessonId,
             worldId,
             levelId,
             order: i,
@@ -252,9 +373,9 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
 
 const generateLessonTitle = (type: LessonType, rng: SeededRNG): string => {
     const titles = {
-        swipe: ["Swipe the Truth", "Left or Right?", "Pick the Winner", "Decision Time"],
-        meme: ["Vibe Check", "Meme Review", "Reality Check", "True Story"],
-        tap_lie: ["Spot the Cap", "Find the Lie", "Truth Bomb", "Fact or Fiction"],
+        swipe: ["Swipe the Truth", "Left or Right?", "Pick the Winner", "Decision Time", "Needs vs Wants"],
+        meme: ["Vibe Check", "Meme Review", "Reality Check", "True Story", "Financial L"],
+        tap_lie: ["Spot the Cap", "Find the Lie", "Truth Bomb", "Fact or Fiction", "Cap Check"],
         drag_drop: ["Sort It Out", "Bucket Challenge", "Organize Your Life", "Money Flow"],
         calculator: ["Do the Math", "Rich Calculator", "Future You", "Number Crunch"],
         info: ["Knowledge Drop", "Listen Up", "The Secret", "Game Alpha"],
@@ -280,7 +401,9 @@ const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG
                 statements: [
                     { text: "Credit cards are free money", isLie: true },
                     { text: "Compound interest takes time", isLie: false },
-                    { text: "You need a budget", isLie: false }
+                    { text: "You need a budget", isLie: false },
+                    { text: "Debit cards help credit score", isLie: true },
+                    { text: "Banks are your friends", isLie: true }
                 ].sort(() => 0.5 - rng.next()) 
             };
         case 'drag_drop':
@@ -292,10 +415,12 @@ const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG
                 { id: 's5', text: "Bus Pass", category: "Needs" },
                 { id: 's6', text: "Concert Tix", category: "Wants" },
                 { id: 's7', text: "Electricity", category: "Needs" },
-                { id: 's8', text: "Video Games", category: "Wants" }
+                { id: 's8', text: "Video Games", category: "Wants" },
+                { id: 's9', text: "Emergency Fund", category: "Savings" },
+                { id: 's10', text: "Stock Investment", category: "Savings" }
             ];
             return { 
-                buckets: ['Needs', 'Wants'],
+                buckets: ['Needs', 'Wants', 'Savings'],
                 items: rng.pickSubset(sortItems, 4) 
             };
         case 'calculator':
