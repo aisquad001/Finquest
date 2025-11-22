@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -15,6 +16,7 @@ import {
 } from 'firebase/auth';
 import * as firestore from 'firebase/firestore';
 import * as analyticsMod from 'firebase/analytics';
+import { logger } from './logger';
 
 // ------------------------------------------------------------------
 // FIREBASE CONFIGURATION
@@ -50,11 +52,11 @@ appleProvider.addScope('name');
 
 export const signInWithGoogle = async () => {
     try {
-        console.log("[Auth] Starting Google Sign In...");
+        logger.info("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
     } catch (error: any) {
-        console.error("Google Sign In Error:", error);
+        logger.error("Google Sign In Error", error);
         const currentDomain = window.location.hostname;
 
         // HELPFUL ERROR HANDLING FOR USER
@@ -63,7 +65,7 @@ export const signInWithGoogle = async () => {
             alert(msg);
             throw new Error("Domain not authorized. See alert for instructions.");
         } else if (error.code === 'auth/popup-closed-by-user') {
-            console.log("User closed popup");
+            logger.warn("User closed popup");
             throw new Error("Login cancelled.");
         } else if (error.code === 'auth/operation-not-allowed') {
             alert("Google Login is disabled. Enable it in Firebase Console.");
@@ -76,11 +78,11 @@ export const signInWithGoogle = async () => {
 
 export const signInWithApple = async () => {
     try {
-        console.log("[Auth] Starting Apple Sign In...");
+        logger.info("[Auth] Starting Apple Sign In...");
         const result = await signInWithPopup(auth, appleProvider);
         return result.user;
     } catch (error: any) {
-        console.error(`[Auth] Apple Sign In Error:`, error.message);
+        logger.error(`[Auth] Apple Sign In Error:`, error.message);
         alert(`Apple Login Failed: ${error.message}`);
         throw error;
     }
@@ -88,16 +90,16 @@ export const signInWithApple = async () => {
 
 export const signInAsGuest = async () => {
     try {
-        console.log("[Auth] Starting Guest Sign In (Anonymous)...");
+        logger.info("[Auth] Starting Guest Sign In (Anonymous)...");
         const result = await signInAnonymously(auth);
         return result.user;
     } catch (error: any) {
-        console.error("Guest Sign In Error:", error);
+        logger.error("Guest Sign In Error", error);
         // If guest auth fails (usually due to it not being enabled in console), fall back to mock
         if (error.code === 'auth/operation-not-allowed') {
              alert("Guest Mode is disabled in Firebase Console. Enabling Mock Mode.");
         }
-        console.warn("[Auth] Falling back to Mock Guest due to error.");
+        logger.warn("[Auth] Falling back to Mock Guest due to error.");
         return createMockUser();
     }
 };
@@ -107,7 +109,7 @@ export const logout = async () => {
         localStorage.removeItem('racked_mock_session_uid');
         await firebaseSignOut(auth);
     } catch (error) {
-        console.error("Sign Out Error:", error);
+        logger.error("Sign Out Error", error);
     }
 };
 

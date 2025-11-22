@@ -7,6 +7,7 @@ import { db } from './firebase';
 import * as firestore from 'firebase/firestore';
 import { UserState, checkStreak, createInitialUser, LevelData, Lesson } from './gamification';
 import { generateLevelContent } from './contentGenerator';
+import { logger } from './logger';
 
 const { 
     doc, 
@@ -92,9 +93,9 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
         }
         return null;
     } catch (error: any) {
-        console.error("Error fetching user:", error);
+        logger.error("Error fetching user", error);
         if (error.code === 'permission-denied') {
-            console.warn("DB Permissions missing.");
+            logger.warn("DB Permissions missing.");
         }
         return null;
     }
@@ -137,7 +138,7 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
         ]);
 
         if (!userSnap.exists()) {
-            console.log("[DB] Creating new user document for:", uid);
+            logger.info("[DB] Creating new user document", { uid });
             const initialData = createInitialUser(onboardingData);
             
             // SECURITY: Explicitly set default roles
@@ -158,19 +159,20 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
                 timeoutPromise(15000)
             ]);
 
+            logger.info("[DB] User document created successfully.");
             return dataToSave;
         } else {
-            console.log("[DB] User exists, updating login time.");
+            logger.info("[DB] User exists, updating login time.");
             await updateDoc(userRef, {
                 lastLoginAt: serverTimestamp()
             });
             return convertDocToUser(userSnap.data());
         }
     } catch (error: any) {
-        console.error("Error creating/fetching user doc:", error);
+        logger.error("Error creating/fetching user doc", error);
         if (error.code === 'permission-denied') {
             const msg = "Sign in failed. Profile creation failed. Missing or insufficient permissions.\n\nFIX: Go to Firebase Console > Firestore > Rules and change to 'allow read, write: if request.auth != null;'";
-            console.error(msg);
+            logger.error(msg);
             throw new Error(msg);
         }
         throw error;
@@ -179,7 +181,7 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
 
 // CRITICAL: Guest -> Real Migration
 export const migrateGuestToReal = async (guestUid: string, realUid: string, realEmail: string) => {
-    console.log(`[MIGRATION] Starting migration from ${guestUid} to ${realUid}`);
+    logger.info(`[MIGRATION] Starting migration from ${guestUid} to ${realUid}`);
     
     // 1. Fetch Guest Data
     let guestData: UserState | null = null;
@@ -205,7 +207,7 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
     const realSnap = await getDoc(realRef);
 
     if (realSnap.exists()) {
-        console.log("Target user exists, merging stats if guest has significant progress...");
+        logger.info("Target user exists, merging stats if guest has significant progress...");
         if (guestData) {
             await updateDoc(realRef, {
                 coins: increment(guestData.coins),
@@ -216,7 +218,7 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
     } else {
         // Target is new, create it with guest data
         if (!guestData) {
-             console.warn("No guest data found, creating fresh.");
+             logger.warn("No guest data found, creating fresh.");
              await createUserDoc(realUid, { email: realEmail, authMethod: 'google' });
              return;
         }
@@ -234,7 +236,7 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
 
         await setDoc(realRef, newUserData);
     }
-    console.log("[MIGRATION] Success! Guest data moved/merged to real account.");
+    logger.info("[MIGRATION] Success! Guest data moved/merged to real account.");
 };
 
 export const updateUser = async (uid: string, data: Partial<UserState>) => {
@@ -255,7 +257,7 @@ export const updateUser = async (uid: string, data: Partial<UserState>) => {
             lastSyncedAt: serverTimestamp()
         });
     } catch (error) {
-        console.error("Error updating user:", error);
+        logger.error("Error updating user", error);
     }
 };
 
@@ -314,7 +316,7 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         }
         await setDoc(userRef, updatePayload, { merge: true });
     } catch (error) {
-        console.error("Error saving progress:", error);
+        logger.error("Error saving progress", error);
     }
 };
 
@@ -326,7 +328,7 @@ export const subscribeToCollection = (colName: string, callback: (data: any[]) =
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(items);
     }, (error) => {
-        console.error(`Error subscribing to ${colName}:`, error);
+        logger.error(`Error subscribing to ${colName}`, error);
         if (error.code === 'permission-denied') {
             // Return empty array to stop loading states in UI
             callback([]);
@@ -339,7 +341,7 @@ export const saveDoc = async (colName: string, id: string, data: any) => {
         const ref = doc(db, colName, id);
         await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
     } catch (e) {
-        console.error(`Error saving to ${colName}:`, e);
+        logger.error(`Error saving to ${colName}`, e);
         throw e;
     }
 };
@@ -348,7 +350,7 @@ export const deleteDocument = async (colName: string, id: string) => {
     try {
         await deleteDoc(doc(db, colName, id));
     } catch (e) {
-        console.error(`Error deleting from ${colName}:`, e);
+        logger.error(`Error deleting from ${colName}`, e);
         throw e;
     }
 };
@@ -388,7 +390,7 @@ export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> =
 };
 
 export const seedGameData = async () => {
-    console.log("Seeding DB...");
+    logger.info("Seeding DB...");
     localStorage.removeItem(MOCK_CONTENT_KEY);
     localStorage.removeItem(MOCK_STORAGE_KEY);
     // No-op in real DB mode, but useful for clearing cache
@@ -396,14 +398,14 @@ export const seedGameData = async () => {
 
 // --- ADMIN REAL-TIME USER DATA ---
 export const subscribeToAllUsers = (callback: (users: UserState[]) => void) => {
-    console.log("[ADMIN] Subscribing to ALL users...");
+    logger.info("[ADMIN] Subscribing to ALL users...");
     const q = query(collection(db, 'users'), orderBy('lastLoginAt', 'desc'), limit(100));
     
     return onSnapshot(q, (snapshot) => {
         const users = snapshot.docs.map(doc => convertDocToUser(doc.data()));
         callback(users);
     }, (error) => {
-        console.error("Admin Sub Error:", error);
+        logger.error("Admin Sub Error", error);
         // Call with empty list to resolve loading state in UI
         callback([]);
     });

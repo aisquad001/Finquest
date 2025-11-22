@@ -1,5 +1,4 @@
 
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -24,14 +23,15 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
-import { addXP, addCoins, purchaseItem, processDailyStreak, triggerMoneyCheat } from './services/gameLogic';
+import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
 import { auth, signInWithGoogle, signInAsGuest, logout } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
+import { logger } from './services/logger';
 
 const App: React.FC = () => {
   // Global State
-  const { user, loading: storeLoading, error: storeError, syncUser, clearUser } = useUserStore();
+  const { user, loading: storeLoading, error: storeError, syncUser, clearUser, setError } = useUserStore();
   
   // UI State
   const [showOnboarding, setShowOnboarding] = useState(true); // Default to true until auth check
@@ -52,14 +52,12 @@ const App: React.FC = () => {
   useEffect(() => {
       if (view === 'admin') {
           if (user) {
-             // Double check client side, though DB rules should also protect data
              if (!user.isAdmin) {
-                 console.warn("Unauthorized access to admin. Redirecting...");
+                 logger.warn("Unauthorized admin access attempt", { uid: user.uid });
                  setView('dashboard');
                  window.history.replaceState({}, '', '/');
              }
           } else if (!storeLoading) {
-              // Not logged in
               setView('dashboard');
           }
       }
@@ -92,14 +90,13 @@ const App: React.FC = () => {
 
       const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
           if (firebaseUser) {
-              console.log("Auth State Changed: User Logged In", firebaseUser.uid);
+              logger.info("Auth State: User Logged In", { uid: firebaseUser.uid });
               if (unsubscribeSync) unsubscribeSync();
               
-              // 1. Start syncing user data
+              // 1. Start syncing user data (Sets loading=true)
               unsubscribeSync = syncUser(firebaseUser.uid);
               
               // 2. Ensure Profile Exists (Auto-Create if missing)
-              // This handles the "Google Login -> Create Profile" flow automatically
               try {
                  await createUserDoc(firebaseUser.uid, { 
                      email: firebaseUser.email, 
@@ -107,24 +104,26 @@ const App: React.FC = () => {
                      displayName: firebaseUser.displayName,
                      authMethod: firebaseUser.isAnonymous ? 'guest' : 'google'
                  });
-                 // If successful, syncUser will pick up the new doc
+                 // If successful, syncUser snapshot will fire and clear loading.
                  setShowOnboarding(false);
                  
                  requestNotificationPermission().then(granted => {
                     if (granted) scheduleDemoNotifications();
                  });
 
-              } catch (e) {
-                 console.error("Profile auto-creation failed:", e);
+              } catch (e: any) {
+                 // CRITICAL FIX: Stop the loading spinner if DB creation fails
+                 logger.error("Profile auto-creation failed", { error: e.message });
+                 setError("Failed to initialize profile. " + e.message);
               }
 
           } else {
-              console.log("Auth State Changed: No User");
+              logger.info("Auth State: No User");
               
               // Mock Mode Check
               const mockUid = localStorage.getItem('racked_mock_session_uid');
               if (mockUid) {
-                  console.log("Restoring Mock Session:", mockUid);
+                  logger.info("Restoring Mock Session", { mockUid });
                   unsubscribeSync = syncUser(mockUid);
                   setShowOnboarding(false);
               } else {
@@ -213,10 +212,10 @@ const App: React.FC = () => {
           } else if (data.authMethod === 'google') {
               await signInWithGoogle();
           }
-          // Auth listener (useEffect) handles the rest (createUserDoc, sync, redirect)
+          // Auth listener (useEffect) handles the rest
       } catch (error: any) {
-          console.error("Signup Flow Failed:", error);
-          throw error;
+          logger.error("Signup Flow Failed", error);
+          // UI error display handled by the store error state or alert in signIn function
       }
   };
 

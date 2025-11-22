@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -21,7 +22,8 @@ import {
     PlusIcon,
     CloudArrowUpIcon,
     CloudArrowDownIcon,
-    XMarkIcon
+    XMarkIcon,
+    CommandLineIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -47,6 +49,7 @@ import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
 import { ASSET_LIST } from '../services/stockMarket';
 import { generateLevelContent } from '../services/contentGenerator';
+import { logger, LogEntry } from '../services/logger';
 
 // --- TYPES & INTERFACES ---
 
@@ -54,7 +57,7 @@ interface AdminProps {
     onExit: () => void;
 }
 
-type ViewType = 'dashboard' | 'users' | 'analytics' | 'cms' | 'shop' | 'monetization' | 'push' | 'god' | 'zoo';
+type ViewType = 'dashboard' | 'users' | 'analytics' | 'cms' | 'shop' | 'monetization' | 'push' | 'god' | 'zoo' | 'logs';
 
 // --- REAL-TIME DATA HOOK ---
 const useAdminData = () => {
@@ -845,6 +848,55 @@ const GodTools = ({ users }: { users: UserState[] }) => {
     );
 };
 
+// 8. LOGS VIEWER
+const LogsViewer = () => {
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+
+    useEffect(() => {
+        // Poll logs periodically or refresh on mount
+        setLogs(logger.getLogs());
+        const interval = setInterval(() => {
+            setLogs(logger.getLogs());
+        }, 2000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="p-8 animate-pop-in h-full flex flex-col">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-game text-white">System Logs</h2>
+                <button 
+                    onClick={() => { logger.clearLogs(); setLogs([]); }}
+                    className="px-4 py-2 bg-slate-700 text-white text-xs font-bold rounded hover:bg-slate-600"
+                >
+                    Clear Logs
+                </button>
+            </div>
+            <div className="flex-1 bg-black border border-slate-700 rounded-xl overflow-hidden font-mono text-xs p-4 overflow-y-auto shadow-inner">
+                {logs.length === 0 ? (
+                    <div className="text-slate-600 text-center mt-10">No logs recorded.</div>
+                ) : (
+                    logs.map((log, i) => (
+                        <div key={i} className="mb-2 border-b border-slate-800 pb-1">
+                            <span className="text-slate-500 mr-2">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span className={`font-bold mr-2 uppercase w-12 inline-block ${
+                                log.level === 'error' ? 'text-red-500' : 
+                                log.level === 'warn' ? 'text-yellow-500' : 'text-blue-400'
+                            }`}>{log.level}</span>
+                            <span className="text-slate-300">{log.message}</span>
+                            {log.details && (
+                                <div className="ml-20 text-slate-500 overflow-x-auto whitespace-pre-wrap bg-slate-900/50 p-1 rounded mt-1">
+                                    {log.details}
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+};
+
 // --- MAIN ADMIN COMPONENT ---
 
 export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
@@ -885,6 +937,7 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
                 <div className="flex-1 overflow-y-auto px-2 py-2">
                     <div className="text-[10px] font-bold text-slate-600 uppercase px-4 mb-2 mt-2">Analytics</div>
                     <SidebarItem id="dashboard" label="Real-Time Stats" icon={ChartBarIcon} />
+                    <SidebarItem id="logs" label="System Logs" icon={CommandLineIcon} />
                     
                     <div className="text-[10px] font-bold text-slate-600 uppercase px-4 mb-2 mt-6">Management</div>
                     <SidebarItem id="users" label="User DB" icon={UsersIcon} />
@@ -916,6 +969,7 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
                     {view === 'push' && <PushNotificationManager />}
                     {view === 'zoo' && <ZooAdmin />}
                     {view === 'god' && <GodTools users={users} />}
+                    {view === 'logs' && <LogsViewer />}
                 </div>
             </div>
         </div>
