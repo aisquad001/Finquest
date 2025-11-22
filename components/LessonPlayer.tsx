@@ -76,9 +76,9 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
 
     return (
         <div className="flex flex-col items-center justify-center h-full p-4 relative">
-            {/* Removed hint text about good/bad idea to prevent spoilers */}
+            {/* Updated: Removed hint text "Swipe Right for W, Left for L" */}
             <h3 className="font-game text-3xl mb-12 text-white drop-shadow-md text-center leading-tight">
-                {cardIndex === 0 ? "Swipe Right for W, Left for L" : "What's the move?"}
+                What's the move?
             </h3>
             
             <div className="relative w-full max-w-xs aspect-[3/4]">
@@ -95,7 +95,8 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                     }}
                 >
                     <div className="text-6xl mb-6">
-                         {currentCard.isRight ? '🤑' : '💸'}
+                         {/* Updated: Hide answer emoji hints if they gave it away, keeping it neutral */}
+                         🤔
                     </div>
                     <div className="text-black font-black text-3xl leading-tight select-none">
                         {currentCard.text}

@@ -5,7 +5,7 @@
  */
 import { db } from './firebase';
 import * as firestore from 'firebase/firestore';
-import { UserState, checkStreak, createInitialUser, LevelData, Lesson } from './gamification';
+import { UserState, checkStreak, createInitialUser, LevelData, Lesson, LeaderboardEntry } from './gamification';
 import { generateLevelContent } from './contentGenerator';
 import { logger } from './logger';
 
@@ -333,6 +333,45 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
     } catch (error) {
         logger.error("Error saving progress", error);
     }
+};
+
+// --- LEADERBOARD ---
+export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) => void) => {
+    // Query top 50 users by net worth (calculated as coins roughly or if portfolio value is stored)
+    // Since netWorth in portfolio is inside an object, sorting by it directly in Firestore requires an index on `portfolio.history` or `portfolio.netWorth`
+    // For now, we'll sort by XP/Level as a proxy for "Racked" success, OR if we sync netWorth to root.
+    // Let's assume we want XP for now as it's most reliable without complex indexing on sub-objects.
+    
+    const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+
+    return onSnapshot(q, (snapshot) => {
+        const entries: LeaderboardEntry[] = snapshot.docs.map((doc, index) => {
+            const u = doc.data() as UserState;
+            
+            // Calculate Net Worth dynamically for display
+            let netWorth = u.coins;
+            if (u.portfolio?.cash) {
+                netWorth = u.portfolio.cash; // Approximation if real-time calculation is client-side
+                // Note: Accurate net worth requires stock prices. We just use cash + stored history value here.
+                if (u.portfolio.history?.length) {
+                    netWorth = u.portfolio.history[u.portfolio.history.length - 1].netWorth;
+                }
+            }
+
+            return {
+                rank: index + 1,
+                name: u.nickname || 'Anonymous',
+                xp: u.xp,
+                avatar: u.avatar?.emoji || '👤',
+                country: 'Global',
+                netWorth: netWorth
+            };
+        });
+        callback(entries);
+    }, (err) => {
+        logger.error("Leaderboard Error", err);
+        callback([]);
+    });
 };
 
 // --- ADMIN GENERIC CRUD HELPERS ---

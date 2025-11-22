@@ -3,12 +3,14 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeftIcon, BoltIcon, ChartBarIcon, ClockIcon, InformationCircleIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
+import React, { useState, useEffect, useMemo } from 'react';
+import { ArrowLeftIcon, ChartBarIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Portfolio, Stock, calculateRiskScore, Transaction, LeaderboardEntry, getMockLeaderboard } from '../services/gamification';
+import { Portfolio, calculateRiskScore, Transaction, LeaderboardEntry } from '../services/gamification';
 import { getMarketData, fetchRealMarketData, generateChartData, StockAsset, getMarketStatus } from '../services/stockMarket';
+import { subscribeToLeaderboard } from '../services/db';
 import { playSound } from '../services/audio';
+import { useUserStore } from '../services/useUserStore';
 
 interface WallStreetZooProps {
     portfolio: Portfolio;
@@ -31,7 +33,7 @@ const StockRow: React.FC<{ stock: StockAsset; ownedQty?: number; onSelect: (stoc
                 <div className="text-[10px] text-gray-400">{stock.name}</div>
                 {ownedQty && ownedQty > 0 ? (
                     <div className="text-[10px] text-neon-blue font-bold mt-0.5">
-                        Owned: ${(ownedQty * stock.price).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        Owned: {ownedQty.toFixed(4)} shares
                     </div>
                 ) : null}
             </div>
@@ -78,26 +80,45 @@ const LineChart = ({ data, color }: { data: number[], color: string }) => {
 };
 
 export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdatePortfolio, onClose }) => {
+    const { user } = useUserStore();
     const [activeTab, setActiveTab] = useState<'market' | 'portfolio' | 'rankings'>('market');
     const [marketData, setMarketData] = useState<StockAsset[]>(getMarketData());
     const [feedStatus, setFeedStatus] = useState<string>('CONNECTING...');
     const [selectedStock, setSelectedStock] = useState<StockAsset | null>(null);
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
     const [tradeAmount, setTradeAmount] = useState<string>('');
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
+    
+    // Real Leaderboard State
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+    const [userRank, setUserRank] = useState<number | null>(null);
 
     // --- REAL DATA POLL LOOP ---
     useEffect(() => {
         const updateMarket = async () => {
-            const updatedData = await fetchRealMarketData();
-            setMarketData([...updatedData]); // Trigger re-render with new prices
+            // Prioritize selected stock for real-time updates
+            const updatedData = await fetchRealMarketData(selectedStock?.symbol);
+            setMarketData([...updatedData]); 
             setFeedStatus(getMarketStatus());
         };
 
-        updateMarket(); // Initial fetch
-        const interval = setInterval(updateMarket, 5000); // Poll every 5s for faster feedback
+        // Initial fetch
+        updateMarket(); 
+        // Poll every 5s (smart poller handles rate limits)
+        const interval = setInterval(updateMarket, 5000); 
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedStock]);
+
+    // --- LEADERBOARD SYNC ---
+    useEffect(() => {
+        const unsub = subscribeToLeaderboard((entries) => {
+            setLeaderboard(entries);
+            if (user) {
+                const myEntry = entries.find(e => e.name === user.nickname);
+                if (myEntry) setUserRank(myEntry.rank);
+            }
+        });
+        return () => unsub();
+    }, [user]);
 
     // --- Derived State ---
     const currentNetWorth = useMemo(() => {
@@ -115,6 +136,12 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
     let riskAnimal = { emoji: '🐢', name: 'Chill Turtle', color: 'text-green-400' };
     if (riskScore > 3 && riskScore <= 7) riskAnimal = { emoji: '🐈', name: 'Balanced Cat', color: 'text-yellow-400' };
     if (riskScore > 7) riskAnimal = { emoji: '🦍', name: 'Degenerate Ape', color: 'text-red-500' };
+
+    // "Beat S&P" Badge
+    const beatSp500 = useMemo(() => {
+        // Simple logic: if net worth > 105k (5% gain)
+        return currentNetWorth > 105000;
+    }, [currentNetWorth]);
 
     const handleTrade = () => {
         if (!selectedStock || !tradeAmount) return;
@@ -165,7 +192,15 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         };
         newPortfolio.transactions.unshift(tx);
         
+        // Update History (for simplified tracking)
+        newPortfolio.history.push({
+            date: new Date().toISOString(),
+            netWorth: currentNetWorth
+        });
+
         onUpdatePortfolio(newPortfolio);
+        
+        // Visuals
         (window as any).confetti({
             particleCount: 100,
             spread: 70,
@@ -189,7 +224,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                     <h1 className="font-game text-lg text-white tracking-wider">WALL STREET ZOO</h1>
                     <div className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${feedStatus === 'LIVE' ? 'text-neon-green' : 'text-yellow-500'}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${feedStatus === 'LIVE' ? 'bg-neon-green animate-pulse' : 'bg-yellow-500'}`}></span>
-                        {feedStatus === 'LIVE' ? 'LIVE FEED' : 'SIMULATED FEED'}
+                        {feedStatus === 'LIVE' ? 'ALPHA VANTAGE LIVE' : 'SIMULATING...'}
                     </div>
                 </div>
                 <div className="w-9"></div>
@@ -197,12 +232,13 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
 
             {/* NEWS TICKER */}
             <div className="bg-black py-1 overflow-hidden border-b border-white/5">
-                <div className="whitespace-nowrap animate-[shimmer_10s_linear_infinite] text-[10px] font-mono text-gray-400 flex gap-8">
-                    <span>🚀 TSLA +2.4%</span>
-                    <span>📉 INFLATION HITS 3.2%</span>
+                <div className="whitespace-nowrap animate-[shimmer_20s_linear_infinite] text-[10px] font-mono text-gray-400 flex gap-8">
+                    {marketData.slice(0, 5).map(s => (
+                        <span key={s.symbol} className={s.changePercent >= 0 ? "text-green-500" : "text-red-500"}>
+                            {s.symbol} {s.changePercent >= 0 ? '+' : ''}{s.changePercent.toFixed(2)}%
+                        </span>
+                    ))}
                     <span>🦍 APES HOLDING STRONG</span>
-                    <span>💎 BITCOIN TO MOON</span>
-                    <span>🍎 APPLE RELEASES IPHONE 25</span>
                 </div>
             </div>
 
@@ -212,16 +248,17 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                 {/* PORTFOLIO SUMMARY */}
                 <div className="p-6 bg-gradient-to-b from-[#1a0b2e] to-[#0f0518]">
                     <div className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 text-center">Total Net Worth</div>
-                    <div className="font-game text-5xl text-center text-white mb-4 tracking-tight">
+                    <div className="font-game text-5xl text-center text-white mb-4 tracking-tight flex justify-center items-center gap-2">
                         ${currentNetWorth.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        {beatSp500 && <span className="text-xs bg-yellow-500 text-black px-2 py-1 rounded-full animate-pulse">🏆 Beat S&P</span>}
                     </div>
                     
                     <div className="h-32 w-full bg-black/20 rounded-xl border border-white/5 p-4 mb-6 relative overflow-hidden">
                          <LineChart 
-                            data={generateChartData('SPY', '1W')} // Mock history of user portfolio
+                            data={portfolio.history.slice(-20).map(h => h.netWorth)} 
                             color="#00C2FF" 
                          />
-                         <div className="absolute top-2 left-2 text-xs font-bold text-neon-blue">7 Day Performance</div>
+                         <div className="absolute top-2 left-2 text-xs font-bold text-neon-blue">Performance</div>
                     </div>
 
                     {/* STATS ROW */}
@@ -247,7 +284,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                     {[
                         { id: 'market', label: 'Explore' },
                         { id: 'portfolio', label: 'My Assets' },
-                        { id: 'rankings', label: 'Leaderboard' }
+                        { id: 'rankings', label: 'Global Rank' }
                     ].map(tab => (
                         <button 
                             key={tab.id}
@@ -264,7 +301,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                     {activeTab === 'market' && (
                         <div>
                              <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                                 <GlobeAltIcon className="w-4 h-4 text-neon-blue" /> Trending Now
+                                 <GlobeAltIcon className="w-4 h-4 text-neon-blue" /> Live Market
                              </h3>
                              {marketData.map(stock => (
                                  <StockRow key={stock.symbol} stock={stock} ownedQty={portfolio.holdings[stock.symbol]} onSelect={setSelectedStock} />
@@ -290,31 +327,49 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
 
                     {activeTab === 'rankings' && (
                         <div className="space-y-2">
+                            {userRank && (
+                                <div className="bg-gradient-to-r from-neon-purple to-indigo-900 p-4 rounded-xl mb-4 border border-white/20 flex items-center justify-between">
+                                    <div>
+                                        <div className="text-xs font-bold text-white/70 uppercase">Your Rank</div>
+                                        <div className="text-2xl font-black text-white">#{userRank}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xs font-bold text-white/70 uppercase">Net Worth</div>
+                                        <div className="text-xl font-black text-green-400">${currentNetWorth.toLocaleString()}</div>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="bg-yellow-500/10 border border-yellow-500/30 p-4 rounded-xl mb-6 flex items-center gap-4">
                                 <div className="text-4xl">🏆</div>
                                 <div>
-                                    <h3 className="font-bold text-yellow-400 text-sm uppercase">Weekly Challenge</h3>
-                                    <p className="text-xs text-yellow-100">Highest returns wins 50,000 Coins!</p>
+                                    <h3 className="font-bold text-yellow-400 text-sm uppercase">Live Leaderboard</h3>
+                                    <p className="text-xs text-yellow-100">Top 50 Portfolios (Real-Time)</p>
                                 </div>
                             </div>
-                            {leaderboard.map((entry, i) => (
-                                <div key={i} className="flex items-center gap-4 p-3 bg-white/5 rounded-xl border border-white/5">
-                                    <div className={`font-black text-lg w-6 text-center ${i < 3 ? 'text-yellow-400' : 'text-gray-500'}`}>
-                                        {entry.rank}
-                                    </div>
-                                    <div className="text-2xl">{entry.avatar}</div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-white text-sm">{entry.name}</div>
-                                        <div className="text-xs text-gray-400">{entry.country}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="font-mono font-bold text-white text-sm">${(entry.netWorth || 0).toLocaleString()}</div>
-                                        <div className="text-[10px] text-green-400 font-bold">
-                                            +{Math.floor(Math.random() * 20)}%
+                            
+                            {leaderboard.length === 0 ? (
+                                <div className="text-center p-8 text-gray-500">Loading Rankings...</div>
+                            ) : (
+                                leaderboard.map((entry, i) => (
+                                    <div key={i} className={`flex items-center gap-4 p-3 rounded-xl border border-white/5 ${entry.name === user?.nickname ? 'bg-white/10 border-white/30' : 'bg-white/5'}`}>
+                                        <div className={`font-black text-lg w-8 text-center ${i < 3 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                                            {entry.rank}
+                                        </div>
+                                        <div className="text-2xl">{entry.avatar}</div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-white text-sm flex items-center gap-2">
+                                                {entry.name}
+                                                {i === 0 && <span className="text-[10px] bg-yellow-500 text-black px-1 rounded">KING</span>}
+                                            </div>
+                                            <div className="text-xs text-gray-400">{entry.xp.toLocaleString()} XP</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-mono font-bold text-white text-sm">${(entry.netWorth || 0).toLocaleString()}</div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
@@ -394,6 +449,10 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                              >
                                  CONFIRM {tradeType.toUpperCase()}
                              </button>
+                             
+                             <p className="text-center text-xs text-gray-500 mt-4">
+                                 Simulation Mode • 60s Price Refresh
+                             </p>
                         </div>
                     </motion.div>
                 )}
