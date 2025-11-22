@@ -11,7 +11,8 @@ import {
     signInAnonymously,
     signOut as firebaseSignOut,
     onAuthStateChanged,
-    User
+    User,
+    AuthError
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
@@ -33,28 +34,48 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
+// Add scopes if needed, e.g. googleProvider.addScope('profile');
+// googleProvider.addScope('email');
+
 export const appleProvider = new OAuthProvider('apple.com');
+appleProvider.addScope('email');
+appleProvider.addScope('name');
 
 export const signInWithGoogle = async () => {
     try {
-        if (!isConfigValid) throw new Error("Firebase not configured.");
+        if (!isConfigValid) {
+            console.error("Firebase Config Missing. Please check .env file.");
+            throw new Error("Firebase not configured.");
+        }
         console.log("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
-        return result.user;
-    } catch (error) {
-        console.error("Google Sign In Error:", error);
+        // The signed-in user info.
+        const user = result.user;
+        console.log("[Auth] Google Sign In Success:", user.uid);
+        return user;
+    } catch (error: any) {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.error(`[Auth] Google Sign In Error (${errorCode}):`, errorMessage);
         throw error;
     }
 };
 
 export const signInWithApple = async () => {
     try {
-        if (!isConfigValid) throw new Error("Firebase not configured.");
+        if (!isConfigValid) {
+            console.error("Firebase Config Missing.");
+            throw new Error("Firebase not configured.");
+        }
         console.log("[Auth] Starting Apple Sign In...");
         const result = await signInWithPopup(auth, appleProvider);
-        return result.user;
-    } catch (error) {
-        console.error("Apple Sign In Error:", error);
+        const user = result.user;
+        console.log("[Auth] Apple Sign In Success:", user.uid);
+        return user;
+    } catch (error: any) {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+        console.error(`[Auth] Apple Sign In Error (${errorCode}):`, errorMessage);
         throw error;
     }
 };

@@ -93,7 +93,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     } catch (e: any) {
         console.error("Auth failed in Onboarding:", e);
         setIsSigningUp(false);
-        alert("Sign in failed. Please try again.");
+        alert("Sign in failed. " + (e.message || "Please try again."));
     }
   };
 
@@ -266,7 +266,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             )}
                         </button>
 
-                        {/* Apple (Now Added) */}
+                        {/* Apple (New) */}
                         <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('apple'); }}
@@ -274,7 +274,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                             className="w-full py-3 bg-black text-white border border-white/20 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-900 btn-3d cursor-pointer z-50 relative disabled:opacity-50"
                         >
                              <img src="https://www.svgrepo.com/show/511330/apple-173.svg" className="w-5 h-5 invert" />
-                            Sign in with Apple
+                             {isSigningUp ? 'Syncing...' : 'Sign in with Apple'}
                         </button>
 
                         <div className="relative py-2">

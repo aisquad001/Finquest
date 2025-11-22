@@ -184,26 +184,30 @@ const App: React.FC = () => {
 
           if (firebaseUser) {
               try {
+                  console.log("Auth successful. Creating/Fetching profile for:", firebaseUser.uid);
                   await createUserDoc(firebaseUser.uid, { 
                       ...data, 
-                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app` 
+                      email: firebaseUser.email || `guest_${firebaseUser.uid.substring(0,6)}@finquest.app`,
+                      photoURL: firebaseUser.photoURL 
                   });
 
                   if (firebaseUser.uid.startsWith('mock_')) {
                       localStorage.setItem('finquest_mock_session_uid', firebaseUser.uid);
                       syncUser(firebaseUser.uid);
                   }
+                  // Only hide onboarding after successful DB operations
                   setShowOnboarding(false);
+                  playSound('levelup');
               } catch (dbError) {
                   console.error("DB Profile Creation Failed:", dbError);
-                  throw new Error("Profile creation failed.");
+                  throw new Error("Profile creation failed. Please try again.");
               }
           } else {
-              throw new Error("Authentication failed");
+              throw new Error("Authentication failed (No User)");
           }
       } catch (error: any) {
-          console.error("Signup Failed:", error);
-          throw error;
+          console.error("Signup Flow Failed:", error);
+          throw error; // Let Onboarding component handle the UI error
       }
   };
 

@@ -121,36 +121,43 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-            // Create New User
+            // Create New User Document
+            console.log("[DB] Creating new user document for:", uid);
             const initialData = createInitialUser(onboardingData);
             
+            // Prepare base data
             const dataToSave = {
                 ...initialData,
                 uid: uid,
                 email: onboardingData.email || '',
+                photoURL: onboardingData.photoURL || null,
                 createdAt: serverTimestamp(),
                 lastLoginAt: serverTimestamp(),
                 isPro: false,
-                // Ensure consistency with requested fields
+                // Ensure these fields are exactly as requested
+                level: 1,
                 streak: 1,
                 streakLastDate: new Date().toISOString().split('T')[0],
                 coins: 500, // Base coins
-                xp: 0
+                xp: 0       // Base XP
             };
             
+            // 1. Create the document
             await setDoc(userRef, dataToSave);
 
-            // Give first-login bonus ONLY once
+            // 2. Apply First-Time Login Bonus (Atomic Increment)
+            console.log("[DB] Applying first-time bonus...");
             await updateDoc(userRef, {
-                coins: increment(500),
-                xp: increment(200)
+                coins: increment(500), // Total = 1000
+                xp: increment(200)     // Total = 200
             });
 
-            // Return the object with estimated bonus for immediate UI update
+            // Return the object with estimated bonus for immediate UI update (optimistic)
             return { ...dataToSave, coins: 1000, xp: 200 };
 
         } else {
-            // Existing User - Just update login time
+            // Existing User
+            console.log("[DB] User exists, updating login time.");
             await updateDoc(userRef, {
                 lastLoginAt: serverTimestamp()
             });
