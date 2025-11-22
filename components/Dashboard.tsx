@@ -158,10 +158,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
     const handleShareParentLink = async () => {
         if (!familyCode) return;
+        // Changed to use query params to avoid 404s on static hosting without rewrite rules
+        const url = `${window.location.origin}/?view=portal&code=${familyCode}`;
+        
         const shareData = {
             title: "Racked Parent Portal",
-            text: `Login to approve my allowance on Racked! Code: ${familyCode}`,
-            url: `${window.location.origin}/portal?code=${familyCode}`
+            text: `Login to approve my allowance on Racked! Access Code: ${familyCode}`,
+            url: url
         };
         
         if (navigator.share) {
@@ -582,7 +585,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                          {familyCode}
                                      </div>
                                      <div className="text-xs text-gray-400 mb-4">
-                                         They can visit <span className="text-white font-bold">racked.gg/portal</span>
+                                         They can visit <span className="text-white font-bold">racked.gg/?view=portal</span>
                                      </div>
                                      
                                      <div className="grid grid-cols-2 gap-3">

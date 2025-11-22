@@ -41,12 +41,15 @@ const App: React.FC = () => {
   const [domainStatus, setDomainStatus] = useState<'correct' | 'old' | 'localhost'>('correct');
   const [isTargetReady, setIsTargetReady] = useState(false);
 
-  const isPortalRoute = window.location.pathname === '/portal';
+  // ROUTING FIX: Support query param 'view=portal' to avoid 404s on static hosts
+  const searchParams = new URLSearchParams(window.location.search);
+  const isPortalRoute = window.location.pathname === '/portal' || searchParams.get('view') === 'portal';
   const isAdminRoute = window.location.pathname === '/admin';
   
   const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo' | 'portal' | 'admin'>(
       isAdminRoute ? 'admin' : isPortalRoute ? 'portal' : 'dashboard'
   );
+
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
   const [activeLevel, setActiveLevel] = useState<any | null>(null);
 
@@ -243,7 +246,15 @@ const App: React.FC = () => {
   // --- RENDER ---
 
   if (view === 'portal') {
-      return <PortalDashboard childData={user} onExit={() => { window.history.pushState({}, '', '/'); setView('dashboard'); }} />;
+      return (
+        <PortalDashboard 
+            childData={user} 
+            onExit={() => { 
+                window.history.pushState({}, '', '/'); 
+                setView('dashboard'); 
+            }} 
+        />
+      );
   }
 
   if (view === 'admin') {
@@ -278,7 +289,7 @@ const App: React.FC = () => {
 
   // LOGIN SCREEN
   if (showOnboarding || !user) {
-      return <Onboarding onComplete={handleOnboardingAuth} />;
+      return <Onboarding onComplete={handleOnboardingAuth} onOpenPortal={() => setView('portal')} />;
   }
 
   // PROFILE SETUP (New User or Editing)

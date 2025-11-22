@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,9 +8,10 @@ import { playSound } from '../services/audio';
 
 interface OnboardingProps {
   onComplete: (data: any) => void;
+  onOpenPortal?: () => void;
 }
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onOpenPortal }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAuth = async (method: 'google' | 'guest') => {
@@ -105,9 +107,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     Play as Guest
                  </button>
                  
-                 <p className="text-xs text-white/70 font-bold mt-4 drop-shadow-md">
-                     Your progress saves forever when you sign in
-                 </p>
+                 <div className="pt-4">
+                     <button
+                        onClick={() => { playSound('click'); if(onOpenPortal) onOpenPortal(); }}
+                        className="text-xs text-white/70 font-bold hover:text-white hover:underline uppercase tracking-widest"
+                     >
+                         Parent Portal Access
+                     </button>
+                 </div>
              </div>
          </div>
     </div>
