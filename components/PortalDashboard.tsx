@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -15,6 +16,7 @@ import {
 } from '@heroicons/react/24/solid';
 import { UserState } from '../services/gamification';
 import { MOCK_BANKING, getInterventions, MOCK_CERTIFICATE } from '../services/portal';
+import { fetchChildByCode } from '../services/db';
 import { Avatar } from './Avatar';
 
 interface PortalProps {
@@ -22,13 +24,29 @@ interface PortalProps {
     onExit: () => void;
 }
 
-export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) => {
+export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData, onExit }) => {
     const [activeTab, setActiveTab] = useState<'overview' | 'banking' | 'education'>('overview');
     const [linkCode, setLinkCode] = useState('');
-    const [isLinked, setIsLinked] = useState(!!childData);
+    const [linkedChild, setLinkedChild] = useState<UserState | null>(initialData);
+    const [isLoading, setIsLoading] = useState(false);
 
-    // If no child linked (simulated for demo flow)
-    if (!isLinked || !childData) {
+    const handleConnect = async () => {
+        if (!linkCode || linkCode.length < 6) {
+            alert("Please enter a valid 6-digit code.");
+            return;
+        }
+        setIsLoading(true);
+        const child = await fetchChildByCode(linkCode.toUpperCase());
+        if (child) {
+            setLinkedChild(child);
+        } else {
+            alert("Invalid code. Please ask your teen to generate a new one in the app.");
+        }
+        setIsLoading(false);
+    };
+
+    // LOGIN VIEW
+    if (!linkedChild) {
         return (
             <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-6 font-sans">
                 <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
@@ -45,18 +63,20 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                             <label className="block text-sm font-bold text-slate-700 mb-2">Enter Family Code</label>
                             <input 
                                 type="text" 
-                                placeholder="e.g. 123-456"
+                                placeholder="e.g. AB12CD"
                                 value={linkCode}
-                                onChange={(e) => setLinkCode(e.target.value)}
-                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                onChange={(e) => setLinkCode(e.target.value.toUpperCase())}
+                                className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono text-center text-lg uppercase"
+                                maxLength={6}
                             />
-                            <p className="text-xs text-slate-400 mt-2">Get this code from your teen's app settings.</p>
+                            <p className="text-xs text-slate-400 mt-2">Get this code from your teen's app settings (Social Tab).</p>
                         </div>
                         <button 
-                            onClick={() => setIsLinked(true)} // Simulating auth
-                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md"
+                            onClick={handleConnect}
+                            disabled={isLoading}
+                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md disabled:opacity-50"
                         >
-                            Connect Account
+                            {isLoading ? "Connecting..." : "Connect Account"}
                         </button>
                         <button onClick={onExit} className="w-full py-3 text-slate-500 hover:text-slate-700 font-medium">
                             Back to App
@@ -67,7 +87,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
         );
     }
 
-    const alerts = getInterventions(childData);
+    const alerts = getInterventions(linkedChild);
     const riskScore = 4; // Derived mock
 
     return (
@@ -83,7 +103,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                         Synced Just Now
                     </div>
-                    <button onClick={onExit} className="text-slate-500 hover:text-slate-800 flex items-center gap-2 font-medium transition-colors">
+                    <button onClick={() => setLinkedChild(null)} className="text-slate-500 hover:text-slate-800 flex items-center gap-2 font-medium transition-colors">
                         <ArrowRightOnRectangleIcon className="w-5 h-5" />
                         <span className="hidden sm:inline">Log Out</span>
                     </button>
@@ -98,21 +118,21 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <div className="flex flex-col items-center text-center">
                             <div className="mb-4 transform scale-75 origin-center">
-                                <Avatar level={childData.level} customConfig={childData.avatar} size="lg" />
+                                <Avatar level={linkedChild.level} customConfig={linkedChild.avatar} size="lg" />
                             </div>
-                            <h2 className="text-xl font-bold text-slate-900">{childData.nickname}</h2>
-                            <p className="text-sm text-slate-500 mb-4">Level {childData.level} • {childData.streak} Day Streak</p>
+                            <h2 className="text-xl font-bold text-slate-900">{linkedChild.nickname}</h2>
+                            <p className="text-sm text-slate-500 mb-4">Level {linkedChild.level} • {linkedChild.streak} Day Streak</p>
                             
                             <div className="w-full bg-slate-100 rounded-full h-2.5 mb-2">
                                 <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: '65%' }}></div>
                             </div>
-                            <p className="text-xs text-slate-400">1,250 XP to Level {childData.level + 1}</p>
+                            <p className="text-xs text-slate-400">1,250 XP to Level {linkedChild.level + 1}</p>
                         </div>
                         <hr className="my-6 border-slate-100" />
                         <div className="space-y-3">
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Net Worth</span>
-                                <span className="font-bold text-slate-900">${(childData.portfolio.cash * 1.05).toLocaleString(undefined, { maximumFractionDigits: 0})}</span>
+                                <span className="font-bold text-slate-900">${(linkedChild.portfolio.cash * 1.05).toLocaleString(undefined, { maximumFractionDigits: 0})}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-slate-500">Risk Profile</span>
@@ -207,7 +227,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                                 <div className="relative z-10">
                                     <h3 className="text-2xl font-bold mb-2">Weekly Highlight</h3>
                                     <p className="text-blue-100 mb-6 max-w-lg">
-                                        {childData.nickname} successfully simulated a 10-year investment strategy, turning $10k into $24k using Index Funds.
+                                        {linkedChild.nickname} successfully simulated a 10-year investment strategy, turning $10k into $24k using Index Funds.
                                     </p>
                                     <button 
                                         onClick={() => window.print()}
@@ -236,7 +256,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                                     <div className="relative z-10 flex justify-between items-end">
                                         <div>
                                             <div className="text-[10px] opacity-60 uppercase">Card Holder</div>
-                                            <div className="font-bold uppercase">{childData.nickname}</div>
+                                            <div className="font-bold uppercase">{linkedChild.nickname}</div>
                                         </div>
                                         <div className="w-12 h-8 bg-white/80 rounded opacity-80"></div>
                                     </div>
@@ -324,7 +344,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData, onExit }) =>
                             <p className="text-slate-500 mb-8">This document certifies that</p>
                             
                             <div className="text-4xl font-bold text-blue-700 mb-4 font-serif border-b-2 border-slate-100 pb-4 inline-block px-12">
-                                {childData.nickname}
+                                {linkedChild.nickname}
                             </div>
                             
                             <p className="text-slate-600 max-w-md mx-auto mb-8">

@@ -37,9 +37,22 @@ export const SocialShare: React.FC<SocialShareProps> = ({ type, data, onClose })
         }
     }[type];
 
-    const handleShare = () => {
-        // In a real app, this would use navigator.share or html2canvas
-        alert("Copied to clipboard! (Simulated Share)");
+    const handleShare = async () => {
+        const shareData = {
+            title: "Racked: The Money Game",
+            text: `Check this out! ${data.nickname} is crushing it on Racked.`,
+            url: "https://racked.gg/"
+        };
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log("Share cancelled");
+            }
+        } else {
+            alert("Copied to clipboard! (Simulated Share)");
+        }
         onClose();
     };
 

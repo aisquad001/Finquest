@@ -71,6 +71,9 @@ export interface UserState {
     portfolio: Portfolio; // Wall Street Zoo Data
     friends: string[]; // Friend IDs
     
+    // Parent Portal
+    parentCode?: string; // 6-digit code for parent access
+
     lastLoginAt?: string;
     lastLocation?: { lat: number, lng: number, country: string }; // For Admin Map
     createdAt?: string;
@@ -288,15 +291,7 @@ export const generateDailyChallenges = (): Challenge[] => [
     },
 ];
 
-export const getMockLeaderboard = (): LeaderboardEntry[] => [
-    { rank: 1, name: "Elon Tusk", xp: 99000, avatar: "🚀", country: "Mars", netWorth: 420000 },
-    { rank: 2, name: "Jeff Bazookas", xp: 85000, avatar: "📦", country: "USA", netWorth: 380000 },
-    { rank: 3, name: "CryptoKing99", xp: 72000, avatar: "💎", country: "UK", netWorth: 150000 },
-    { rank: 4, name: "DiamondHands", xp: 68000, avatar: "🦍", country: "WSB", netWorth: 120000 },
-    { rank: 5, name: "Satoshi", xp: 60000, avatar: "🤐", country: "JP", netWorth: 100000 },
-    { rank: 6, name: "Warren Buffet", xp: 55000, avatar: "🍔", country: "USA", netWorth: 90000 },
-    { rank: 7, name: "Racked God", xp: 50000, avatar: "👑", country: "App", netWorth: 85000 },
-];
+export const getMockLeaderboard = (): LeaderboardEntry[] => [];
 
 export const calculateRiskScore = (portfolio: Portfolio): number => {
     const memeStocks = ['GME', 'AMC', 'DOGE', 'RBLX', 'TSLA', 'BTC'];

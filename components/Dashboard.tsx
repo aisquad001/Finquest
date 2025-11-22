@@ -26,7 +26,6 @@ import {
     LeaderboardEntry, 
     UserState, 
     getXpForNextLevel, 
-    getMockLeaderboard, 
     SHOP_ITEMS,
     SEASONAL_EVENTS
 } from '../services/gamification';
@@ -35,7 +34,7 @@ import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
 import { signInWithGoogle, logout } from '../services/firebase';
-import { migrateGuestToReal, subscribeToCollection } from '../services/db';
+import { migrateGuestToReal, subscribeToCollection, updateParentCode } from '../services/db';
 
 interface DashboardProps {
     user: UserState;
@@ -50,9 +49,9 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin, onEditProfile }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]); // Real data init empty
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
-    const [familyCode, setFamilyCode] = useState<string | null>(null);
+    const [familyCode, setFamilyCode] = useState<string | null>(user.parentCode || null);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
     const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); // Initialize with default
     
@@ -117,15 +116,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         onBuyItem(item);
     };
 
-    const handleGenerateCode = () => {
+    const handleGenerateCode = async () => {
         playSound('pop');
-        setFamilyCode(generateLinkCode());
+        const code = generateLinkCode();
+        setFamilyCode(code);
+        if (user.uid) {
+            await updateParentCode(user.uid, code);
+        }
     };
 
-    const handleCopyReferral = () => {
-        navigator.clipboard.writeText(user.referralCode);
-        playSound('coin');
-        alert("Code copied! Share it to get rich.");
+    const handleShareApp = async () => {
+        const shareData = {
+            title: "Racked: The Money Game",
+            text: "Join me and turn your allowance into an empire 💰",
+            url: `https://racked.gg/?ref=${user.referralCode}`
+        };
+        
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData);
+            } catch (err) {
+                console.log("Share cancelled");
+            }
+        } else {
+            navigator.clipboard.writeText(shareData.url);
+            playSound('coin');
+            alert("Link copied! Share it to get rich.");
+        }
     };
 
     // --- GUEST UPGRADE ---
@@ -451,17 +468,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             <span className="text-xs font-mono text-gray-400">Resets Weekly</span>
                         </div>
                         <div className="divide-y divide-white/5">
-                            {leaderboard.map((entry) => (
-                                <div key={entry.rank} className={`flex items-center p-4 ${entry.rank === 1 ? 'bg-yellow-400/10' : ''}`}>
-                                    <div className="font-black text-lg text-white w-8">{entry.rank}</div>
-                                    <div className="text-2xl mr-4">{entry.avatar}</div>
-                                    <div className="flex-1">
-                                        <div className="font-bold text-white">{entry.name}</div>
-                                        <div className="text-xs text-gray-500">{entry.country}</div>
-                                    </div>
-                                    <div className="font-mono font-bold text-neon-green">{entry.xp.toLocaleString()} XP</div>
+                            {leaderboard.length === 0 ? (
+                                <div className="p-8 text-center">
+                                    <div className="text-6xl mb-4">👑</div>
+                                    <h3 className="font-game text-xl text-white mb-2">Be The First!</h3>
+                                    <p className="text-sm text-gray-400">Climb the ranks and claim the throne.</p>
                                 </div>
-                            ))}
+                            ) : (
+                                leaderboard.map((entry) => (
+                                    <div key={entry.rank} className={`flex items-center p-4 ${entry.rank === 1 ? 'bg-yellow-400/10' : ''}`}>
+                                        <div className="font-black text-lg text-white w-8">{entry.rank}</div>
+                                        <div className="text-2xl mr-4">{entry.avatar}</div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-white">{entry.name}</div>
+                                            <div className="text-xs text-gray-500">{entry.country}</div>
+                                        </div>
+                                        <div className="font-mono font-bold text-neon-green">{entry.xp.toLocaleString()} XP</div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 )}
@@ -479,14 +504,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             
                             <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/10">
                                 <div className="text-xs text-gray-400 uppercase font-bold mb-1">Your Secret Code</div>
-                                <div onClick={handleCopyReferral} className="font-mono text-3xl text-neon-blue font-bold tracking-widest cursor-pointer hover:scale-105 transition-transform">
+                                <div onClick={handleShareApp} className="font-mono text-3xl text-neon-blue font-bold tracking-widest cursor-pointer hover:scale-105 transition-transform">
                                     {user.referralCode}
                                 </div>
-                                <div className="text-[10px] text-gray-500 mt-1">Tap to copy</div>
+                                <div className="text-[10px] text-gray-500 mt-1">Tap to share</div>
                             </div>
 
                             <div className="flex gap-2">
-                                <button onClick={handleCopyReferral} className="flex-1 bg-white text-black font-game text-lg py-3 rounded-xl btn-3d flex items-center justify-center gap-2">
+                                <button onClick={handleShareApp} className="flex-1 bg-white text-black font-game text-lg py-3 rounded-xl btn-3d flex items-center justify-center gap-2">
                                     <ShareIcon className="w-5 h-5" /> SHARE
                                 </button>
                             </div>
@@ -518,6 +543,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                      <div className="text-xs text-gray-500 uppercase font-bold mb-1">Give this to your parent</div>
                                      <div className="font-mono text-3xl text-white font-bold tracking-widest select-all">
                                          {familyCode}
+                                     </div>
+                                     <div className="text-[10px] text-gray-400 mt-2">
+                                         They can visit <span className="text-white font-bold">racked.gg/portal</span>
                                      </div>
                                  </div>
                              )}

@@ -26,7 +26,8 @@ const {
     limit,
     orderBy,
     writeBatch,
-    getDocs
+    getDocs,
+    where
 } = firestore;
 
 // --- MOCK DB HELPERS ---
@@ -277,6 +278,41 @@ export const updateUser = async (uid: string, data: Partial<UserState>) => {
     }
 };
 
+// NEW: Parent Code Helpers
+export const updateParentCode = async (uid: string, code: string) => {
+    // Handle mock mode if needed, though typically parent portal is a "real" feature
+    if (uid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        if (mockDB[uid]) {
+            mockDB[uid].parentCode = code;
+            saveMockDB(mockDB);
+            dispatchMockUpdate(uid, mockDB[uid]);
+        }
+        return;
+    }
+    await updateUser(uid, { parentCode: code });
+};
+
+export const fetchChildByCode = async (code: string): Promise<UserState | null> => {
+    // Mock check
+    const mockDB = getMockDB();
+    const mockUser = Object.values(mockDB).find(u => u.parentCode === code);
+    if (mockUser) return mockUser;
+
+    try {
+        // Simple equality query (requires simple index, which is default)
+        const q = query(collection(db, 'users'), where('parentCode', '==', code), limit(1));
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+            return convertDocToUser(snapshot.docs[0].data());
+        }
+        return null;
+    } catch (e) {
+        logger.error("Error fetching child by code", e);
+        return null;
+    }
+};
+
 export const handleDailyLogin = async (uid: string, currentUserState: UserState): Promise<{ updatedUser: UserState, message?: string }> => {
     const { updatedUser, savedByFreeze, broken } = checkStreak(currentUserState);
     
@@ -338,6 +374,7 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
 
 // --- LEADERBOARD ---
 export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) => void) => {
+    // Query top 50 by XP to minimize reads, then we filter/sort in client for specifics
     const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
 
     return onSnapshot(q, (snapshot) => {
