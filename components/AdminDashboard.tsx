@@ -231,18 +231,14 @@ const ContentCMS = () => {
 
     // 1. REAL-TIME SUBSCRIPTION
     useEffect(() => {
-        const q = collection(db, "lessons");
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lesson));
+        const unsubscribe = subscribeToCollection('lessons', (data) => {
+            const lessonsList = data as Lesson[];
             // Sort: World -> Level -> Order
-            const sorted = data.sort((a, b) => {
+            const sorted = lessonsList.sort((a, b) => {
                 if (a.worldId !== b.worldId) return a.worldId.localeCompare(b.worldId);
                 return (a.order || 0) - (b.order || 0);
             });
             setLessons(sorted);
-            setLoading(false);
-        }, (error) => {
-            console.error("CMS Subscription Error:", error);
             setLoading(false);
         });
         return () => unsubscribe();
@@ -255,30 +251,42 @@ const ContentCMS = () => {
         setIsProcessing(true);
         try {
             // A. DELETE ALL EXISTING
+            console.log("Cleaning up existing records...");
             const snapshot = await getDocs(collection(db, "lessons"));
-            const totalToDelete = snapshot.size;
-            console.log(`Deleting ${totalToDelete} existing records...`);
+            if (!snapshot.empty) {
+                const chunks = [];
+                let batch = writeBatch(db);
+                let count = 0;
+                snapshot.docs.forEach((doc) => {
+                    batch.delete(doc.ref);
+                    count++;
+                    if (count % 400 === 0) {
+                        chunks.push(batch.commit());
+                        batch = writeBatch(db);
+                    }
+                });
+                if (count % 400 !== 0) chunks.push(batch.commit());
+                await Promise.all(chunks);
+            }
 
-            const deleteBatches: Promise<void>[] = [];
-            let deleteBatch = writeBatch(db);
-            let deleteCount = 0;
-
-            snapshot.docs.forEach((doc) => {
-                deleteBatch.delete(doc.ref);
-                deleteCount++;
-                if (deleteCount % 400 === 0) {
-                    deleteBatches.push(deleteBatch.commit());
-                    deleteBatch = writeBatch(db);
-                }
-            });
-            if (deleteCount % 400 !== 0) deleteBatches.push(deleteBatch.commit());
-            await Promise.all(deleteBatches);
-
-            // B. FETCH NEW DATA
+            // B. FETCH NEW DATA (With Proxy Fallback)
             console.log("Downloading seed data...");
-            const res = await fetch("https://files.catbox.moe/4p3h7k.json");
-            if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-            const seedData = await res.json();
+            const targetUrl = "https://files.catbox.moe/4p3h7k.json";
+            let seedData: any[] = [];
+            
+            try {
+                // Try direct fetch first
+                const res = await fetch(targetUrl);
+                if (!res.ok) throw new Error(`Direct fetch error: ${res.status}`);
+                seedData = await res.json();
+            } catch (directError) {
+                console.warn("Direct fetch failed, attempting proxy...", directError);
+                // Fallback to CORS proxy
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                const res = await fetch(proxyUrl);
+                if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
+                seedData = await res.json();
+            }
             
             if (!Array.isArray(seedData)) throw new Error("Invalid JSON format: Expected array");
 
@@ -432,9 +440,18 @@ const ContentCMS = () => {
                     <button 
                         onClick={handleSeedDB}
                         disabled={isProcessing}
-                        className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg disabled:opacity-50"
+                        className={`px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
-                        <FireIcon className="w-4 h-4" /> {isProcessing ? "Processing..." : "Seed Default DB"}
+                        {isProcessing ? (
+                            <span className="flex items-center gap-2">
+                                <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                Seeding...
+                            </span>
+                        ) : (
+                            <>
+                                <FireIcon className="w-4 h-4" /> Seed Default DB
+                            </>
+                        )}
                     </button>
 
                     <button 
@@ -475,7 +492,7 @@ const ContentCMS = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-700">
                             {loading ? (
-                                <tr><td colSpan={8} className="p-8 text-center animate-pulse">Loading content...</td></tr>
+                                <tr><td colSpan={8} className="p-8 text-center animate-pulse">Loading content from database...</td></tr>
                             ) : filteredLessons.length === 0 ? (
                                 <tr>
                                     <td colSpan={8} className="p-12 text-center">
