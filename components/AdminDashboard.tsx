@@ -413,7 +413,7 @@ const ContentCMS = () => {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-game text-white">Content CMS</h2>
                 <div className="flex gap-4">
-                    <a href="https://files.catbox.moe/4p3h7k.json" target="_blank" className="text-xs text-blue-400 underline self-center">Download Sample Template</a>
+                    <a href="https://files.catbox.moe/4p3h7k.json" download className="text-xs text-blue-400 underline self-center font-bold">Download Sample Template</a>
                     <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2">
                         <CloudArrowUpIcon className="w-5 h-5" />
                         {isUploading ? "Uploading..." : "Bulk Upload JSON"}
@@ -507,24 +507,28 @@ const ContentCMS = () => {
                     <thead className="bg-slate-900 text-white font-bold uppercase text-xs">
                         <tr>
                             <th className="p-4">ID</th>
+                            <th className="p-4">World</th>
+                            <th className="p-4">Level</th>
                             <th className="p-4">Title</th>
                             <th className="p-4">Type</th>
-                            <th className="p-4">Rewards</th>
+                            <th className="p-4">XP</th>
+                            <th className="p-4">Coins</th>
                             <th className="p-4 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-700">
                         {lessons.length === 0 ? (
-                            <tr><td colSpan={5} className="p-8 text-center text-slate-500 italic">No custom content loaded. Use Bulk Upload or Add New.</td></tr>
+                            <tr><td colSpan={8} className="p-8 text-center text-slate-500 italic">No custom content loaded. Use Bulk Upload or Add New.</td></tr>
                         ) : (
                             lessons.map(l => (
                                 <tr key={l.id} className="hover:bg-slate-700/50 transition-colors">
                                     <td className="p-4 font-mono text-xs text-slate-500">{l.id}</td>
+                                    <td className="p-4 text-xs text-slate-300">{l.worldId}</td>
+                                    <td className="p-4 text-xs text-slate-300">{l.levelId ? l.levelId.split('_l')[1] : '-'}</td>
                                     <td className="p-4 font-bold text-white">{l.title}</td>
                                     <td className="p-4"><span className="bg-blue-900/50 border border-blue-500/30 text-blue-300 px-2 py-1 rounded text-xs uppercase font-bold">{l.type}</span></td>
-                                    <td className="p-4 text-xs">
-                                        <span className="text-neon-green font-bold">{l.xpReward} XP</span> • <span className="text-yellow-400">{l.coinReward} Coins</span>
-                                    </td>
+                                    <td className="p-4 text-neon-green font-bold">{l.xpReward}</td>
+                                    <td className="p-4 text-yellow-400 font-bold">{l.coinReward}</td>
                                     <td className="p-4 text-right flex justify-end gap-2">
                                         <button onClick={() => handleEdit(l)} className="p-2 bg-slate-700 rounded hover:bg-blue-600 hover:text-white transition-colors" title="Edit"><PencilSquareIcon className="w-4 h-4"/></button>
                                         <button onClick={() => handleDelete(l.id)} className="p-2 bg-slate-700 rounded hover:bg-red-600 hover:text-white transition-colors" title="Delete"><TrashIcon className="w-4 h-4"/></button>
