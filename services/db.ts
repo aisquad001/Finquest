@@ -165,8 +165,8 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
 // --- CONTENT CRUD (ADMIN CMS) ---
 
 export const upsertLesson = async (lesson: Lesson) => {
-    // Mock
-    if (true) { // Forcing mock in demo, but structure supports real firestore switch
+    // Mock Implementation for Demo / Testing
+    if (true) {
         const content = getMockContent();
         const idx = content.lessons.findIndex(l => l.id === lesson.id);
         if (idx >= 0) {
@@ -175,9 +175,10 @@ export const upsertLesson = async (lesson: Lesson) => {
             content.lessons.push(lesson);
         }
         saveMockContent(content);
+        console.log(`[DB] Upserted Lesson: ${lesson.id}`);
         return;
     }
-    // Real Firestore
+    // Real Firestore Implementation
     // await setDoc(doc(db, 'lessons', lesson.id), lesson);
 };
 
@@ -186,6 +187,7 @@ export const deleteLesson = async (lessonId: string) => {
         const content = getMockContent();
         content.lessons = content.lessons.filter(l => l.id !== lessonId);
         saveMockContent(content);
+        console.log(`[DB] Deleted Lesson: ${lessonId}`);
         return;
     }
     // await deleteDoc(doc(db, 'lessons', lessonId));
@@ -196,7 +198,9 @@ export const updateLevelConfig = async (level: LevelData) => {
         const content = getMockContent();
         const idx = content.levels.findIndex(l => l.id === level.id);
         if (idx >= 0) content.levels[idx] = level;
+        else content.levels.push(level);
         saveMockContent(content);
+        console.log(`[DB] Updated Level: ${level.id}`);
         return;
     }
     // await setDoc(doc(db, 'levels', level.id), level);
@@ -222,7 +226,6 @@ export const seedGameData = async () => {
     if (isMock) {
         saveMockContent({ levels, lessons });
         console.log(`[SEED] Generated ${levels.length} unique levels and ${lessons.length} lessons.`);
-        alert("100% UNIQUE CONTENT GENERATED 🔥\nNo duplicates found.");
     }
 };
 
@@ -232,18 +235,25 @@ export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]>
     const mockLevels = content.levels.filter(l => l.worldId === worldId);
     if (mockLevels.length > 0) return mockLevels.sort((a, b) => a.levelNumber - b.levelNumber);
 
-    // Real Firestore fallback query
-    return [];
+    // If no levels found in DB, generate placeholders so Admin UI doesn't crash
+    return Array.from({ length: 8 }, (_, i) => ({
+        id: `${worldId}_l${i + 1}`,
+        worldId,
+        levelNumber: i + 1,
+        title: `Level ${i + 1}`,
+        description: 'New Level',
+        bossName: 'Boss',
+        bossImage: '👹',
+        bossIntro: 'Fight me!',
+        bossQuiz: []
+    }));
 };
 
 export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> => {
     // Mock
     const content = getMockContent();
     const mockLessons = content.lessons.filter(l => l.levelId === levelId);
-    if (mockLessons.length > 0) return mockLessons.sort((a, b) => a.order - b.order);
-
-    // Real Firestore fallback
-    return [];
+    return mockLessons.sort((a, b) => a.order - b.order);
 };
 
 export const saveLevelProgress = async (uid: string, worldId: string, levelId: string, score: number, isCompleted: boolean) => {
