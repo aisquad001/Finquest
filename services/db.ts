@@ -1,10 +1,13 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import { db } from './firebase';
-import { 
+import * as firestore from 'firebase/firestore';
+import { UserState, checkStreak, createInitialUser, LevelData, Lesson, WORLDS_METADATA } from './gamification';
+import { generateLevelContent } from './contentGenerator';
+
+const { 
     doc, 
     getDoc, 
     setDoc, 
@@ -19,9 +22,7 @@ import {
     where,
     writeBatch,
     arrayUnion
-} from 'firebase/firestore';
-import { UserState, checkStreak, createInitialUser, LevelData, Lesson, WORLDS_METADATA } from './gamification';
-import { generateLevelContent } from './contentGenerator';
+} = firestore;
 
 // --- MOCK DB HELPERS ---
 const MOCK_STORAGE_KEY = 'racked_mock_users';
@@ -87,8 +88,12 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
             return convertDocToUser(userDoc.data());
         }
         return null;
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching user:", error);
+        if (error.code === 'permission-denied') {
+            // We swallow this on getUser to allow the UI to handle the 'user not found/auth' flow or show a specific error state elsewhere
+            console.warn("DB Permissions missing.");
+        }
         return null;
     }
 };
@@ -182,8 +187,16 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
             });
             return convertDocToUser(userSnap.data());
         }
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error creating/fetching user doc:", error);
+        
+        // Provide explicit instructions for the most common new-app error
+        if (error.code === 'permission-denied') {
+            const msg = "DATABASE PERMISSION DENIED.\n\n1. Go to Firebase Console > Firestore Database > Rules.\n2. Change to: `allow read, write: if request.auth != null;`\n3. If using your own project, ensure 'services/firebase.ts' has YOUR config.";
+            console.error(msg);
+            throw new Error(msg);
+        }
+        
         throw error;
     }
 };

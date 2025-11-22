@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -14,8 +13,8 @@ import {
     onAuthStateChanged,
     User
 } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getAnalytics, isSupported } from 'firebase/analytics';
+import * as firestore from 'firebase/firestore';
+import * as analyticsMod from 'firebase/analytics';
 
 // ------------------------------------------------------------------
 // FIREBASE CONFIGURATION
@@ -33,13 +32,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = firestore.getFirestore(app);
+export const getFirestore = firestore.getFirestore;
 
 // Initialize Analytics safely
 export let analytics: any = null;
-isSupported().then(yes => {
+analyticsMod.isSupported().then(yes => {
   if (yes) {
-    analytics = getAnalytics(app);
+    analytics = analyticsMod.getAnalytics(app);
   }
 });
 

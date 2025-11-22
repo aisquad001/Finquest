@@ -13,7 +13,7 @@ interface AvatarConfig {
 
 interface AvatarProps {
   level?: number;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   customConfig?: AvatarConfig | null;
 }
 

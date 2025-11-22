@@ -1,12 +1,13 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import { db } from './firebase';
-import { doc, updateDoc, increment, arrayUnion, serverTimestamp, runTransaction } from 'firebase/firestore';
+import * as firestore from 'firebase/firestore';
 import { UserState, SHOP_ITEMS } from './gamification';
 import { playSound } from './audio';
+
+const { doc, updateDoc, increment, arrayUnion, serverTimestamp, runTransaction } = firestore;
 
 // --- UTILS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local time approximation for streaks

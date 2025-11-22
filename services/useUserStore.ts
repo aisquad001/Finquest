@@ -1,13 +1,14 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import { create } from 'zustand';
-import { doc, onSnapshot } from 'firebase/firestore';
+import * as firestore from 'firebase/firestore';
 import { db } from './firebase';
 import { UserState } from './gamification';
 import { convertDocToUser, getUser } from './db';
+
+const { doc, onSnapshot } = firestore;
 
 interface UserStore {
     user: UserState | null;
@@ -80,7 +81,9 @@ export const useUserStore = create<UserStore>((set) => ({
                     console.error('[STORE] Sync error:', err);
                     
                     let msg = err.message;
-                    if (err.code === 'permission-denied') msg = "Access Denied. Please refresh.";
+                    if (err.code === 'permission-denied') {
+                        msg = "Database Locked. Please enable 'allow read, write: if request.auth != null' in Firebase Console > Firestore Rules.";
+                    }
                     if (err.code === 'unavailable') msg = "Network Offline. Please check connection.";
 
                     set({ error: msg, loading: false });
