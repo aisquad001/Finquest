@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -18,7 +17,6 @@ import {
     MagnifyingGlassIcon,
     PencilSquareIcon,
     ExclamationTriangleIcon,
-    CheckCircleIcon,
     TrashIcon,
     PlusIcon,
     CloudArrowUpIcon,
@@ -31,8 +29,7 @@ import {
     UserState,
     SHOP_ITEMS,
     Lesson,
-    Stock,
-    LessonType
+    Stock
 } from '../services/gamification';
 import { 
     subscribeToAllUsers,
@@ -44,7 +41,7 @@ import {
     batchWrite
 } from '../services/db';
 import { db } from '../services/firebase';
-import { collection, getDocs, writeBatch, doc, onSnapshot, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { playSound } from '../services/audio';
 import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
@@ -75,11 +72,24 @@ const useAdminData = () => {
     return { users, loading };
 };
 
+// --- HELPER: GENERATE DEFAULT SEED DATA ---
+// This acts as the "stored JSON" on the server side, generated deterministically.
+const getGeneratedSeedData = (): Lesson[] => {
+    const data: Lesson[] = [];
+    WORLDS_METADATA.forEach(world => {
+        // Generate 8 levels per world
+        for (let l = 1; l <= 8; l++) {
+            const { lessons } = generateLevelContent(world.id, l);
+            data.push(...lessons);
+        }
+    });
+    return data;
+};
+
 // --- SUB-COMPONENTS ---
 
 // 1. DASHBOARD HOME (Stats)
 const DashboardHome = ({ users }: { users: UserState[] }) => {
-    // Stats calculation logic (same as before)
     const stats = useMemo(() => {
         const now = new Date();
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -133,7 +143,7 @@ const DashboardHome = ({ users }: { users: UserState[] }) => {
     );
 };
 
-// 2. USER MANAGEMENT (Searchable, Sortable)
+// 2. USER MANAGEMENT
 const UserManagement = ({ users }: { users: UserState[] }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const filteredUsers = users.filter(u => 
@@ -219,7 +229,7 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
     );
 };
 
-// 3. CONTENT CMS (REBUILT & ROBUST)
+// 3. CONTENT CMS
 const ContentCMS = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(true);
@@ -230,11 +240,9 @@ const ContentCMS = () => {
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editForm, setEditForm] = useState<Partial<Lesson>>({});
 
-    // 1. REAL-TIME SUBSCRIPTION
     useEffect(() => {
         const unsubscribe = subscribeToCollection('lessons', (data) => {
             const lessonsList = data as Lesson[];
-            // Sort: World -> Level -> Order
             const sorted = lessonsList.sort((a, b) => {
                 if (a.worldId !== b.worldId) return a.worldId.localeCompare(b.worldId);
                 return (a.order || 0) - (b.order || 0);
@@ -245,9 +253,8 @@ const ContentCMS = () => {
         return () => unsubscribe();
     }, []);
 
-    // 2. SEED FUNCTION (NUCLEAR FALLBACK)
     const handleSeedDB = async () => {
-        if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and re-seed the database. Continue?")) return;
+        if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and re-seed the database with default content. Continue?")) return;
         
         setIsProcessing(true);
         try {
@@ -270,42 +277,13 @@ const ContentCMS = () => {
                 await Promise.all(chunks);
             }
 
-            // B. OBTAIN SEED DATA (Fetch or Generate)
-            console.log("Obtaining seed data...");
-            let seedData: Lesson[] = [];
-            const targetUrl = "https://files.catbox.moe/4p3h7k.json";
-            
-            try {
-                // Attempt 1: CORS Proxy
-                console.log("Attempting fetch via proxy...");
-                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
-                if (!res.ok) throw new Error("Network response was not ok");
-                
-                const text = await res.text();
-                // Check if result is JSON (prevents <HTML> error)
-                if (text.trim().startsWith('<')) throw new Error("Received HTML instead of JSON (URL might be expired/blocked)");
-                
-                seedData = JSON.parse(text);
-                console.log("Downloaded seed data via proxy.");
-            } catch (fetchError) {
-                console.warn("Fetch failed or returned HTML, falling back to local generation:", fetchError);
-                // FALLBACK: Generate Locally
-                WORLDS_METADATA.forEach(world => {
-                    // Generate for 8 levels per world
-                    for (let l = 1; l <= 8; l++) {
-                        const { lessons } = generateLevelContent(world.id, l);
-                        seedData.push(...lessons);
-                    }
-                });
-                console.log(`Generated ${seedData.length} lessons locally.`);
-            }
-
-            if (!Array.isArray(seedData) || seedData.length === 0) {
-                 throw new Error("Failed to obtain valid seed data.");
-            }
+            // B. GET GENERATED DATA
+            console.log("Generating default seed data...");
+            const seedData = getGeneratedSeedData();
+            console.log(`Generated ${seedData.length} lessons.`);
 
             // C. WRITE NEW DATA
-            console.log(`Writing ${seedData.length} records...`);
+            console.log(`Writing records to database...`);
             const writeBatches: Promise<void>[] = [];
             let writeBatchInst = writeBatch(db);
             let writeCount = 0;
@@ -338,15 +316,9 @@ const ContentCMS = () => {
     const handleDownloadTemplate = () => {
         let dataToExport = lessons;
 
+        // If DB is empty, use the default seed data as the template
         if (dataToExport.length === 0) {
-            const generated: Lesson[] = [];
-            WORLDS_METADATA.forEach(world => {
-                for (let l = 1; l <= 8; l++) {
-                    const { lessons } = generateLevelContent(world.id, l);
-                    generated.push(...lessons);
-                }
-            });
-            dataToExport = generated;
+            dataToExport = getGeneratedSeedData();
         }
 
         const jsonString = JSON.stringify(dataToExport, null, 2);
@@ -362,7 +334,6 @@ const ContentCMS = () => {
         playSound('pop');
     };
 
-    // 3. CRUD ACTIONS
     const handleDelete = async (id: string) => {
         if (!confirm(`Delete lesson ${id}?`)) return;
         try {
@@ -375,9 +346,8 @@ const ContentCMS = () => {
 
     const openEditor = (lesson?: Lesson) => {
         if (lesson) {
-            setEditForm(JSON.parse(JSON.stringify(lesson))); // Deep copy
+            setEditForm(JSON.parse(JSON.stringify(lesson)));
         } else {
-            // Defaults for new
             setEditForm({
                 id: `world1_l1_${Date.now()}`,
                 worldId: 'world1',
@@ -444,17 +414,15 @@ const ContentCMS = () => {
             alert("Upload failed: " + err.message);
         } finally {
             setIsProcessing(false);
-            e.target.value = ''; // Reset input
+            e.target.value = '';
         }
     };
 
-    // Filter Logic
     const filteredLessons = lessons.filter(l => 
         l.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
         l.id.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // --- RENDER ---
     return (
         <div className="p-6 h-full flex flex-col animate-pop-in">
             {/* TOP BAR */}
@@ -469,7 +437,7 @@ const ContentCMS = () => {
                         onClick={handleDownloadTemplate}
                         className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg"
                     >
-                        <CloudArrowDownIcon className="w-4 h-4" /> Template
+                        <CloudArrowDownIcon className="w-4 h-4" /> Template / Backup
                     </button>
 
                     <label className={`px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -489,7 +457,7 @@ const ContentCMS = () => {
                             </span>
                         ) : (
                             <>
-                                <FireIcon className="w-4 h-4" /> Seed Default DB
+                                <FireIcon className="w-4 h-4" /> Seed DB (Reset)
                             </>
                         )}
                     </button>
@@ -570,16 +538,12 @@ const ContentCMS = () => {
             {isEditorOpen && (
                 <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div className="bg-slate-900 w-full max-w-3xl max-h-[90vh] rounded-2xl border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
-                        
-                        {/* Header */}
                         <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
                             <h3 className="font-bold text-white text-lg">
                                 {lessons.find(l => l.id === editForm.id) ? 'Edit Lesson' : 'Create New Lesson'}
                             </h3>
                             <button onClick={() => setIsEditorOpen(false)} className="text-slate-400 hover:text-white"><XMarkIcon className="w-6 h-6"/></button>
                         </div>
-
-                        {/* Form Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
@@ -655,7 +619,6 @@ const ContentCMS = () => {
                             </div>
                         </div>
 
-                        {/* Footer */}
                         <div className="p-4 border-t border-slate-700 bg-slate-800 flex justify-end gap-3">
                             <button onClick={() => setIsEditorOpen(false)} className="px-4 py-2 text-slate-400 font-bold hover:text-white">Cancel</button>
                             <button onClick={handleSave} disabled={isProcessing} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow-lg disabled:opacity-50">
@@ -669,7 +632,7 @@ const ContentCMS = () => {
     );
 };
 
-// 4. SHOP & ECONOMY (Live Edit)
+// 4. SHOP & ECONOMY
 const ShopEconomy = () => {
     const [items, setItems] = useState<ShopItem[]>([]);
     
@@ -726,7 +689,7 @@ const ShopEconomy = () => {
     );
 };
 
-// 5. NOTIFICATIONS (Functional)
+// 5. NOTIFICATIONS
 const PushNotificationManager = () => {
     const [history, setHistory] = useState<any[]>([]);
     const [form, setForm] = useState({ title: '', body: '' });
@@ -738,10 +701,8 @@ const PushNotificationManager = () => {
 
     const handleSend = async () => {
         if (!form.title || !form.body) return;
-        // 1. Save to DB (Cloud Function would pick this up)
         await batchWrite('notification_history', [{ ...form, sentAt: Date.now(), status: 'sent', openRate: '0%' }]);
-        // 2. Trigger Mock for Admin
-        sendMockNotification('MORNING_STREAK'); // Mock trigger for demo
+        sendMockNotification('MORNING_STREAK');
         playSound('pop');
         setForm({ title: '', body: '' });
         alert("Push Notification Sent to All Users!");
