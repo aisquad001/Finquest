@@ -26,6 +26,8 @@ export interface UserState {
     xp: number;
     coins: number;
     
+    isAdmin?: boolean; // Access Control
+
     // Monetization
     subscriptionStatus: 'free' | 'pro';
     
@@ -128,6 +130,33 @@ export interface LeaderboardEntry {
 
 export type LessonType = 'swipe' | 'drag_drop' | 'tap_lie' | 'calculator' | 'meme' | 'video' | 'info';
 
+// CMS Types
+export interface LessonSwipeCard { text: string; isRight: boolean; label: string; }
+export interface LessonDragItem { id: string; text: string; category: string; }
+export interface LessonStatement { text: string; isLie: boolean; }
+
+export interface LessonContent {
+    // Swipe
+    cards?: LessonSwipeCard[];
+    // Drag Drop
+    buckets?: string[];
+    items?: LessonDragItem[];
+    // Tap Lie
+    statements?: LessonStatement[];
+    // Meme
+    imageUrl?: string;
+    topText?: string;
+    bottomText?: string;
+    explanation?: string;
+    // Calculator
+    label?: string;
+    formula?: string;
+    resultLabel?: string;
+    // Info / Video
+    text?: string;
+    videoUrl?: string;
+}
+
 export interface Lesson {
     id: string;
     worldId: string;
@@ -135,11 +164,12 @@ export interface Lesson {
     order: number;
     type: LessonType;
     title: string;
-    content: any; // Flexible payload based on type
+    content: LessonContent; 
     xpReward: number;
     coinReward: number;
     likes?: number;
     popularity?: string; // e.g. "12.4k"
+    tags?: string[];
 }
 
 export interface LevelData {
@@ -152,6 +182,7 @@ export interface LevelData {
     bossImage: string; // Emoji or URL
     bossIntro: string; // Trash talk line
     bossQuiz: BossQuestion[];
+    lessons?: Lesson[]; // Legacy/Pre-loaded support
 }
 
 export interface BossQuestion {
@@ -252,7 +283,6 @@ export const getMockLeaderboard = (): LeaderboardEntry[] => [
 ];
 
 export const calculateRiskScore = (portfolio: Portfolio): number => {
-    // Simplified risk score based on holding specific volatile assets
     const memeStocks = ['GME', 'AMC', 'DOGE', 'RBLX', 'TSLA', 'BTC'];
     let riskPoints = 0;
     let totalInvested = 0;
@@ -271,7 +301,6 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
 
 export const createInitialUser = (onboardingData: any): UserState => {
     const today = new Date().toISOString().split('T')[0];
-    // Generate random referral code: 3 letters + 3 numbers (e.g. ABC123)
     const code = Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(Math.random() * 900 + 100);
 
     return {
@@ -282,6 +311,8 @@ export const createInitialUser = (onboardingData: any): UserState => {
         coins: 500,
         subscriptionStatus: 'free',
         
+        isAdmin: false,
+
         referralCode: code,
         referralCount: 0,
         
@@ -295,12 +326,12 @@ export const createInitialUser = (onboardingData: any): UserState => {
 
         completedLevels: [],
         masteredWorlds: [],
-        progress: {}, // New Progress Tracking
+        progress: {}, 
         inventory: [],
         knowledgeGems: [],
         joinedAt: new Date().toISOString(),
         portfolio: {
-            cash: 100000, // $100k Fake Cash Start
+            cash: 100000, 
             holdings: {},
             transactions: [],
             history: [{ date: new Date().toISOString(), netWorth: 100000 }]
