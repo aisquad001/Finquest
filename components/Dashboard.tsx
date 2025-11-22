@@ -35,7 +35,7 @@ import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
 import { signInWithGoogle, logout } from '../services/firebase';
-import { migrateGuestToReal, subscribeToCollection, updateParentCode } from '../services/db';
+import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard } from '../services/db';
 
 interface DashboardProps {
     user: UserState;
@@ -50,11 +50,11 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin, onEditProfile }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
-    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]); // Real data init empty
+    const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]); 
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(user.parentCode || null);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
-    const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); // Initialize with default
+    const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); 
     
     // Admin Secret Trigger
     const avatarPressTimer = useRef<any>(null);
@@ -82,6 +82,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         });
         return () => unsub();
     }, []);
+
+    // Leaderboard Sync Logic
+    useEffect(() => {
+        if (activeTab === 'leaderboard') {
+            const unsub = subscribeToLeaderboard((entries) => {
+                setLeaderboard(entries);
+            });
+            return () => unsub();
+        }
+    }, [activeTab]);
 
     const handleInstall = () => {
         if (installPrompt) {
@@ -487,7 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 <TrophyIcon className="w-6 h-6 text-yellow-400" />
                                 TOP PLAYERS
                             </h2>
-                            <span className="text-xs font-mono text-gray-400">Resets Weekly</span>
+                            <span className="text-xs font-mono text-gray-400">Ranked by Net Worth</span>
                         </div>
                         <div className="divide-y divide-white/5">
                             {leaderboard.length === 0 ? (
@@ -497,15 +507,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                     <p className="text-sm text-gray-400">Climb the ranks and claim the throne.</p>
                                 </div>
                             ) : (
-                                leaderboard.map((entry) => (
+                                leaderboard.slice(0, 10).map((entry) => (
                                     <div key={entry.rank} className={`flex items-center p-4 ${entry.rank === 1 ? 'bg-yellow-400/10' : ''}`}>
-                                        <div className="font-black text-lg text-white w-8">{entry.rank}</div>
-                                        <div className="text-2xl mr-4">{entry.avatar}</div>
-                                        <div className="flex-1">
-                                            <div className="font-bold text-white">{entry.name}</div>
-                                            <div className="text-xs text-gray-500">{entry.country}</div>
+                                        <div className={`font-black text-lg w-8 ${entry.rank === 1 ? 'text-yellow-400 text-2xl' : 'text-white'}`}>
+                                            {entry.rank === 1 ? '1' : entry.rank}
                                         </div>
-                                        <div className="font-mono font-bold text-neon-green">{entry.xp.toLocaleString()} XP</div>
+                                        <div className="text-3xl mr-4">{entry.avatar}</div>
+                                        <div className="flex-1">
+                                            <div className="font-bold text-white text-lg">{entry.name}</div>
+                                            <div className="text-xs text-gray-500 font-mono">Lvl {Math.floor(Math.sqrt(entry.xp / 100))}</div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="font-mono font-bold text-neon-green text-lg">${(entry.netWorth || 0).toLocaleString()}</div>
+                                            <div className="text-[10px] text-gray-500 uppercase">Net Worth</div>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -563,18 +578,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                              ) : (
                                  <div className="bg-black/40 p-4 rounded-xl animate-pop-in">
                                      <div className="text-xs text-gray-500 uppercase font-bold mb-1">Give this to your parent</div>
-                                     <div className="font-mono text-3xl text-white font-bold tracking-widest select-all">
+                                     <div className="font-mono text-3xl text-white font-bold tracking-widest select-all mb-2">
                                          {familyCode}
                                      </div>
-                                     <div className="text-[10px] text-gray-400 mt-2">
+                                     <div className="text-xs text-gray-400 mb-4">
                                          They can visit <span className="text-white font-bold">racked.gg/portal</span>
                                      </div>
-                                     <button 
-                                         onClick={handleShareParentLink}
-                                         className="w-full mt-4 py-2 bg-neon-blue text-black font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-cyan-400 transition-colors"
-                                     >
-                                         <LinkIcon className="w-4 h-4" /> Share Login Link
-                                     </button>
+                                     
+                                     <div className="grid grid-cols-2 gap-3">
+                                         <button 
+                                             onClick={() => {
+                                                 navigator.clipboard.writeText(familyCode);
+                                                 playSound('coin');
+                                                 alert("Code copied!");
+                                             }}
+                                             className="py-2 bg-white/10 text-white font-bold rounded-lg text-xs hover:bg-white/20"
+                                         >
+                                             Copy Code
+                                         </button>
+                                         <button 
+                                             onClick={handleShareParentLink}
+                                             className="py-2 bg-neon-blue text-black font-bold rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-cyan-400"
+                                         >
+                                             <LinkIcon className="w-3 h-3" /> Share Login Link
+                                         </button>
+                                     </div>
                                  </div>
                              )}
                         </div>

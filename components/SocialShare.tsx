@@ -13,6 +13,8 @@ interface SocialShareProps {
         subtitle: string;
         avatar: any;
         nickname: string;
+        referralCode?: string; // Optional
+        userId?: string;
     };
     onClose: () => void;
 }
@@ -38,10 +40,13 @@ export const SocialShare: React.FC<SocialShareProps> = ({ type, data, onClose })
     }[type];
 
     const handleShare = async () => {
+        // Prioritize referral code, fallback to user ID if needed
+        const refId = data.referralCode || data.userId || 'unknown';
+        
         const shareData = {
-            title: "Racked: The Money Game",
-            text: `Check this out! ${data.nickname} is crushing it on Racked.`,
-            url: "https://racked.gg/"
+            title: "I'm getting rich on Racked!",
+            text: `Join me and turn your allowance into an empire 💰. Check out my stats: ${data.nickname} - ${config.title}`,
+            url: `https://racked.gg/?ref=${refId}`
         };
 
         if (navigator.share) {
@@ -51,7 +56,8 @@ export const SocialShare: React.FC<SocialShareProps> = ({ type, data, onClose })
                 console.log("Share cancelled");
             }
         } else {
-            alert("Copied to clipboard! (Simulated Share)");
+            navigator.clipboard.writeText(shareData.url);
+            alert("Link copied to clipboard!");
         }
         onClose();
     };

@@ -291,6 +291,7 @@ export const generateDailyChallenges = (): Challenge[] => [
     },
 ];
 
+// Leaderboard should be fetched from DB, no mocks
 export const getMockLeaderboard = (): LeaderboardEntry[] => [];
 
 export const calculateRiskScore = (portfolio: Portfolio): number => {
