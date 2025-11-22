@@ -72,103 +72,178 @@ const BOSS_TRASH_TALK: Record<string, string[]> = {
     world8: ["No Roth IRA? I’m coming for you at 65.", "Social Security is empty!", "Welcome to the poor house!"]
 };
 
-// NEW: Detailed Question Database for Boss Battles
+// NEW: Massive Question Database for Boss Battles
 const BOSS_QUESTIONS_DB: Record<string, Array<{ q: string, o: string[], a: number, e: string }>> = {
     world1: [ // Basics
-        { q: "You find $20 on the street. What do you do?", o: ["Buy candy immediately", "Save it for a rainy day", "Burn it"], a: 1, e: "Found money is still money. Save it!" },
-        { q: "The ATM charges a $5 fee. Worth it?", o: ["No, find my bank's ATM", "Yes, I need cash NOW", "Steal the ATM"], a: 0, e: "ATM fees are money trash. Avoid them." },
-        { q: "Inflation makes your money worth...", o: ["More", "Less", "The same"], a: 1, e: "Inflation decreases purchasing power over time." },
-        { q: "What is 'Fiat' money?", o: ["A car brand", "Government-issued currency", "Crypto"], a: 1, e: "Fiat is money backed by trust in the government, not gold." },
-        { q: "Why do banks pay interest?", o: ["They are nice", "To borrow your money", "It's a glitch"], a: 1, e: "Banks pay you to use your money for loans to others." },
-        { q: "A 'Need' is something essential like:", o: ["Food", "Netflix", "Gucci Slides"], a: 0, e: "Needs keep you alive. Wants keep you entertained." },
-        { q: "Which loses value over time?", o: ["Gold", "Cash under a mattress", "Real Estate"], a: 1, e: "Cash loses value to inflation if not invested." },
-        { q: "Gross Income is:", o: ["Money before taxes", "Money after taxes", "Disgusting money"], a: 0, e: "Gross is total. Net is what you actually keep." }
+        { q: "You find $20 on the street. What's the move?", o: ["Buy V-Bucks instantly", "Save it (Free W)", "Burn it for clout"], a: 1, e: "Found money is a blessing. Don't fumble the bag." },
+        { q: "The ATM wants a $5 fee. You...", o: ["Pay it (I'm lazy)", "Walk to my bank (Free)", "Cry"], a: 1, e: "ATM fees are literal scams. Walk 2 blocks." },
+        { q: "Inflation makes your money worth...", o: ["More", "Less", "The same"], a: 1, e: "Prices go up, money value goes down. It's the silent tax." },
+        { q: "What is 'Fiat' money?", o: ["A fast Italian car", "Govt-backed paper", "Fake crypto"], a: 1, e: "Fiat is money backed by 'trust me bro' from the govt." },
+        { q: "Why do banks pay you interest?", o: ["They love you", "To borrow your cash", "It's a glitch"], a: 1, e: "They lend your money out at 7% and pay you 0.01%. Rud." },
+        { q: "A 'Need' is essential. Like:", o: ["Food & Shelter", "Netflix & Chill", "Gucci Slides"], a: 0, e: "You can survive without Netflix (barely)." },
+        { q: "Which loses value over time?", o: ["Gold", "Cash under mattress", "Real Estate"], a: 1, e: "Inflation eats cash. Invest it or lose it." },
+        { q: "Gross Income is:", o: ["Money before taxes", "Disgusting money", "What you keep"], a: 0, e: "Gross is the total. Net is what hits your bank." },
+        { q: "Bartering means:", o: ["Trading goods directly", "Stealing", "Buying online"], a: 0, e: "Swapping a skin for a battle pass is bartering." },
+        { q: "If supply is low and demand is high, price goes...", o: ["Down", "Up", "Sideways"], a: 1, e: "Basic Econ. Rare stuff costs more." },
+        { q: "The 'Opportunity Cost' of studying is:", o: ["Getting smarter", "Missing the party", "Zero"], a: 1, e: "It's what you give up to do something else." },
+        { q: "Deflation means prices are:", o: ["Going up", "Going down", "Staying flat"], a: 1, e: "Sounds good, but usually means the economy is crashing." },
+        { q: "Liquid Assets are:", o: ["Water bottles", "Cash/Easy to sell stuff", "Frozen houses"], a: 1, e: "Liquidity = how fast you can buy tacos with it." },
+        { q: "The main function of money is:", o: ["To look cool", "Medium of exchange", "To eat"], a: 1, e: "It helps us trade without carrying goats around." },
+        { q: "Scarcity means:", o: ["Unlimited resources", "Not enough for everyone", "Scary city"], a: 1, e: "Things have value because they are limited." }
     ],
     world2: [ // Budgeting
-        { q: "The 50/30/20 rule says 50% goes to:", o: ["Wants", "Needs", "Savings"], a: 1, e: "50% Needs, 30% Wants, 20% Savings." },
-        { q: "You spend $5/day on coffee. That's approx:", o: ["$150/month", "$50/month", "$10/month"], a: 0, e: "Small habits add up. $150/mo is $1,800/year!" },
-        { q: "A budget is:", o: ["A punishment", "A plan for your money", "Something for poor people"], a: 1, e: "Budgets give you freedom to spend without guilt." },
-        { q: "Impulse buying is:", o: ["buying without thinking", "buying with a plan", "buying needs"], a: 0, e: "Impulse buys kill budgets. Wait 24 hours." },
-        { q: "Which is a 'Fixed Expense'?", o: ["Groceries", "Rent", "Movie Tickets"], a: 1, e: "Fixed expenses stay the same every month." },
-        { q: "How much should you save for emergencies?", o: ["$10", "3-6 months of expenses", "Nothing"], a: 1, e: "3-6 months gives you a safety net." },
-        { q: "Tracking expenses helps you:", o: ["Feel bad", "See where money goes", "Lose time"], a: 1, e: "You can't improve what you don't measure." },
-        { q: "What is the 'envelope method'?", o: ["Mailing cash", "Cash budgeting system", "Paper maché"], a: 1, e: "Putting cash in envelopes for categories stops overspending." }
+        { q: "The 50/30/20 rule says 50% goes to:", o: ["Wants", "Needs", "Savings"], a: 1, e: "50% Needs, 30% Fun, 20% Future You." },
+        { q: "Spending $5/day on coffee is approx:", o: ["$150/month", "$50/month", "$10/month"], a: 0, e: "That's $1,800 a year! Make it at home." },
+        { q: "A budget is:", o: ["A punishment", "A plan for your money", "For poor people"], a: 1, e: "A budget tells your money where to go instead of wondering where it went." },
+        { q: "Impulse buying is:", o: ["Buying without thinking", "Strategic investing", "Buying needs"], a: 0, e: "Wait 24 hours before buying. The urge usually fades." },
+        { q: "Which is a 'Fixed Expense'?", o: ["Groceries", "Rent", "Movie Tickets"], a: 1, e: "Fixed means same price every month. Like rent or Spotify." },
+        { q: "Emergency fund size should be:", o: ["$20", "3-6 months expenses", "Zero"], a: 1, e: "Enough to survive a zombie apocalypse (or job loss)." },
+        { q: "Tracking expenses helps you:", o: ["Feel guilty", "See leaks in wallet", "Waste time"], a: 1, e: "You can't fix what you don't track." },
+        { q: "The 'Envelope Method' uses:", o: ["Email", "Cash categories", "Stamps"], a: 1, e: "Cash in envelopes. When it's gone, you stop spending." },
+        { q: "Zero-Based Budgeting means:", o: ["You have $0", "Every dollar has a job", "Spending nothing"], a: 1, e: "Income minus Expenses equals Zero. Assign every dollar." },
+        { q: "Pay Yourself First means:", o: ["Buy clothes first", "Save before spending", "Eat lunch first"], a: 1, e: "Transfer to savings on payday, spend the rest." },
+        { q: "Lifestyle Creep is:", o: ["Walking slowly", "Spending more as you earn more", "A weird neighbor"], a: 1, e: "Avoid it. If you get a raise, save the difference." },
+        { q: "A 'Want' becomes a 'Need' when:", o: ["You really want it", "It keeps you alive", "Never"], a: 1, e: "Don't gaslight yourself. New Jordans are a WANT." },
+        { q: "Variable expenses:", o: ["Stay the same", "Change every month", "Are illegal"], a: 1, e: "Groceries, gas, entertainment. Harder to predict." },
+        { q: "Sinking Funds are for:", o: ["Boats", "Saving for big purchases", "Losing money"], a: 1, e: "Saving a little each month for a big future bill." },
+        { q: "The 'Latte Factor' refers to:", o: ["Coffee prices", "Small habits adding up", "Milk allergies"], a: 1, e: "Small daily spends wreck your wealth over time." }
     ],
     world3: [ // Compound Interest
-        { q: "Compound interest is:", o: ["Interest on interest", "Simple interest", "A bank fee"], a: 0, e: "Money making money on top of money." },
-        { q: "The earlier you start investing...", o: ["The less you make", "The more you make", "It doesn't matter"], a: 1, e: "Time is the most powerful factor in compounding." },
-        { q: "Rule of 72 calculates:", o: ["Retirement age", "Years to double money", "Tax rate"], a: 1, e: "Divide 72 by interest rate to see doubling time." },
-        { q: "APR stands for:", o: ["Annual Percentage Rate", "Apple Pear Rice", "All People Rich"], a: 0, e: "It's the yearly cost of borrowing or earning." },
-        { q: "Who becomes a millionaire faster?", o: ["Starter at 20", "Starter at 40", "Lottery player"], a: 0, e: "Starting at 20 gives you 20 extra years of growth." },
-        { q: "Is high interest good?", o: ["Yes for savings, No for debt", "Always Yes", "Always No"], a: 0, e: "You want high interest on savings, low on debt." },
-        { q: "A High Yield Savings Account (HYSA) pays:", o: ["0.01%", "4-5%", "50%"], a: 1, e: "HYSA pays way more than regular banks." },
-        { q: "Inflation vs Compound Interest:", o: ["Inflation wins", "Compound Interest fights inflation", "They are the same"], a: 1, e: "Investing beats inflation over the long run." }
+        { q: "Compound interest is:", o: ["Interest on interest", "Simple addition", "A bank fee"], a: 0, e: "Money having babies, and those babies having babies." },
+        { q: "The biggest factor in compounding is:", o: ["Money amount", "Time", "Luck"], a: 1, e: "Start young. Time does the heavy lifting." },
+        { q: "Rule of 72 calculates:", o: ["Retirement age", "Years to double money", "Tax rate"], a: 1, e: "72 divided by interest rate = years to double." },
+        { q: "APR stands for:", o: ["Annual Percentage Rate", "Apple Pear Rice", "All People Rich"], a: 0, e: "The yearly cost of borrowing or earning." },
+        { q: "Who gets richer?", o: ["Invests at 20", "Invests at 40", "Plays Lotto"], a: 0, e: "The 20-year-old wins by a landslide due to time." },
+        { q: "Is high interest good?", o: ["Yes for savings, No for debt", "Always Yes", "Always No"], a: 0, e: "You want high returns on assets, low rates on loans." },
+        { q: "A High Yield Savings Account (HYSA) pays:", o: ["0.01%", "4-5%", "50%"], a: 1, e: "Regular banks pay dust. HYSAs actually pay you." },
+        { q: "Inflation vs Investing:", o: ["Inflation wins", "Investing beats inflation", "Same thing"], a: 1, e: "If you don't invest, inflation eats your cash." },
+        { q: "Albert Einstein called Compound Interest:", o: ["Boring", "The 8th Wonder of the World", "A scam"], a: 1, e: "He who understands it, earns it. He who doesn't, pays it." },
+        { q: "Simple Interest is calculated on:", o: ["Principal only", "Principal + Interest", "Your credit score"], a: 0, e: "Simple interest doesn't grow as fast as compound." },
+        { q: "Exponential Growth looks like:", o: ["A straight line", "A hockey stick curve", "A circle"], a: 1, e: "Starts slow, then explodes upwards." },
+        { q: "To maximize compounding, you should:", o: ["Withdraw often", "Reinvest dividends", "Panic sell"], a: 1, e: "Keep the money in the pot to keep it growing." },
+        { q: "APY (Annual Percentage Yield) includes:", o: ["Compounding frequency", "Just the rate", "Hidden fees"], a: 0, e: "APY is the real number you earn per year." },
+        { q: "The 'Snowball Effect' in investing refers to:", o: ["Cold cash", "Momentum building up", "Freezing assets"], a: 1, e: "Small gains build on each other to become massive." },
+        { q: "Does debt compound?", o: ["No", "Yes, against you", "Only on Tuesdays"], a: 1, e: "Yes! Unpaid interest gets added to the balance. Dangerous." }
     ],
     world4: [ // Banking
-        { q: "FDIC Insurance covers up to:", o: ["$1,000", "$250,000", "$1 Million"], a: 1, e: "Your money is safe up to $250k if the bank fails." },
-        { q: "An Overdraft Fee happens when:", o: ["You spend more than you have", "You deposit too much", "You open the app"], a: 0, e: "Banks charge you for being broke. Turn off overdraft!" },
-        { q: "Checking accounts are for:", o: ["Long term savings", "Daily spending", "Investing"], a: 1, e: "Checking is for flow, Savings is for stash." },
-        { q: "What is a Routing Number?", o: ["Your password", "Bank ID number", "Your account ID"], a: 1, e: "Identifies which bank holds your money." },
-        { q: "Direct Deposit is:", o: ["Paycheck straight to bank", "Going to the bank", "Mailing a check"], a: 0, e: "It's faster and often waives fees." },
-        { q: "Should you share your PIN?", o: ["Yes, with friends", "Never", "Only with bank staff"], a: 1, e: "Never share your PIN. Not even with the bank." },
-        { q: "Credit Unions are:", o: ["For-profit banks", "Non-profit member owned", "Government agencies"], a: 1, e: "Credit Unions often have lower fees and better service." },
-        { q: "A Certificate of Deposit (CD) locks money for:", o: ["Higher interest", "Lower interest", "Fun"], a: 0, e: "You trade liquidity for a higher rate." }
+        { q: "FDIC Insurance covers up to:", o: ["$1,000", "$250,000", "$1 Million"], a: 1, e: "If the bank fails, the govt covers you up to $250k." },
+        { q: "Overdraft Fees happen when:", o: ["You spend $0", "You spend more than you have", "You save too much"], a: 1, e: "Banks charge you $35 for being broke. Turn off overdraft protection!" },
+        { q: "Checking accounts are for:", o: ["Long term savings", "Daily spending", "Crypto trading"], a: 1, e: "Checking is a revolving door. Savings is a vault." },
+        { q: "A Routing Number identifies:", o: ["You", "Your Bank", "Your Password"], a: 1, e: "Like an address for your bank." },
+        { q: "Direct Deposit means:", o: ["Paycheck goes straight to bank", "Walking to bank", "Mailing cash"], a: 0, e: "It's faster, safer, and usually waives fees." },
+        { q: "Should you share your PIN?", o: ["With BFFs", "Never", "With Mom"], a: 1, e: "Never. Not even with the bank staff." },
+        { q: "Credit Unions are:", o: ["For-profit", "Non-profit member owned", "Govt agency"], a: 1, e: "They usually have lower fees and better service than big banks." },
+        { q: "A CD (Certificate of Deposit) locks money for:", o: ["Higher interest", "Lower interest", "Fun"], a: 0, e: "You trade access for a better rate." },
+        { q: "Minimum Balance Fees are:", o: ["Rewards", "Penalties for being poor", "Optional"], a: 1, e: "Avoid banks that charge you for having low balances." },
+        { q: "Two-Factor Auth (2FA) is:", o: ["Annoying", "Essential security", "Double spending"], a: 1, e: "Always enable 2FA to stop hackers." },
+        { q: "Phishing is:", o: ["Catching fish", "Fake emails stealing info", "A band"], a: 1, e: "Don't click sus links claiming your account is locked." },
+        { q: "ATM Skimmers are:", o: ["Card readers that steal data", "People who skim milk", "Fast ATMs"], a: 0, e: "Wiggle the card reader before using an ATM." },
+        { q: "Peer-to-Peer (P2P) payments are like:", o: ["Cash App/Venmo", "Writing a check", "Wire transfer"], a: 0, e: "Instant transfers between friends." },
+        { q: "Can you negotiate bank fees?", o: ["No, never", "Yes, often", "Only if rich"], a: 1, e: "Call them. They often waive fees if you ask nicely." },
+        { q: "Unbanked means:", o: ["Having no bank account", "Hating banks", "Bank closed"], a: 0, e: "Relying on cash/check cashing places is expensive." }
     ],
     world5: [ // Debt
-        { q: "Good Debt vs Bad Debt:", o: ["All debt is bad", "Mortgage = Good, Credit Card = Bad", "Credit Card = Good"], a: 1, e: "Debt that builds wealth (assets) is 'Good'. Consumer debt is 'Bad'." },
-        { q: "If you miss a payment, your credit score:", o: ["Goes up", "Goes down", "Stays same"], a: 1, e: "Payment history is 35% of your score." },
-        { q: "What is a 'Principal'?", o: ["School boss", "Original loan amount", "Interest rate"], a: 1, e: "You pay interest on the principal." },
-        { q: "Payday loans usually have APRs of:", o: ["5%", "20%", "300%+"], a: 2, e: "Payday loans are predatory traps. Avoid!" },
-        { q: "Minimum payments on credit cards:", o: ["Pay off debt fast", "Keep you in debt longer", "Are recommended"], a: 1, e: "Paying minimums mostly pays interest, not the balance." },
-        { q: "A cosigner is:", o: ["A witness", "Someone responsible if you don't pay", "A bank teller"], a: 1, e: "Never cosign unless you are ready to pay the full debt." },
-        { q: "Bankruptcy stays on your record for:", o: ["1 year", "7-10 years", "Forever"], a: 1, e: "It's a nuclear option. Destroys credit for a decade." },
-        { q: "Snowball Method means:", o: ["Paying smallest debt first", "Paying largest debt first", "Throwing snow"], a: 0, e: "Psychological wins help you keep going." }
+        { q: "Good Debt vs Bad Debt:", o: ["All debt is bad", "Mortgage (Good) vs Credit Card (Bad)", "Credit Card (Good)"], a: 1, e: "Debt that buys assets (house) is okay. Debt for shoes is bad." },
+        { q: "If you miss a payment, credit score:", o: ["Goes up", "Goes down", "Stays same"], a: 1, e: "Payment history is 35% of your score. Don't miss it." },
+        { q: "The 'Principal' is:", o: ["School boss", "Original loan amount", "Interest"], a: 1, e: "You pay interest on the principal." },
+        { q: "Payday Loans are:", o: ["Helpful", "Scams (300%+ APR)", "Govt grants"], a: 1, e: "Legal loan sharking. Avoid at all costs." },
+        { q: "Paying only the Minimum Balance:", o: ["Is smart", "Keeps you in debt forever", "Boosts score"], a: 1, e: "You mostly pay interest, barely touching the debt." },
+        { q: "A Cosigner is:", o: ["A witness", "Responsible if you don't pay", "A friend"], a: 1, e: "Never cosign unless you are ready to pay the whole debt." },
+        { q: "Bankruptcy stays on report for:", o: ["1 year", "7-10 years", "Forever"], a: 1, e: "It's the financial nuclear option." },
+        { q: "The Snowball Method:", o: ["Pay smallest debt first", "Pay highest interest first", "Ignore debt"], a: 0, e: "Psychological wins help you keep going." },
+        { q: "The Avalanche Method:", o: ["Pay smallest debt first", "Pay highest interest first", "Buy snow"], a: 1, e: "Mathematically cheapest way to pay off debt." },
+        { q: "Credit Utilization should be below:", o: ["100%", "30%", "0%"], a: 1, e: "Don't max out your cards. It hurts your score." },
+        { q: "Predatory Lending targets:", o: ["Rich people", "Desperate people", "Banks"], a: 1, e: "They trick you with hidden fees and insane rates." },
+        { q: "Student Loans are:", o: ["Free money", "Debt that doesn't go away", "Scholarships"], a: 1, e: "Even bankruptcy rarely clears student loans." },
+        { q: "Secured Credit Card:", o: ["Requires a deposit", "Is free", "Has no limit"], a: 0, e: "Great way to build credit if you have none." },
+        { q: "Hard Inquiry vs Soft Inquiry:", o: ["Hard hurts score", "Soft hurts score", "Both same"], a: 0, e: "Applying for credit (Hard) dips score temporarily." },
+        { q: "Debt-to-Income Ratio (DTI):", o: ["How much you owe vs earn", "Social score", "Tax rate"], a: 0, e: "Banks check this before giving you a mortgage." }
     ],
-    world6: [ // Income/Taxes
-        { q: "Net Income is:", o: ["Gross - Taxes", "Gross + Bonus", "Total Salary"], a: 0, e: "Net is what hits your bank account." },
-        { q: "A W-2 form is for:", o: ["Employees", "Freelancers", "Stocks"], a: 0, e: "Employees get W-2s. Freelancers get 1099s." },
-        { q: "A Side Hustle is:", o: ["Illegal work", "Extra income source", "A dance move"], a: 1, e: "Multiple income streams build wealth faster." },
-        { q: "Income Tax pays for:", o: ["Roads & Military", "Netflix", "Amazon Prime"], a: 0, e: "Taxes fund public services." },
-        { q: "Sales Tax is paid when:", o: ["You earn money", "You buy something", "You sleep"], a: 1, e: "Added to the price of goods at checkout." },
-        { q: "A tax refund means:", o: ["Free money", "You overpaid taxes", "Government bonus"], a: 1, e: "You gave the govt an interest-free loan." },
-        { q: "Gig economy jobs (Uber/DoorDash) represent:", o: ["Passive income", "Active income", "Portfolio income"], a: 1, e: "You trade time for money. That's active." },
-        { q: "Passive income is:", o: ["Working hard", "Money earned while sleeping", "Winning lottery"], a: 1, e: "Assets paying you without daily work." }
+    world6: [ // Income
+        { q: "Net Income is:", o: ["Gross - Taxes", "Gross + Bonus", "Total Salary"], a: 0, e: "Net is what actually hits your bank account." },
+        { q: "W-2 form is for:", o: ["Employees", "Freelancers", "Stocks"], a: 0, e: "Standard employees get W-2s. Taxes usually withheld." },
+        { q: "1099 form is for:", o: ["Employees", "Freelancers/Gig Work", "Lottery"], a: 1, e: "You gotta pay your own taxes on 1099 income!" },
+        { q: "Income Tax pays for:", o: ["Roads & Military", "Netflix", "Amazon"], a: 0, e: "It funds public services (and politicians)." },
+        { q: "A Tax Refund means:", o: ["Free money", "You overpaid the govt", "Bonus"], a: 1, e: "You gave the govt an interest-free loan all year." },
+        { q: "Passive Income is:", o: ["Working hard", "Money earned while sleeping", "Lottery"], a: 1, e: "Assets paying you without daily work." },
+        { q: "Active Income is:", o: ["Trading time for money", "Dividends", "Rent checks"], a: 0, e: "If you stop working, the money stops." },
+        { q: "Progressive Tax System:", o: ["Everyone pays same", "Earn more = Pay higher %", "Earn more = Pay less"], a: 1, e: "Rich people (theoretically) pay a higher rate." },
+        { q: "FICA taxes fund:", o: ["Social Security & Medicare", "NASA", "Schools"], a: 0, e: "For old people (future you)." },
+        { q: "Sales Tax is paid:", o: ["On income", "At the register", "Yearly"], a: 1, e: "Consumption tax on stuff you buy." },
+        { q: "Capital Gains Tax is on:", o: ["Salary", "Profit from selling assets", "Gifts"], a: 1, e: "Selling stocks or houses for profit." },
+        { q: "Gig Economy jobs (Uber) are:", o: ["Stable", "Flexible but no benefits", "Passive"], a: 1, e: "You are your own boss, but also your own HR." },
+        { q: "Salary Negotiation:", o: ["Is rude", "Is expected", "Is illegal"], a: 1, e: "Always negotiate. The first offer is rarely the best." },
+        { q: "Direct Deposit:", o: ["Safety hazard", "Convenient & Fast", "Expensive"], a: 1, e: "Required for most jobs now." },
+        { q: "Gross Pay looks:", o: ["Smaller than Net", "Bigger than Net", "Same"], a: 1, e: "Gross is the big number before the govt takes a bite." }
     ],
     world7: [ // Investing
-        { q: "A Stock represents:", o: ["Ownership in a company", "A loan to a company", "A product"], a: 0, e: "You own a tiny piece of the business." },
-        { q: "Diversification means:", o: ["Buying only Tesla", "Don't put all eggs in one basket", "Saving cash"], a: 1, e: "Spread risk across many investments." },
-        { q: "Bull Market means stocks are:", o: ["Going Up", "Going Down", "Sleeping"], a: 0, e: "Bull = Up (Horns up). Bear = Down (Claws down)." },
-        { q: "An Index Fund (S&P 500):", o: ["Buys 1 company", "Buys top 500 companies", "Is risky"], a: 1, e: "Instant diversification. Bet on the whole economy." },
-        { q: "Dividends are:", o: ["Fees you pay", "Profits paid to shareholders", "Math problems"], a: 1, e: "Cash payments just for owning a stock." },
-        { q: "Buy Low, Sell...", o: ["Lower", "High", "Never"], a: 1, e: "The basic rule of profit." },
-        { q: "Crypto is considered:", o: ["Safe asset", "High risk asset", "Currency only"], a: 1, e: "High volatility means high risk." },
-        { q: "FOMO investing leads to:", o: ["Big gains", "Buying at the top (losing)", "Stability"], a: 1, e: "Fear Of Missing Out makes you buy when expensive." }
+        { q: "A Stock represents:", o: ["A loan", "Ownership share", "A product"], a: 1, e: "You own a tiny piece of the company." },
+        { q: "Diversification means:", o: ["YOLO into one stock", "Don't put eggs in one basket", "Saving cash"], a: 1, e: "Spread risk. If one crashes, others might survive." },
+        { q: "Bull Market means:", o: ["Prices going Up", "Prices going Down", "Animals allowed"], a: 0, e: "Bull horns go up. Optimism." },
+        { q: "Bear Market means:", o: ["Prices going Up", "Prices going Down", "Camping trip"], a: 1, e: "Bear claws swipe down. Pessimism." },
+        { q: "S&P 500 is:", o: ["A race car", "Top 500 US Companies", "A crypto coin"], a: 1, e: "Buying the whole haystack instead of finding the needle." },
+        { q: "Dividends are:", o: ["Fees", "Profit payouts", "Taxes"], a: 1, e: "Thank you money for holding the stock." },
+        { q: "Buy Low, Sell...", o: ["Lower", "High", "Never"], a: 1, e: "The golden rule of trading." },
+        { q: "FOMO investing leads to:", o: ["Wealth", "Buying at the top", "Happiness"], a: 1, e: "Fear Of Missing Out makes you the exit liquidity." },
+        { q: "Volatility is:", o: ["Price stability", "Wild price swings", "Volume"], a: 1, e: "How bumpy the ride is." },
+        { q: "A Bond is:", o: ["James Bond", "Loan to govt/company", "A stock"], a: 1, e: "You lend money, they pay interest." },
+        { q: "Market Cap is:", o: ["Total value of company", "A hat", "Max price"], a: 0, e: "Share Price x Number of Shares." },
+        { q: "IPO stands for:", o: ["Initial Public Offering", "I Pay Often", "International Police"], a: 0, e: "When a company first sells stock to the public." },
+        { q: "ETF (Exchange Traded Fund):", o: ["Basket of stocks", "Electronic Transfer", "Alien"], a: 0, e: "Like a mutual fund but trades like a stock." },
+        { q: "Risk vs Reward:", o: ["Higher risk = Higher potential return", "No correlation", "Risk is bad"], a: 0, e: "You get paid for taking risks (smart ones)." },
+        { q: "Diamond Hands 💎🙌:", o: ["Holding through drops", "Selling quickly", "Wearing jewelry"], a: 0, e: "Not panicking when the line goes down." }
     ],
     world8: [ // Wealth
-        { q: "Assets put money in your pocket. Liabilities...", o: ["Take it out", "Keep it safe", "Double it"], a: 0, e: "Rich people buy assets. Poor people buy liabilities." },
-        { q: "A Roth IRA is great because:", o: ["Tax-free withdrawals", "Free money", "No limits"], a: 0, e: "Pay taxes now, zero taxes at retirement." },
-        { q: "Net Worth formula:", o: ["Income - Expenses", "Assets - Liabilities", "Cash + Car"], a: 1, e: "What you OWN minus what you OWE." },
-        { q: "The 4% Rule is for:", o: ["Tipping", "Retirement spending", "Interest rates"], a: 1, e: "Safe withdrawal rate to never run out of money." },
-        { q: "Lifestyle Creep is:", o: ["Spending more as you earn more", "Walking slowly", "Buying old clothes"], a: 0, e: "Avoid it to build wealth. Keep living like a student." },
-        { q: "Real Estate can provide:", o: ["Cash flow & Appreciation", "Headaches only", "Instant cash"], a: 0, e: "Rent checks + value going up." },
-        { q: "Financial Independence means:", o: ["Being rich", "Assets cover living expenses", "Owning a yacht"], a: 1, e: "You don't HAVE to work to survive." },
-        { q: "Estate Planning is:", o: ["Building a mansion", "Plan for assets after death", "Gardening"], a: 1, e: "Deciding who gets your stuff when you die." }
+        { q: "Assets vs Liabilities:", o: ["Assets take money", "Assets make money", "Same thing"], a: 1, e: "Rich people collect assets. Poor collect liabilities." },
+        { q: "Roth IRA benefit:", o: ["Tax-free growth", "Free money", "No limits"], a: 0, e: "Pay tax now, zero tax when you retire." },
+        { q: "Net Worth = ", o: ["Income + Expenses", "Assets - Liabilities", "Cash only"], a: 1, e: "The real scoreboard of wealth." },
+        { q: "The 4% Rule:", o: ["Tipping amount", "Safe withdrawal rate", "Interest rate"], a: 1, e: "Don't spend more than 4% of portfolio to last forever." },
+        { q: "Inflation Hedge:", o: ["Cash", "Assets like Gold/Real Estate", "Savings account"], a: 1, e: "Something that rises in value when dollar drops." },
+        { q: "Depreciation:", o: ["Value goes up", "Value goes down", "Depression"], a: 1, e: "Cars depreciate. Houses usually appreciate." },
+        { q: "Appreciation:", o: ["Saying thanks", "Value goes up", "Value goes down"], a: 1, e: "Real estate and stocks usually appreciate." },
+        { q: "Liquid Net Worth:", o: ["Boats", "Cash/Stocks you can sell fast", "House value"], a: 1, e: "Net worth you can actually spend today." },
+        { q: "Estate Planning:", o: ["Building a mansion", "Will & Trust", "Gardening"], a: 1, e: "Deciding who gets your stuff when you die." },
+        { q: "Financial Independence (FI):", o: ["Being rich", "Work is optional", "Turning 18"], a: 1, e: "Assets cover your living expenses." },
+        { q: "FIRE Movement:", o: ["Arson", "Financial Independence Retire Early", "Hot sauce"], a: 1, e: "Saving aggressively to quit jobs young." },
+        { q: "Lifestyle Inflation:", o: ["Getting fat", "Spending raises immediately", "Exercise"], a: 1, e: "The enemy of wealth. Keep living cheap." },
+        { q: "Generational Wealth:", o: ["Passing assets to kids", "Winning lotto", "Spending it all"], a: 0, e: "Building something that lasts beyond you." },
+        { q: "Umbrella Insurance:", o: ["For rain", "Extra liability protection", "Beach gear"], a: 1, e: "Protects rich people from lawsuits." },
+        { q: "Arbitrage:", o: ["Buying low here, selling high there", "Stealing", "Art"], a: 0, e: "Profiting from price differences." }
     ]
 };
 
+// EXPANDED SCENARIOS (For Swipe Lessons)
 const SCENARIOS = [
-    { text: "Buying AirPods Pro 2 instead of lunch", isRight: false, label: "Starving" },
-    { text: "Cooking at home", isRight: true, label: "W" },
-    { text: "Buying V-Bucks on sale", isRight: false, label: "Bait" },
-    { text: "Investing birthday money", isRight: true, label: "Smart" },
-    { text: "Lending money to a broke friend", isRight: false, label: "Gone" },
-    { text: "Using a student discount", isRight: true, label: "Hack" },
-    { text: "Buying brand new textbooks", isRight: false, label: "Ripoff" },
-    { text: "Renting textbooks", isRight: true, label: "Savvy" },
-    { text: "Buying Shein haul on credit", isRight: false, label: "Trap" },
-    { text: "Waiting 24h before buying", isRight: true, label: "Control" },
-    { text: "Buying generic brand cereal", isRight: true, label: "Big Brain" },
-    { text: "Spending $50 on DoorDash", isRight: false, label: "Broke" }
+    { text: "Buying AirPods Pro 2 when you have working ears", isRight: false, label: "Consumerism" },
+    { text: "Meal prepping instead of DoorDash daily", isRight: true, label: "Chef Mode" },
+    { text: "Investing $50 in S&P 500", isRight: true, label: "Future Millionaire" },
+    { text: "Buying a monkey JPEG for $10k", isRight: false, label: "Rugged" },
+    { text: "Using a credit card for points (and paying it off)", isRight: true, label: "Points God" },
+    { text: "Maxing out credit card for clout", isRight: false, label: "Broke Soon" },
+    { text: "Emergency fund in a High Yield Savings Account", isRight: true, label: "Smart Stash" },
+    { text: "Keeping savings under the mattress", isRight: false, label: "Inflation L" },
+    { text: "Buying generic meds (same ingredients)", isRight: true, label: "Galaxy Brain" },
+    { text: "Paying for gym membership but never going", isRight: false, label: "Donation" },
+    { text: "Checking bank account scaries", isRight: true, label: "Awareness" },
+    { text: "Ignoring bank notifications", isRight: false, label: "Delusional" },
+    { text: "Buying a car you can't afford to impress people you hate", isRight: false, label: "Ego Trap" },
+    { text: "Walking/Biking to save gas", isRight: true, label: "Fitness + $" },
+    { text: "Subscription for an app you opened once", isRight: false, label: "Cancel It" },
+    { text: "Selling old clothes on Depop", isRight: true, label: "Hustle" },
+    { text: "Buying limited edition drops on resale", isRight: false, label: "Markup L" },
+    { text: "Waiting 30 days before big purchase", isRight: true, label: "Discipline" },
+    { text: "Buying water bottles when tap is free", isRight: false, label: "Waste" },
+    { text: "Using student discounts everywhere", isRight: true, label: "Frugal King" },
+    { text: "Ordering water at the club", isRight: true, label: "Hydro Homie" },
+    { text: "Buying skins for a game you suck at", isRight: false, label: "Skill Issue" },
+    { text: "Pre-gaming before the bar", isRight: true, label: "Budget W" },
+    { text: "Buying coffee daily ($7)", isRight: false, label: "Leak" },
+    { text: "Bringing lunch to work/school", isRight: true, label: "Savings" },
+    { text: "Leasing a luxury car on minimum wage", isRight: false, label: "Down Bad" },
+    { text: "Buying textbooks new", isRight: false, label: "Scam" },
+    { text: "Renting textbooks / PDF", isRight: true, label: "Scholar" },
+    { text: "Subscribing to OnlyFans... of a cat", isRight: false, label: "Down Bad" },
+    { text: "Unsubscribing from marketing emails", isRight: true, label: "Focus" }
 ];
 
 const MEME_TEMPLATES = [
@@ -178,7 +253,10 @@ const MEME_TEMPLATES = [
     { url: "https://i.imgflip.com/26am.jpg", top: "WAITING FOR PAYDAY", bottom: "LIKE..." },
     { url: "https://i.imgflip.com/1jwhww.jpg", top: "WHEN THE DIP", bottom: "KEEPS DIPPING" },
     { url: "https://i.imgflip.com/30b1gx.jpg", top: "REJECTING SAVINGS", bottom: "CHASING TIKTOK TRENDS" },
-    { url: "https://i.imgflip.com/1g8my4.jpg", top: "ME IGNORING BUDGET", bottom: "DURING SHEIN SALE" }
+    { url: "https://i.imgflip.com/1g8my4.jpg", top: "ME IGNORING BUDGET", bottom: "DURING SHEIN SALE" },
+    { url: "https://i.imgflip.com/28j0te.jpg", top: "INVESTING $5", bottom: "WHERE LAMBO?" },
+    { url: "https://i.imgflip.com/1h7in3.jpg", top: "I AM ONCE AGAIN ASKING", bottom: "FOR FINANCIAL LITERACY" },
+    { url: "https://i.imgflip.com/1otk96.jpg", top: "CHANGE MY MIND:", bottom: "COFFEE AT HOME > STARBUCKS" }
 ];
 
 // --- UNIQUE LESSON OVERRIDES ---
@@ -295,11 +373,8 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
 
     const worldQs = BOSS_QUESTIONS_DB[worldId] || BOSS_QUESTIONS_DB['world1'];
     
-    // Ensure we have enough pool, duplicate if needed to avoid crash on small pools
-    let questionPool = [...worldQs];
-    if (questionPool.length < 5) questionPool = [...questionPool, ...questionPool];
-    
-    const selectedQs = rng.pickSubset(questionPool, 5);
+    // Pick 5 unique questions
+    const selectedQs = rng.pickSubset(worldQs, 5);
 
     const bossQuiz: BossQuestion[] = selectedQs.map(q => ({
         question: q.q,
@@ -373,8 +448,8 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
 
 const generateLessonTitle = (type: LessonType, rng: SeededRNG): string => {
     const titles = {
-        swipe: ["Swipe the Truth", "Left or Right?", "Pick the Winner", "Decision Time", "Needs vs Wants"],
-        meme: ["Vibe Check", "Meme Review", "Reality Check", "True Story", "Financial L"],
+        swipe: ["Swipe the Truth", "Left or Right?", "Pick the Winner", "Decision Time", "Needs vs Wants", "Vibe Check"],
+        meme: ["Meme Review", "Reality Check", "True Story", "Financial L", "Big Mood"],
         tap_lie: ["Spot the Cap", "Find the Lie", "Truth Bomb", "Fact or Fiction", "Cap Check"],
         drag_drop: ["Sort It Out", "Bucket Challenge", "Organize Your Life", "Money Flow"],
         calculator: ["Do the Math", "Rich Calculator", "Future You", "Number Crunch"],
@@ -397,15 +472,24 @@ const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG
                 explanation: "This meme explains why being broke costs money." 
             };
         case 'tap_lie':
-            return { 
-                statements: [
-                    { text: "Credit cards are free money", isLie: true },
-                    { text: "Compound interest takes time", isLie: false },
-                    { text: "You need a budget", isLie: false },
-                    { text: "Debit cards help credit score", isLie: true },
-                    { text: "Banks are your friends", isLie: true }
-                ].sort(() => 0.5 - rng.next()) 
-            };
+            const liePool = [
+                { text: "Credit cards are free money", isLie: true },
+                { text: "Compound interest takes time", isLie: false },
+                { text: "You need a budget", isLie: false },
+                { text: "Debit cards help credit score", isLie: true },
+                { text: "Banks are your friends", isLie: true },
+                { text: "Inflation is a scam", isLie: true },
+                { text: "You can't save $1", isLie: true },
+                { text: "Rich people budget too", isLie: false },
+                { text: "Debt is always bad", isLie: true },
+                { text: "Assets make money", isLie: false },
+                { text: "Liabilities take money", isLie: false },
+                { text: "NFTs are stable", isLie: true },
+                { text: "HYSAs are better than checking", isLie: false },
+                { text: "401k is for old people only", isLie: true },
+                { text: "Emergency funds are essential", isLie: false }
+            ];
+            return { statements: rng.pickSubset(liePool, 5) };
         case 'drag_drop':
             const sortItems = [
                 { id: 's1', text: "Netflix Sub", category: "Wants" },
@@ -417,7 +501,12 @@ const generateLessonContent = (type: LessonType, worldId: string, rng: SeededRNG
                 { id: 's7', text: "Electricity", category: "Needs" },
                 { id: 's8', text: "Video Games", category: "Wants" },
                 { id: 's9', text: "Emergency Fund", category: "Savings" },
-                { id: 's10', text: "Stock Investment", category: "Savings" }
+                { id: 's10', text: "Stock Investment", category: "Savings" },
+                { id: 's11', text: "Bitcoin", category: "Savings" },
+                { id: 's12', text: "V-Bucks", category: "Wants" },
+                { id: 's13', text: "Water Bill", category: "Needs" },
+                { id: 's14', text: "Gucci Belt", category: "Wants" },
+                { id: 's15', text: "Roth IRA", category: "Savings" }
             ];
             return { 
                 buckets: ['Needs', 'Wants', 'Savings'],
