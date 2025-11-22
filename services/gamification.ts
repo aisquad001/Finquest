@@ -358,9 +358,14 @@ export const createInitialUser = (onboardingData: any): UserState => {
         avatar = randomProfile.avatar;
     }
     
-    // 4. For Guest Mode specifically, unless they manually entered a name (not implemented in UI yet), use full random
+    // 4. For Guest Mode specifically...
     if (onboardingData.authMethod === 'guest' && !onboardingData.nickname) {
         nickname = randomProfile.nickname;
+        avatar = randomProfile.avatar;
+    }
+
+    // FINAL SAFEGUARD: Ensure avatar is an object to prevent Firestore undefined errors
+    if (!avatar || typeof avatar !== 'object' || !avatar.emoji) {
         avatar = randomProfile.avatar;
     }
 

@@ -7,7 +7,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeftIcon, BoltIcon, ChartBarIcon, ClockIcon, InformationCircleIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Portfolio, Stock, calculateRiskScore, Transaction, LeaderboardEntry, getMockLeaderboard } from '../services/gamification';
-import { getMarketData, fetchRealMarketData, generateChartData, StockAsset } from '../services/stockMarket';
+import { getMarketData, fetchRealMarketData, generateChartData, StockAsset, getMarketStatus } from '../services/stockMarket';
 import { playSound } from '../services/audio';
 
 interface WallStreetZooProps {
@@ -80,6 +80,7 @@ const LineChart = ({ data, color }: { data: number[], color: string }) => {
 export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdatePortfolio, onClose }) => {
     const [activeTab, setActiveTab] = useState<'market' | 'portfolio' | 'rankings'>('market');
     const [marketData, setMarketData] = useState<StockAsset[]>(getMarketData());
+    const [feedStatus, setFeedStatus] = useState<string>('CONNECTING...');
     const [selectedStock, setSelectedStock] = useState<StockAsset | null>(null);
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
     const [tradeAmount, setTradeAmount] = useState<string>('');
@@ -90,10 +91,11 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         const updateMarket = async () => {
             const updatedData = await fetchRealMarketData();
             setMarketData([...updatedData]); // Trigger re-render with new prices
+            setFeedStatus(getMarketStatus());
         };
 
         updateMarket(); // Initial fetch
-        const interval = setInterval(updateMarket, 10000); // Poll every 10s
+        const interval = setInterval(updateMarket, 5000); // Poll every 5s for faster feedback
         return () => clearInterval(interval);
     }, []);
 
@@ -185,9 +187,9 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                 </button>
                 <div className="flex flex-col items-center">
                     <h1 className="font-game text-lg text-white tracking-wider">WALL STREET ZOO</h1>
-                    <div className="flex items-center gap-1 text-[10px] text-neon-green font-mono">
-                        <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse"></span>
-                        LIVE FEED
+                    <div className={`flex items-center gap-1 text-[10px] font-mono transition-colors ${feedStatus === 'LIVE' ? 'text-neon-green' : 'text-yellow-500'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${feedStatus === 'LIVE' ? 'bg-neon-green animate-pulse' : 'bg-yellow-500'}`}></span>
+                        {feedStatus === 'LIVE' ? 'LIVE FEED' : 'SIMULATED FEED'}
                     </div>
                 </div>
                 <div className="w-9"></div>

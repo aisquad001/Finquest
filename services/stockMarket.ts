@@ -55,6 +55,10 @@ export const ASSET_LIST: StockAsset[] = [
 
 // Internal State
 let marketState = [...ASSET_LIST];
+let isUsingLiveFeed = false;
+
+// Expose status for UI
+export const getMarketStatus = () => isUsingLiveFeed ? 'LIVE' : 'SIMULATED';
 
 // Setup Listener for Admin Overrides (Crashes/Moons)
 let overrideListenerSet = false;
@@ -85,57 +89,47 @@ export const getMarketData = () => {
 
 // --- ROBUST FETCHING UTILS ---
 
-async function tryProxy(url: string, proxyName: string): Promise<any> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s timeout
-    
-    try {
-        const res = await fetch(url, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        return await res.json();
-    } catch (e: any) {
-        clearTimeout(timeoutId);
-        throw new Error(`${proxyName} failed: ${e.message}`);
-    }
-}
-
 async function fetchYahooQuotes(tickers: string[]) {
     const symbols = tickers.join(',');
-    // Yahoo Finance API V7
-    const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}`;
+    // Yahoo Finance API V7 with Cache Busting
+    const yahooUrl = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${symbols}&_=${Date.now()}`;
 
-    // STRATEGY 1: Corsproxy.io
-    // Usually fast and reliable
-    try {
-        const data = await tryProxy(`https://corsproxy.io/?${encodeURIComponent(yahooUrl)}`, 'corsproxy');
-        if (data.quoteResponse?.result) return data.quoteResponse.result;
-        throw new Error("Invalid data structure");
-    } catch (e: any) {
-        logger.warn(`Proxy 1 skipped: ${e.message}`);
-    }
+    const proxies = [
+        // Strategy 1: AllOrigins Raw (Bypasses JSON wrapping issues)
+        { url: (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, name: 'allorigins-raw' },
+        // Strategy 2: Corsproxy.io
+        { url: (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`, name: 'corsproxy' },
+        // Strategy 3: CodeTabs
+        { url: (u: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`, name: 'codetabs' },
+        // Strategy 4: ThingProxy
+        { url: (u: string) => `https://thingproxy.freeboard.io/fetch/${u}`, name: 'thingproxy' }
+    ];
 
-    // STRATEGY 2: AllOrigins
-    // Reliable but wraps response in JSON
-    try {
-        const data = await tryProxy(`https://api.allorigins.win/get?url=${encodeURIComponent(yahooUrl)}&t=${Date.now()}`, 'allorigins');
-        if (data.contents) {
-             const inner = JSON.parse(data.contents);
-             if (inner.quoteResponse?.result) return inner.quoteResponse.result;
+    for (const proxy of proxies) {
+        try {
+            const res = await fetch(proxy.url(yahooUrl));
+            if (!res.ok) continue;
+            
+            const data = await res.json();
+            
+            // Handle potential double-wrapping or different structures
+            let result = data.quoteResponse?.result;
+            
+            // Fallback: Check if data.contents contains the JSON (AllOrigins standard mode sometimes does this)
+            if (!result && data.contents) {
+                try {
+                    const inner = typeof data.contents === 'string' ? JSON.parse(data.contents) : data.contents;
+                    result = inner.quoteResponse?.result;
+                } catch {}
+            }
+
+            if (result && result.length > 0) {
+                // logger.info(`Fetched via ${proxy.name}`);
+                return result;
+            }
+        } catch (e: any) {
+             // logger.debug(`Proxy ${proxy.name} failed: ${e.message}`);
         }
-        throw new Error("Invalid data structure");
-    } catch (e: any) {
-        logger.warn(`Proxy 2 skipped: ${e.message}`);
-    }
-
-    // STRATEGY 3: CodeTabs
-    // Good backup
-    try {
-         const data = await tryProxy(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(yahooUrl)}`, 'codetabs');
-         if (data.quoteResponse?.result) return data.quoteResponse.result;
-         throw new Error("Invalid data structure");
-    } catch (e: any) {
-        logger.warn(`Proxy 3 skipped: ${e.message}`);
     }
 
     throw new Error("All proxies exhausted");
@@ -150,33 +144,37 @@ export const fetchRealMarketData = async (): Promise<StockAsset[]> => {
         const results = await fetchYahooQuotes(tickers);
 
         if (results && results.length > 0) {
+            isUsingLiveFeed = true;
             marketState = marketState.map(asset => {
                 const searchSymbol = asset.category === 'crypto' ? `${asset.symbol}-USD` : asset.symbol;
                 const quote = results.find((r: any) => r.symbol === searchSymbol);
                 
-                if (quote && quote.regularMarketPrice) {
+                if (quote && (quote.regularMarketPrice || quote.marketState)) {
                     return {
                         ...asset,
-                        price: quote.regularMarketPrice,
-                        changePercent: quote.regularMarketChangePercent || 0
+                        price: quote.regularMarketPrice || quote.price || asset.price,
+                        changePercent: quote.regularMarketChangePercent || quote.changePercent || 0
                     };
                 }
                 return asset;
             });
-            logger.info("✅ Market data updated via live feed.");
+            // logger.info("✅ Market data updated via live feed.");
         }
     } catch (e: any) {
-        logger.warn("⚠️ Real-time feed failed, using simulation fallback.", { error: e.message });
+        isUsingLiveFeed = false;
+        // logger.warn("⚠️ Feed failed, using simulation.", { error: e.message });
         
-        // FALLBACK: Simulate movement if API fails so app doesn't feel broken
+        // FALLBACK: Simulate VISIBLE movement if API fails
         marketState = marketState.map(asset => {
-             // Random walk with mean reversion logic
-             const drift = (Math.random() - 0.5) * asset.volatility * (asset.price * 0.02); 
-             let newPrice = asset.price + drift;
+             // 1. Drift: Random walk based on volatility
+             // We increase the multiplier here (0.05 -> 0.15) so user sees movement even if offline
+             const driftPct = (Math.random() - 0.5) * asset.volatility * 0.15; 
+             let newPrice = asset.price * (1 + driftPct);
              if (newPrice < 0.01) newPrice = 0.01;
              
-             // Simulate a slight change in percent for visual effect
-             const newChange = asset.changePercent + ((Math.random() - 0.5) * 0.2);
+             // 2. Update Change Percent visually
+             // We slowly gravitate change percent towards the day's random trend
+             const newChange = asset.changePercent + (driftPct * 100);
              
              return { ...asset, price: newPrice, changePercent: newChange };
         });
