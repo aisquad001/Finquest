@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -6,7 +7,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { ArrowLeftIcon, BoltIcon, ChartBarIcon, ClockIcon, InformationCircleIcon, ArrowTrendingUpIcon, ArrowTrendingDownIcon, GlobeAltIcon } from '@heroicons/react/24/solid';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Portfolio, Stock, calculateRiskScore, Transaction, LeaderboardEntry, getMockLeaderboard } from '../services/gamification';
-import { getMarketData, simulateMarketMovement, generateChartData, StockAsset } from '../services/stockMarket';
+import { getMarketData, fetchRealMarketData, generateChartData, StockAsset } from '../services/stockMarket';
 import { playSound } from '../services/audio';
 
 interface WallStreetZooProps {
@@ -84,12 +85,15 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
     const [tradeAmount, setTradeAmount] = useState<string>('');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
 
-    // --- Simulation Loop ---
+    // --- REAL DATA POLL LOOP ---
     useEffect(() => {
-        const interval = setInterval(() => {
-            const updated = simulateMarketMovement();
-            setMarketData([...updated]); // Trigger re-render
-        }, 3000); // Update every 3 seconds
+        const updateMarket = async () => {
+            const updatedData = await fetchRealMarketData();
+            setMarketData([...updatedData]); // Trigger re-render with new prices
+        };
+
+        updateMarket(); // Initial fetch
+        const interval = setInterval(updateMarket, 10000); // Poll every 10s
         return () => clearInterval(interval);
     }, []);
 
@@ -183,7 +187,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                     <h1 className="font-game text-lg text-white tracking-wider">WALL STREET ZOO</h1>
                     <div className="flex items-center gap-1 text-[10px] text-neon-green font-mono">
                         <span className="w-1.5 h-1.5 bg-neon-green rounded-full animate-pulse"></span>
-                        LIVE MARKET
+                        LIVE FEED
                     </div>
                 </div>
                 <div className="w-9"></div>

@@ -126,8 +126,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         alert("Code copied! Share it to get rich.");
     };
 
-    const zooUnlocked = user.level >= 20;
-
     // --- GUEST UPGRADE ---
     const handleUpgradeAccount = async () => {
         if (isUpgrading) return;
@@ -346,25 +344,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
                         )}
 
-                        {/* ZOO BUTTON */}
+                        {/* ZOO BUTTON - ALWAYS UNLOCKED */}
                         <button 
                             onClick={onOpenZoo}
-                            className={`w-full rounded-3xl p-[2px] btn-3d group transition-all
-                                ${zooUnlocked 
-                                    ? 'bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer' 
-                                    : 'bg-gray-800 cursor-not-allowed grayscale opacity-80'
-                                }
-                            `}
+                            className={`w-full rounded-3xl p-[2px] btn-3d group transition-all bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer`}
                         >
                             <div className="bg-[#1a0b2e] rounded-[22px] p-4 flex items-center gap-4 h-full relative overflow-hidden">
                                 <div className="absolute right-0 bottom-0 opacity-20 text-6xl rotate-12 translate-x-4 translate-y-4">🦍</div>
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 ${zooUnlocked ? 'bg-white/10' : 'bg-black/50'}`}>
+                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 bg-white/10`}>
                                     📈
                                 </div>
                                 <div className="text-left flex-1 relative z-10">
                                     <h3 className="font-game text-xl text-white leading-none mb-1 text-stroke-black">WALL STREET ZOO</h3>
                                     <p className="text-[10px] text-gray-300 font-bold leading-tight">
-                                        {zooUnlocked ? 'Trade Stocks. Get Rich. No Cap.' : 'Unlocks at Level 20'}
+                                        Trade Stocks. Get Rich. No Cap.
                                     </p>
                                 </div>
                             </div>

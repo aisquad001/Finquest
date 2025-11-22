@@ -7,10 +7,8 @@
 import { db } from './firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
-// POLYGON.IO Integration Note:
-// In a real production build, you would fetch from: https://api.polygon.io/v2/aggs/ticker/{ticker}/range/1/day/...
-// For this "Live-Ready" demo, we implement a robust simulation engine that mimics real market behavior
-// so the app works instantly for anyone who clones it without needing an API key immediately.
+// REAL FINANCIAL FEED INTEGRATION
+// We use Yahoo Finance via a CORS proxy to get real-time data without a backend.
 
 export interface StockAsset {
     symbol: string;
@@ -18,7 +16,7 @@ export interface StockAsset {
     category: 'tech' | 'meme' | 'crypto' | 'consumer' | 'index';
     price: number;
     changePercent: number;
-    volatility: number; // 0-1: How much it moves
+    volatility: number; // Used for fallback simulation
     logo: string; // Emoji or URL
     active?: boolean;
 }
@@ -53,28 +51,25 @@ export const ASSET_LIST: StockAsset[] = [
     { symbol: 'QQQ', name: 'Nasdaq', category: 'index', price: 405.00, changePercent: 0.5, volatility: 0.02, logo: '🌐' },
 ];
 
-// Simulation State
+// Internal State
 let marketState = [...ASSET_LIST];
 
-// Setup Listener for Admin Overrides
+// Setup Listener for Admin Overrides (Crashes/Moons)
 let overrideListenerSet = false;
 if (!overrideListenerSet) {
     try {
         onSnapshot(doc(db, 'zoo_config', 'market_state'), (snap) => {
             if (snap.exists()) {
                 const data = snap.data();
-                // Apply global market events
+                // Admin overrides apply on top of real data
                 if (data.event === 'crash') {
-                    marketState = marketState.map(s => ({...s, price: s.price * 0.8, changePercent: -20}));
+                    marketState = marketState.map(s => ({...s, changePercent: s.changePercent - 20}));
                 } else if (data.event === 'moon') {
-                    marketState = marketState.map(s => ({...s, price: s.price * 1.5, changePercent: 50}));
+                    marketState = marketState.map(s => ({...s, changePercent: s.changePercent + 50}));
                 }
             }
         }, (error) => {
-            // Suppress permission errors in console for non-admin users
-            if (error.code !== 'permission-denied') {
-                console.warn("Zoo config sync warning:", error.message);
-            }
+            if (error.code !== 'permission-denied') console.warn("Zoo config sync warning:", error.message);
         });
         overrideListenerSet = true;
     } catch(e) {
@@ -86,39 +81,63 @@ export const getMarketData = () => {
     return marketState;
 };
 
-// Run a simulation step to update prices based on volatility
-export const simulateMarketMovement = () => {
-    marketState = marketState.map(asset => {
-        const drift = (Math.random() - 0.5) * 2; // -1 to 1
-        const change = drift * asset.volatility * (asset.price * 0.01); // Move relative to price and volatility
+// REAL-TIME FETCH FUNCTION
+export const fetchRealMarketData = async (): Promise<StockAsset[]> => {
+    try {
+        // Map symbols to Yahoo format (Crypto needs -USD)
+        const tickers = marketState.map(s => s.category === 'crypto' ? `${s.symbol}-USD` : s.symbol);
         
-        let newPrice = asset.price + change;
-        if (newPrice < 0.01) newPrice = 0.01; // Prevent negative prices
+        // Yahoo Finance Quote Endpoint
+        const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${tickers.join(',')}`;
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+        
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const json = await response.json();
+        const results = json.quoteResponse?.result || [];
 
-        // Calculate change percent relative to opening (mocked as static for this session)
-        const original = ASSET_LIST.find(a => a.symbol === asset.symbol)?.price || asset.price;
-        const percent = ((newPrice - original) / original) * 100;
-
-        return {
-            ...asset,
-            price: newPrice,
-            changePercent: percent
-        };
-    });
+        if (results.length > 0) {
+            marketState = marketState.map(asset => {
+                const searchSymbol = asset.category === 'crypto' ? `${asset.symbol}-USD` : asset.symbol;
+                const quote = results.find((r: any) => r.symbol === searchSymbol);
+                
+                if (quote && quote.regularMarketPrice) {
+                    return {
+                        ...asset,
+                        price: quote.regularMarketPrice,
+                        changePercent: quote.regularMarketChangePercent || 0
+                    };
+                }
+                return asset;
+            });
+        }
+    } catch (e) {
+        console.warn("Real-time feed failed, using simulation fallback", e);
+        // FALLBACK: Simulate movement if API fails
+        marketState = marketState.map(asset => {
+             const drift = (Math.random() - 0.5) * asset.volatility * (asset.price * 0.01); 
+             let newPrice = asset.price + drift;
+             if (newPrice < 0.01) newPrice = 0.01;
+             return { ...asset, price: newPrice };
+        });
+    }
     return marketState;
 };
 
+// Generate Chart Data (Mocked history for demo performance, or could fetch real history later)
 export const generateChartData = (symbol: string, timeframe: '1D' | '1W' | '1Y') => {
-    const asset = ASSET_LIST.find(a => a.symbol === symbol) || ASSET_LIST[0];
+    const asset = marketState.find(a => a.symbol === symbol) || ASSET_LIST[0];
     const points = timeframe === '1D' ? 24 : timeframe === '1W' ? 7 : 30;
     
     let currentPrice = asset.price;
     const data = [];
     
+    // Generate a believable chart ending at the current real price
     for (let i = 0; i < points; i++) {
-        // Reverse walk
         data.unshift(currentPrice);
-        const drift = (Math.random() - 0.5) * asset.volatility * 20; 
+        // Reverse walk
+        const drift = (Math.random() - 0.5) * asset.volatility * (asset.price * 0.05); 
         currentPrice = currentPrice - drift;
     }
     

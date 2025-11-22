@@ -1,4 +1,5 @@
 
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -276,7 +277,7 @@ const App: React.FC = () => {
                 onOpenWorld={handleOpenWorld}
                 onClaimReward={handleClaimReward}
                 onBuyItem={handleBuyItem}
-                onOpenZoo={() => { if(user.level >= 2) setView('zoo'); else alert("Reach Level 2 to Unlock Market!"); }}
+                onOpenZoo={() => setView('zoo')}
                 onOpenPremium={() => setShowPremiumModal(true)}
                 onOpenAdmin={() => { window.history.pushState({}, '', '/admin'); setView('admin'); }}
             />
