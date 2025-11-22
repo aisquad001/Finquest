@@ -11,32 +11,40 @@ import {
     signInAnonymously,
     signOut as firebaseSignOut,
     onAuthStateChanged,
-    User,
-    AuthError
+    User
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 
-// Configuration using environment variables
+// ------------------------------------------------------------------
+// FIREBASE CONFIGURATION
+// ------------------------------------------------------------------
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
-  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "finquest-app.firebaseapp.com",
-  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "finquest-app",
-  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_FIREBASE_APP_ID
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyDR2GIy-E11dUptoi2LAzsHWdAJn_IoNR0",
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "finquest-453823206066.firebaseapp.com",
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID || "finquest-453823206066",
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET || "finquest-453823206066.firebasestorage.app",
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID || "583622846504",
+  appId: process.env.REACT_APP_FIREBASE_APP_ID || "1:583622846504:web:257545b9ff0eb9d408ed1d",
+  measurementId: "G-M29LK595L7"
 };
 
-// Check if configuration is valid
-const isConfigValid = firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
+// Check if configuration is valid (Real keys do not contain "PASTE_")
+const isConfigValid = firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("PASTE_");
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-export const googleProvider = new GoogleAuthProvider();
-// Add scopes if needed, e.g. googleProvider.addScope('profile');
-// googleProvider.addScope('email');
+// Initialize Analytics safely
+export let analytics: any = null;
+isSupported().then(yes => {
+  if (yes) {
+    analytics = getAnalytics(app);
+  }
+});
 
+export const googleProvider = new GoogleAuthProvider();
 export const appleProvider = new OAuthProvider('apple.com');
 appleProvider.addScope('email');
 appleProvider.addScope('name');
@@ -44,15 +52,13 @@ appleProvider.addScope('name');
 export const signInWithGoogle = async () => {
     try {
         if (!isConfigValid) {
-            console.error("Firebase Config Missing. Please check .env file.");
+            console.error("Firebase Config Invalid");
+            alert("⚠️ CONFIG ERROR: Check services/firebase.ts");
             throw new Error("Firebase not configured.");
         }
         console.log("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
-        // The signed-in user info.
-        const user = result.user;
-        console.log("[Auth] Google Sign In Success:", user.uid);
-        return user;
+        return result.user;
     } catch (error: any) {
         const errorCode = error.code;
         const errorMessage = error.message;
@@ -64,18 +70,14 @@ export const signInWithGoogle = async () => {
 export const signInWithApple = async () => {
     try {
         if (!isConfigValid) {
-            console.error("Firebase Config Missing.");
+            console.error("Firebase Config Invalid");
             throw new Error("Firebase not configured.");
         }
         console.log("[Auth] Starting Apple Sign In...");
         const result = await signInWithPopup(auth, appleProvider);
-        const user = result.user;
-        console.log("[Auth] Apple Sign In Success:", user.uid);
-        return user;
+        return result.user;
     } catch (error: any) {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.error(`[Auth] Apple Sign In Error (${errorCode}):`, errorMessage);
+        console.error(`[Auth] Apple Sign In Error:`, error.message);
         throw error;
     }
 };
@@ -99,7 +101,7 @@ export const signInAsGuest = async () => {
 
 export const logout = async () => {
     try {
-        localStorage.removeItem('finquest_mock_session_uid');
+        localStorage.removeItem('racked_mock_session_uid');
         if (isConfigValid) {
             await firebaseSignOut(auth);
         }
@@ -108,7 +110,7 @@ export const logout = async () => {
     }
 };
 
-// Helper to create a fake user for demo mode
+// Helper to create a fake user for demo mode (fallback)
 const createMockUser = (): User => {
     const uid = `mock_guest_${Date.now()}`;
     return {

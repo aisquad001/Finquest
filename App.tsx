@@ -35,6 +35,9 @@ const App: React.FC = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   
+  // Domain Check State
+  const [domainStatus, setDomainStatus] = useState<'correct' | 'old' | 'localhost'>('correct');
+
   // Navigation State
   const isPortalRoute = window.location.pathname === '/portal';
   const isAdminRoute = window.location.pathname === '/admin';
@@ -47,6 +50,25 @@ const App: React.FC = () => {
 
   // EASTER EGG STATE
   const [konami, setKonami] = useState('');
+
+  // DOMAIN & HTTPS ENFORCER
+  useEffect(() => {
+      const host = window.location.hostname;
+      
+      // 1. Force HTTPS on production
+      if (window.location.protocol === 'http:' && host !== 'localhost') {
+          window.location.href = window.location.href.replace('http:', 'https:');
+      }
+
+      // 2. Check Domain Status
+      if (host === 'racked.gg' || host === 'www.racked.gg') {
+         setDomainStatus('correct');
+      } else if (host === 'localhost') {
+         setDomainStatus('localhost');
+      } else {
+         setDomainStatus('old');
+      }
+  }, []);
 
   // AUTH & SYNC LISTENER
   useEffect(() => {
@@ -248,6 +270,17 @@ const App: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
       
+      {/* DOMAIN MIGRATION BANNER - Shows only on old URL */}
+      {domainStatus === 'old' && (
+          <div 
+            className="fixed top-0 left-0 right-0 z-[9999] bg-gradient-to-r from-neon-pink to-purple-600 text-white text-center font-game text-xs md:text-sm py-3 shadow-[0_0_20px_rgba(255,0,184,0.6)] cursor-pointer animate-pulse border-b-2 border-white flex items-center justify-center gap-2"
+            onClick={() => window.location.href = 'https://racked.gg'}
+          >
+              <span>🚀 RACKED.GG IS LIVE!</span>
+              <span className="bg-white text-neon-pink px-2 py-0.5 rounded text-[10px]">TAP TO SWITCH</span>
+          </div>
+      )}
+
       <VisualEffects />
 
       {/* Background Effects */}
@@ -257,7 +290,7 @@ const App: React.FC = () => {
       </div>
       
       {/* Views */}
-      <div className="relative z-10">
+      <div className={`relative z-10 ${domainStatus === 'old' ? 'pt-10' : ''}`}>
           {view === 'dashboard' && (
             <Dashboard 
                 user={user} 
