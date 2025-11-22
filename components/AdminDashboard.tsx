@@ -49,6 +49,7 @@ import { playSound } from '../services/audio';
 import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
 import { ASSET_LIST } from '../services/stockMarket';
+import { generateLevelContent } from '../services/contentGenerator';
 
 // --- TYPES & INTERFACES ---
 
@@ -244,9 +245,9 @@ const ContentCMS = () => {
         return () => unsubscribe();
     }, []);
 
-    // 2. SEED FUNCTION (NUCLEAR)
+    // 2. SEED FUNCTION (NUCLEAR FALLBACK)
     const handleSeedDB = async () => {
-        if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and replace them with the default 384 lessons. This cannot be undone. Continue?")) return;
+        if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and re-seed the database. Continue?")) return;
         
         setIsProcessing(true);
         try {
@@ -269,26 +270,39 @@ const ContentCMS = () => {
                 await Promise.all(chunks);
             }
 
-            // B. FETCH NEW DATA (With Proxy Fallback)
-            console.log("Downloading seed data...");
+            // B. OBTAIN SEED DATA (Fetch or Generate)
+            console.log("Obtaining seed data...");
+            let seedData: Lesson[] = [];
             const targetUrl = "https://files.catbox.moe/4p3h7k.json";
-            let seedData: any[] = [];
             
             try {
-                // Try direct fetch first
-                const res = await fetch(targetUrl);
-                if (!res.ok) throw new Error(`Direct fetch error: ${res.status}`);
-                seedData = await res.json();
-            } catch (directError) {
-                console.warn("Direct fetch failed, attempting proxy...", directError);
-                // Fallback to CORS proxy
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-                const res = await fetch(proxyUrl);
-                if (!res.ok) throw new Error(`Proxy fetch failed: ${res.status}`);
-                seedData = await res.json();
+                // Attempt 1: CORS Proxy
+                console.log("Attempting fetch via proxy...");
+                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
+                if (!res.ok) throw new Error("Network response was not ok");
+                
+                const text = await res.text();
+                // Check if result is JSON (prevents <HTML> error)
+                if (text.trim().startsWith('<')) throw new Error("Received HTML instead of JSON (URL might be expired/blocked)");
+                
+                seedData = JSON.parse(text);
+                console.log("Downloaded seed data via proxy.");
+            } catch (fetchError) {
+                console.warn("Fetch failed or returned HTML, falling back to local generation:", fetchError);
+                // FALLBACK: Generate Locally
+                WORLDS_METADATA.forEach(world => {
+                    // Generate for 8 levels per world
+                    for (let l = 1; l <= 8; l++) {
+                        const { lessons } = generateLevelContent(world.id, l);
+                        seedData.push(...lessons);
+                    }
+                });
+                console.log(`Generated ${seedData.length} lessons locally.`);
             }
-            
-            if (!Array.isArray(seedData)) throw new Error("Invalid JSON format: Expected array");
+
+            if (!Array.isArray(seedData) || seedData.length === 0) {
+                 throw new Error("Failed to obtain valid seed data.");
+            }
 
             // C. WRITE NEW DATA
             console.log(`Writing ${seedData.length} records...`);
@@ -297,6 +311,7 @@ const ContentCMS = () => {
             let writeCount = 0;
 
             for (const item of seedData) {
+                if (!item.id) continue;
                 const ref = doc(db, "lessons", item.id);
                 writeBatchInst.set(ref, item);
                 writeCount++;
