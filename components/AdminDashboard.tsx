@@ -21,7 +21,8 @@ import {
     CheckCircleIcon,
     TrashIcon,
     PlusIcon,
-    CloudArrowUpIcon
+    CloudArrowUpIcon,
+    CloudArrowDownIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -238,7 +239,15 @@ const ContentCMS = () => {
 
     // Listen to live content
     useEffect(() => {
-        const unsub = subscribeToCollection('lessons', (data) => setLessons(data as Lesson[]));
+        // Subscribe to 'lessons' collection
+        const unsub = subscribeToCollection('lessons', (data) => {
+            // Sort lessons by WorldId then Order for clean display
+            const sorted = (data as Lesson[]).sort((a, b) => {
+                if (a.worldId !== b.worldId) return a.worldId.localeCompare(b.worldId);
+                return (a.order || 0) - (b.order || 0);
+            });
+            setLessons(sorted);
+        });
         return () => unsub();
     }, []);
 
@@ -262,6 +271,29 @@ const ContentCMS = () => {
             await deleteDocument('lessons', id);
             playSound('error');
         }
+    };
+
+    const handleSeedDB = async () => {
+        if (!confirm("Reset and Seed Database with default content? This ensures all 384 lessons are loaded.")) return;
+        setIsUploading(true);
+        try {
+             const res = await fetch("https://files.catbox.moe/4p3h7k.json");
+             const data = await res.json();
+             if (Array.isArray(data)) {
+                 // Process in chunks of 400 to be safe with Firestore batch limit (500)
+                 const chunkSize = 400;
+                 for (let i = 0; i < data.length; i += chunkSize) {
+                     const chunk = data.slice(i, i + chunkSize);
+                     await batchWrite('lessons', chunk);
+                 }
+                 alert(`Success! ${data.length} lessons seeded into database.`);
+                 playSound('levelup');
+             }
+        } catch(e: any) {
+            console.error(e);
+            alert("Error seeding database: " + e.message);
+        }
+        setIsUploading(false);
     };
 
     const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,12 +445,23 @@ const ContentCMS = () => {
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-3xl font-game text-white">Content CMS</h2>
                 <div className="flex gap-4">
-                    <a href="https://files.catbox.moe/4p3h7k.json" download className="text-xs text-blue-400 underline self-center font-bold">Download Sample Template</a>
-                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2">
+                    <a href="https://files.catbox.moe/4p3h7k.json" download className="text-xs text-blue-400 underline self-center font-bold">Download Template</a>
+                    
+                    <button 
+                        onClick={handleSeedDB}
+                        disabled={isUploading}
+                        className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 disabled:opacity-50 shadow-lg"
+                    >
+                        <CloudArrowDownIcon className="w-5 h-5" />
+                        {isUploading ? "Seeding..." : "Seed DB"}
+                    </button>
+
+                    <label className="cursor-pointer bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-lg">
                         <CloudArrowUpIcon className="w-5 h-5" />
-                        {isUploading ? "Uploading..." : "Bulk Upload JSON"}
+                        Bulk Upload
                         <input type="file" className="hidden" accept=".json" onChange={handleBulkUpload} disabled={isUploading} />
                     </label>
+
                     <button onClick={() => { 
                         setEditingId('new'); 
                         setEditForm({ 
@@ -432,7 +475,7 @@ const ContentCMS = () => {
                             coinReward: 50,
                             content: {} 
                         }); 
-                    }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2">
+                    }} className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded-xl flex items-center gap-2 shadow-lg">
                         <PlusIcon className="w-5 h-5" /> Add New
                     </button>
                 </div>
@@ -518,7 +561,10 @@ const ContentCMS = () => {
                     </thead>
                     <tbody className="divide-y divide-slate-700">
                         {lessons.length === 0 ? (
-                            <tr><td colSpan={8} className="p-8 text-center text-slate-500 italic">No custom content loaded. Use Bulk Upload or Add New.</td></tr>
+                            <tr><td colSpan={8} className="p-8 text-center text-slate-500 italic">
+                                No custom content loaded. 
+                                <button onClick={handleSeedDB} className="ml-2 text-purple-400 underline font-bold">Seed Default Content</button>
+                            </td></tr>
                         ) : (
                             lessons.map(l => (
                                 <tr key={l.id} className="hover:bg-slate-700/50 transition-colors">
