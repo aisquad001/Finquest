@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -70,7 +69,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     setNickname(random);
   };
 
-  const handleAuthAction = async (method: 'google' | 'guest') => {
+  const handleAuthAction = async (method: 'google' | 'guest' | 'apple') => {
     console.log("Handle Auth Action Triggered:", method);
     if (isSigningUp) return;
     
@@ -249,30 +248,41 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         🎁
                      </div>
                      <h2 className="font-game text-4xl mb-2 text-center">ALMOST THERE!</h2>
-                     <p className="text-gray-300 text-center mb-8 px-4">Save your progress to claim <span className="text-neon-green font-bold">500 XP</span> + Starter Pack.</p>
+                     <p className="text-gray-300 text-center mb-8 px-4">Save your progress to claim <span className="text-neon-green font-bold">1,000 XP</span> + Starter Pack.</p>
 
                      <div className="w-full max-w-xs space-y-3">
+                        {/* Google */}
                         <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('google'); }}
                             disabled={isSigningUp}
                             className="w-full py-3 bg-white text-black font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-100 btn-3d cursor-pointer z-50 relative disabled:opacity-50"
                         >
-                            {isSigningUp ? 'Signing In...' : (
+                            {isSigningUp ? 'Syncing...' : (
                                 <>
                                     <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" />
                                     Continue with Google
                                 </>
                             )}
                         </button>
-                        <button disabled className="w-full py-3 bg-black text-white border border-white/20 font-bold rounded-xl flex items-center justify-center gap-2 opacity-60 cursor-not-allowed">
+
+                        {/* Apple (Now Added) */}
+                        <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleAuthAction('apple'); }}
+                            disabled={isSigningUp}
+                            className="w-full py-3 bg-black text-white border border-white/20 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-gray-900 btn-3d cursor-pointer z-50 relative disabled:opacity-50"
+                        >
                              <img src="https://www.svgrepo.com/show/511330/apple-173.svg" className="w-5 h-5 invert" />
-                            Apple (Coming Soon)
+                            Sign in with Apple
                         </button>
+
                         <div className="relative py-2">
                              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/10"></div></div>
                              <div className="relative flex justify-center text-xs uppercase"><span className="bg-[#1a0b2e] px-2 text-gray-500">or</span></div>
                         </div>
+                        
+                        {/* Guest */}
                         <button 
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleAuthAction('guest'); }}
@@ -286,6 +296,5 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             </div>
             <div className="swiper-pagination !right-4 !left-auto !top-1/2 !-translate-y-1/2 flex flex-col gap-2"></div>
         </div>
-    </div>
-  );
+    );
 };

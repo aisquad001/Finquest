@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -7,6 +6,7 @@ import { initializeApp } from 'firebase/app';
 import { 
     getAuth, 
     GoogleAuthProvider, 
+    OAuthProvider,
     signInWithPopup, 
     signInAnonymously,
     signOut as firebaseSignOut,
@@ -16,7 +16,6 @@ import {
 import { getFirestore } from 'firebase/firestore';
 
 // Configuration using environment variables
-// Note: If running in an environment without these set, we fall back to Mock Mode.
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "YOUR_API_KEY_HERE",
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || "finquest-app.firebaseapp.com",
@@ -34,10 +33,11 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
+export const appleProvider = new OAuthProvider('apple.com');
 
 export const signInWithGoogle = async () => {
     try {
-        if (!isConfigValid) throw new Error("Firebase not configured. Google Sign In unavailable in demo mode.");
+        if (!isConfigValid) throw new Error("Firebase not configured.");
         console.log("[Auth] Starting Google Sign In...");
         const result = await signInWithPopup(auth, googleProvider);
         return result.user;
@@ -47,9 +47,20 @@ export const signInWithGoogle = async () => {
     }
 };
 
+export const signInWithApple = async () => {
+    try {
+        if (!isConfigValid) throw new Error("Firebase not configured.");
+        console.log("[Auth] Starting Apple Sign In...");
+        const result = await signInWithPopup(auth, appleProvider);
+        return result.user;
+    } catch (error) {
+        console.error("Apple Sign In Error:", error);
+        throw error;
+    }
+};
+
 export const signInAsGuest = async () => {
     try {
-        // Fast-fail or detect invalid key to switch to mock
         if (!isConfigValid) {
             console.warn("[Auth] Invalid API Key. Switching to Mock Guest.");
             return createMockUser();
@@ -57,13 +68,9 @@ export const signInAsGuest = async () => {
 
         console.log("[Auth] Starting Guest Sign In (Anonymous)...");
         const result = await signInAnonymously(auth);
-        console.log("[Auth] Guest Sign In Success:", result.user.uid);
         return result.user;
     } catch (error: any) {
         console.error("Guest Sign In Error:", error);
-        
-        // Fallback to Mock User for ANY error during guest login
-        // This ensures the user can play the game even if Firebase is misconfigured or blocked
         console.warn("[Auth] Falling back to Mock Guest due to error.");
         return createMockUser();
     }
@@ -82,9 +89,6 @@ export const logout = async () => {
 
 // Helper to create a fake user for demo mode
 const createMockUser = (): User => {
-    // Ensure UID is consistent for "Guest" session until cleared? 
-    // Actually, better to generate a new one or store it? 
-    // App.tsx handles storage of the session ID, here we just create a new identity object.
     const uid = `mock_guest_${Date.now()}`;
     return {
         uid,

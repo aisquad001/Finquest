@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -24,7 +23,7 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
 import { addXP, addCoins, purchaseItem, processDailyStreak, devAddResources, triggerMoneyCheat } from './services/gameLogic';
-import { auth, signInWithGoogle, signInAsGuest } from './services/firebase';
+import { auth, signInWithGoogle, signInWithApple, signInAsGuest } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 
@@ -177,6 +176,8 @@ const App: React.FC = () => {
               firebaseUser = await signInAsGuest();
           } else if (data.authMethod === 'google') {
               firebaseUser = await signInWithGoogle();
+          } else if (data.authMethod === 'apple') {
+              firebaseUser = await signInWithApple();
           } else {
               throw new Error("Unknown authentication method");
           }

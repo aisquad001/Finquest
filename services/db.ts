@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -11,6 +10,7 @@ import {
     updateDoc, 
     deleteDoc,
     serverTimestamp,
+    increment,
     Timestamp,
     collection,
     getDocs,
@@ -84,35 +84,80 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
 };
 
 export const createUserDoc = async (uid: string, onboardingData: any) => {
-    const initialData = createInitialUser(onboardingData);
-    const dataToSave = {
-        ...initialData,
-        uid: uid,
-        email: onboardingData.email || '',
-        createdAt: new Date().toISOString(), 
-        lastLoginAt: new Date().toISOString(),
-        isPro: false,
-        proExpiresAt: null
-    };
-
+    // --- MOCK MODE HANDLER ---
     if (uid.startsWith('mock_')) {
         const mockDB = getMockDB();
+        if (mockDB[uid]) {
+             // User Exists
+             mockDB[uid].lastLoginAt = new Date().toISOString();
+             saveMockDB(mockDB);
+             dispatchMockUpdate(uid, mockDB[uid]);
+             return mockDB[uid];
+        }
+        
+        // New User
+        const initialData = createInitialUser(onboardingData);
+        const dataToSave = {
+            ...initialData,
+            uid: uid,
+            email: onboardingData.email || '',
+            createdAt: new Date().toISOString(), 
+            lastLoginAt: new Date().toISOString(),
+            isPro: false,
+            proExpiresAt: null,
+            // Bonus applied directly for mock
+            coins: (initialData.coins || 500) + 500,
+            xp: (initialData.xp || 0) + 200
+        };
         mockDB[uid] = dataToSave;
         saveMockDB(mockDB);
         dispatchMockUpdate(uid, dataToSave);
         return dataToSave;
     }
 
+    // --- REAL FIRESTORE HANDLER ---
     try {
-        const firestoreData = {
-            ...dataToSave,
-            createdAt: serverTimestamp(),
-            lastLoginAt: serverTimestamp()
-        };
-        await setDoc(doc(db, 'users', uid), firestoreData);
-        return dataToSave;
+        const userRef = doc(db, "users", uid);
+        const userSnap = await getDoc(userRef);
+
+        if (!userSnap.exists()) {
+            // Create New User
+            const initialData = createInitialUser(onboardingData);
+            
+            const dataToSave = {
+                ...initialData,
+                uid: uid,
+                email: onboardingData.email || '',
+                createdAt: serverTimestamp(),
+                lastLoginAt: serverTimestamp(),
+                isPro: false,
+                // Ensure consistency with requested fields
+                streak: 1,
+                streakLastDate: new Date().toISOString().split('T')[0],
+                coins: 500, // Base coins
+                xp: 0
+            };
+            
+            await setDoc(userRef, dataToSave);
+
+            // Give first-login bonus ONLY once
+            await updateDoc(userRef, {
+                coins: increment(500),
+                xp: increment(200)
+            });
+
+            // Return the object with estimated bonus for immediate UI update
+            return { ...dataToSave, coins: 1000, xp: 200 };
+
+        } else {
+            // Existing User - Just update login time
+            await updateDoc(userRef, {
+                lastLoginAt: serverTimestamp()
+            });
+            return convertDocToUser(userSnap.data());
+        }
     } catch (error) {
-        console.error("Error creating user doc:", error);
+        console.error("Error creating/fetching user doc:", error);
         throw error;
     }
 };
@@ -165,7 +210,6 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
 // --- CONTENT CRUD (ADMIN CMS) ---
 
 export const upsertLesson = async (lesson: Lesson) => {
-    // Mock Implementation for Demo / Testing
     if (true) {
         const content = getMockContent();
         const idx = content.lessons.findIndex(l => l.id === lesson.id);
@@ -178,8 +222,6 @@ export const upsertLesson = async (lesson: Lesson) => {
         console.log(`[DB] Upserted Lesson: ${lesson.id}`);
         return;
     }
-    // Real Firestore Implementation
-    // await setDoc(doc(db, 'lessons', lesson.id), lesson);
 };
 
 export const deleteLesson = async (lessonId: string) => {
@@ -190,7 +232,6 @@ export const deleteLesson = async (lessonId: string) => {
         console.log(`[DB] Deleted Lesson: ${lessonId}`);
         return;
     }
-    // await deleteDoc(doc(db, 'lessons', lessonId));
 };
 
 export const updateLevelConfig = async (level: LevelData) => {
@@ -203,7 +244,6 @@ export const updateLevelConfig = async (level: LevelData) => {
         console.log(`[DB] Updated Level: ${level.id}`);
         return;
     }
-    // await setDoc(doc(db, 'levels', level.id), level);
 };
 
 export const seedGameData = async () => {
@@ -211,18 +251,15 @@ export const seedGameData = async () => {
     const levels: LevelData[] = [];
     const lessons: Lesson[] = [];
 
-    // Iterate through ALL worlds and ALL levels (8x8 = 64 Levels)
     WORLDS_METADATA.forEach((world) => {
         for (let lvl = 1; lvl <= 8; lvl++) {
-            // Use the Variety Engine to generate unique content for this specific slot
             const { level, lessons: levelLessons } = generateLevelContent(world.id, lvl);
-            
             levels.push(level);
             lessons.push(...levelLessons);
         }
     });
 
-    const isMock = true; // For demo purposes, force mock storage
+    const isMock = true;
     if (isMock) {
         saveMockContent({ levels, lessons });
         console.log(`[SEED] Generated ${levels.length} unique levels and ${lessons.length} lessons.`);
@@ -230,12 +267,10 @@ export const seedGameData = async () => {
 };
 
 export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]> => {
-    // Mock
     const content = getMockContent();
     const mockLevels = content.levels.filter(l => l.worldId === worldId);
     if (mockLevels.length > 0) return mockLevels.sort((a, b) => a.levelNumber - b.levelNumber);
 
-    // If no levels found in DB, generate placeholders so Admin UI doesn't crash
     return Array.from({ length: 8 }, (_, i) => ({
         id: `${worldId}_l${i + 1}`,
         worldId,
@@ -250,7 +285,6 @@ export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]>
 };
 
 export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> => {
-    // Mock
     const content = getMockContent();
     const mockLessons = content.lessons.filter(l => l.levelId === levelId);
     return mockLessons.sort((a, b) => a.order - b.order);
@@ -265,7 +299,6 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         if (!user.progress) user.progress = {};
         if (!user.progress[worldId]) user.progress[worldId] = { level: 0, lessonsCompleted: {}, score: 0 };
         
-        // Logic: If completing level 1, unlock level 2.
         const levelNum = parseInt(levelId.split('_l')[1] || '1');
         
         if (isCompleted && levelNum > user.progress[worldId].level) {
@@ -282,7 +315,6 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         return;
     }
 
-    // Firestore Real Implementation
     try {
         const userRef = doc(db, 'users', uid);
         await updateDoc(userRef, {
