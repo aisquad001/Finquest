@@ -337,21 +337,36 @@ export const createInitialUser = (onboardingData: any): UserState => {
     const today = new Date().toISOString().split('T')[0];
     const code = Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(Math.random() * 900 + 100);
 
-    // Handle Random Generation if Guest/Empty
-    let profile = { nickname: onboardingData.nickname, avatar: onboardingData.avatar };
+    // Generate a base random profile for defaults (ensures avatar is never undefined)
+    const randomProfile = generateRandomProfile();
+
+    let nickname = onboardingData.nickname;
+    let avatar = onboardingData.avatar;
     
-    // Use Google Display Name if available
+    // 1. Use Google Display Name if available (and not strictly guest)
     if (onboardingData.displayName && onboardingData.authMethod !== 'guest') {
-        profile.nickname = onboardingData.displayName;
+        nickname = onboardingData.displayName;
     }
 
-    if (!profile.nickname || onboardingData.authMethod === 'guest') {
-        profile = generateRandomProfile();
+    // 2. If nickname is missing, use random
+    if (!nickname) {
+        nickname = randomProfile.nickname;
+    }
+    
+    // 3. If avatar is missing (common for Google Auth), use random
+    if (!avatar) {
+        avatar = randomProfile.avatar;
+    }
+    
+    // 4. For Guest Mode specifically, unless they manually entered a name (not implemented in UI yet), use full random
+    if (onboardingData.authMethod === 'guest' && !onboardingData.nickname) {
+        nickname = randomProfile.nickname;
+        avatar = randomProfile.avatar;
     }
 
     return {
-        nickname: profile.nickname,
-        avatar: profile.avatar,
+        nickname: nickname,
+        avatar: avatar,
         level: 1, 
         xp: onboardingData.xp || 500, 
         coins: 500,

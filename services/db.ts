@@ -142,6 +142,7 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
             const initialData = createInitialUser(onboardingData);
             
             // SECURITY: Explicitly set default roles
+            // We store dates as timestamps in Firestore, but as strings in the returned object for the app
             const dataToSave = {
                 ...initialData,
                 uid: uid,
@@ -160,7 +161,21 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
             ]);
 
             logger.info("[DB] User document created successfully.");
-            return dataToSave;
+            
+            // Return the user object with ISO strings so the app can use it immediately
+            // without waiting for a fetch
+            return {
+                ...initialData,
+                uid: uid,
+                email: onboardingData.email || '',
+                photoURL: onboardingData.photoURL || null,
+                createdAt: new Date().toISOString(),
+                lastLoginAt: new Date().toISOString(),
+                isAdmin: false,
+                role: 'user',
+                loginType: onboardingData.authMethod || 'google'
+            } as UserState;
+
         } else {
             logger.info("[DB] User exists, updating login time.");
             await updateDoc(userRef, {

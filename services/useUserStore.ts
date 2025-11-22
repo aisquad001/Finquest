@@ -20,6 +20,7 @@ interface UserStore {
     // Actions
     syncUser: (uid: string) => () => void; // Returns unsubscribe function
     clearUser: () => void;
+    setUser: (user: UserState) => void; // NEW: Manual override
     setLoading: (loading: boolean) => void;
     setError: (error: string) => void;
 }
@@ -29,19 +30,21 @@ export const useUserStore = create<UserStore>((set, get) => ({
     loading: true,
     error: null,
 
+    setUser: (user: UserState) => {
+        set({ user, loading: false, error: null });
+    },
+
     syncUser: (uid: string) => {
         set({ loading: true, error: null });
         logger.info(`Syncing user profile`, { uid });
         
         // MOCK MODE SYNC
         if (uid.startsWith('mock_')) {
-            // Initial Fetch
             getUser(uid).then(u => {
                 if (u) set({ user: u, loading: false });
                 else set({ error: "Mock User not found", loading: false });
             });
 
-            // Listen for local updates
             const handleUpdate = (e: any) => {
                 if (e.detail.uid === uid) {
                     set({ user: e.detail.user });
@@ -53,7 +56,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
         // FIREBASE SYNC
         let connectionTimeout: any;
-        let creationTimeout: any;
         let unsub: () => void = () => {};
 
         try {
@@ -61,10 +63,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
             connectionTimeout = setTimeout(() => {
                 if (get().loading) {
                     logger.warn("Firestore connection timed out", { uid });
-                    set({ 
-                        loading: false, 
-                        error: "Server connection slow. Check internet or refresh." 
-                    });
+                    // Do NOT set error here strictly, just warn, as createUserDoc might save us
                 }
             }, 15000);
 
@@ -73,32 +72,16 @@ export const useUserStore = create<UserStore>((set, get) => ({
                     clearTimeout(connectionTimeout); // Connection established
                     
                     if (docSnap.exists()) {
-                        clearTimeout(creationTimeout); // Doc exists, valid state
                         const userData = convertDocToUser(docSnap.data());
                         set({ user: userData, loading: false, error: null });
-                        // Only log this once or if significant change? Keep noisy logs down
-                        // logger.info("User profile updated", { level: userData.level });
                     } else {
                         // User authenticated but doc missing.
                         // This happens momentarily during registration.
                         logger.info("Auth success but profile doc missing. Waiting for creation...", { uid });
-                        
-                        // If this state persists > 10s, something broke in createUserDoc
-                        if (!creationTimeout) {
-                            creationTimeout = setTimeout(() => {
-                                if (!get().user && get().loading) {
-                                    const msg = "Profile creation hung. Please refresh.";
-                                    logger.error(msg, { uid });
-                                    set({ loading: false, error: msg });
-                                }
-                            }, 10000);
-                        }
                     }
                 },
                 (err) => {
                     clearTimeout(connectionTimeout);
-                    clearTimeout(creationTimeout);
-                    
                     logger.error('Firestore Sync Error', { code: err.code, msg: err.message });
                     
                     let msg = err.message;
@@ -113,7 +96,6 @@ export const useUserStore = create<UserStore>((set, get) => ({
             
             return () => {
                 clearTimeout(connectionTimeout);
-                clearTimeout(creationTimeout);
                 unsub();
             };
 

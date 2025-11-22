@@ -31,7 +31,7 @@ import { logger } from './services/logger';
 
 const App: React.FC = () => {
   // Global State
-  const { user, loading: storeLoading, error: storeError, syncUser, clearUser, setError } = useUserStore();
+  const { user, loading: storeLoading, error: storeError, syncUser, clearUser, setError, setUser, setLoading } = useUserStore();
   
   // UI State
   const [showOnboarding, setShowOnboarding] = useState(true); // Default to true until auth check
@@ -66,12 +66,12 @@ const App: React.FC = () => {
   // DOMAIN & HTTPS ENFORCER
   useEffect(() => {
       const host = window.location.hostname;
-      if (window.location.protocol === 'http:' && host !== 'localhost' && !host.includes('127.0.0.1')) {
+      if (window.location.protocol === 'http:' && !host.includes('localhost') && !host.includes('127.0.0.1') && !host.startsWith('192.168.')) {
           window.location.href = window.location.href.replace('http:', 'https:');
       }
       if (host === 'racked.gg' || host === 'www.racked.gg' || host.endsWith('.run.app') || host.includes('firebaseapp.com')) {
          setDomainStatus('correct');
-      } else if (host === 'localhost' || host.includes('127.0.0.1')) {
+      } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
          setDomainStatus('localhost');
       } else {
          setDomainStatus('old');
@@ -98,21 +98,25 @@ const App: React.FC = () => {
               
               // 2. Ensure Profile Exists (Auto-Create if missing)
               try {
-                 await createUserDoc(firebaseUser.uid, { 
+                 const newUserData = await createUserDoc(firebaseUser.uid, { 
                      email: firebaseUser.email, 
                      photoURL: firebaseUser.photoURL,
                      displayName: firebaseUser.displayName,
                      authMethod: firebaseUser.isAnonymous ? 'guest' : 'google'
                  });
-                 // If successful, syncUser snapshot will fire and clear loading.
-                 setShowOnboarding(false);
+
+                 // CRITICAL FIX: Manually force state update to prevent race condition
+                 // if the snapshot listener is slow or blocked.
+                 if (newUserData) {
+                     setUser(newUserData);
+                 }
                  
+                 setShowOnboarding(false);
                  requestNotificationPermission().then(granted => {
                     if (granted) scheduleDemoNotifications();
                  });
 
               } catch (e: any) {
-                 // CRITICAL FIX: Stop the loading spinner if DB creation fails
                  logger.error("Profile auto-creation failed", { error: e.message });
                  setError("Failed to initialize profile. " + e.message);
               }
@@ -219,6 +223,11 @@ const App: React.FC = () => {
       }
   };
 
+  const handleManualLogout = async () => {
+      await logout();
+      window.location.reload();
+  };
+
   // --- RENDER ---
 
   if (view === 'portal') {
@@ -237,12 +246,19 @@ const App: React.FC = () => {
                   <div className="text-6xl mb-4 animate-bounce">💸</div>
                   <h2 className="font-game text-white text-2xl">RACKING UP...</h2>
               </div>
-              {storeError && (
+              {storeError ? (
                   <div className="bg-red-500/20 border border-red-500 text-red-200 p-4 rounded-xl max-w-md mb-8 animate-pop-in">
                       <p className="font-bold mb-2">⚠️ Error</p>
                       <p className="text-xs mb-4">{storeError}</p>
                       <button onClick={() => window.location.reload()} className="w-full py-3 bg-white text-black font-bold rounded-xl">RETRY</button>
                   </div>
+              ) : (
+                  <button 
+                    onClick={handleManualLogout} 
+                    className="mt-8 text-gray-500 hover:text-white text-xs font-bold underline"
+                  >
+                      Stuck? Sign Out
+                  </button>
               )}
           </div>
       );
