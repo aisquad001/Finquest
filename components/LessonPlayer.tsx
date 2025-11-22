@@ -90,9 +90,6 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                 }}
             >
                 <div className="text-black font-black text-3xl mb-4 leading-tight">{currentCard.text}</div>
-                <div className={`text-white font-bold uppercase tracking-widest px-4 py-1 rounded-full ${currentCard.isRight ? 'bg-green-500' : 'bg-red-500'}`}>
-                    {currentCard.isRight ? 'Good' : 'Bad'} Idea?
-                </div>
             </motion.div>
             <div className="flex gap-12 mt-12">
                 <button onClick={(e) => handleSwipe('left', e)} className="p-6 bg-red-500 rounded-full border-b-[6px] border-red-800 active:translate-y-1 transition-transform hover:scale-110"><XMarkIcon className="w-10 h-10 text-white"/></button>
