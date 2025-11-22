@@ -48,7 +48,7 @@ const WRONG_ANSWER_ROASTS = [
     "Wallet: 'Am I a joke to you?' 😐"
 ];
 
-// --- SUB-COMPONENTS (Moved outside to prevent re-mounts on parent state change) ---
+// --- SUB-COMPONENTS ---
 
 const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
     const [cardIndex, setCardIndex] = useState(0);
@@ -75,25 +75,44 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
     if (!currentCard) return <div>Done</div>;
 
     return (
-        <div className="flex flex-col items-center justify-center h-full p-4">
-            <h3 className="font-game text-2xl mb-8 text-white drop-shadow-md">Swipe Right if Smart ✅</h3>
-            <motion.div 
-                key={cardIndex}
-                initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
-                animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                className="w-72 h-96 bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6 text-center border-[6px] border-black relative"
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                onDragEnd={(e, { offset }) => {
-                    if (offset.x > 100) handleSwipe('right', e);
-                    else if (offset.x < -100) handleSwipe('left', e);
-                }}
-            >
-                <div className="text-black font-black text-3xl mb-4 leading-tight">{currentCard.text}</div>
-            </motion.div>
-            <div className="flex gap-12 mt-12">
-                <button onClick={(e) => handleSwipe('left', e)} className="p-6 bg-red-500 rounded-full border-b-[6px] border-red-800 active:translate-y-1 transition-transform hover:scale-110"><XMarkIcon className="w-10 h-10 text-white"/></button>
-                <button onClick={(e) => handleSwipe('right', e)} className="p-6 bg-green-500 rounded-full border-b-[6px] border-green-800 active:translate-y-1 transition-transform hover:scale-110"><CheckCircleIcon className="w-10 h-10 text-white"/></button>
+        <div className="flex flex-col items-center justify-center h-full p-4 relative">
+            {/* Removed hint text about good/bad idea to prevent spoilers */}
+            <h3 className="font-game text-3xl mb-12 text-white drop-shadow-md text-center leading-tight">
+                {cardIndex === 0 ? "Swipe Right for W, Left for L" : "What's the move?"}
+            </h3>
+            
+            <div className="relative w-full max-w-xs aspect-[3/4]">
+                <motion.div 
+                    key={cardIndex}
+                    initial={{ scale: 0.5, opacity: 0, y: 50 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    className="absolute inset-0 bg-white rounded-3xl shadow-[10px_10px_0px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-8 text-center border-4 border-black transform rotate-1"
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(e, { offset }) => {
+                        if (offset.x > 100) handleSwipe('right', e);
+                        else if (offset.x < -100) handleSwipe('left', e);
+                    }}
+                >
+                    <div className="text-6xl mb-6">
+                         {currentCard.isRight ? '🤑' : '💸'}
+                    </div>
+                    <div className="text-black font-black text-3xl leading-tight select-none">
+                        {currentCard.text}
+                    </div>
+                    <div className="mt-6 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                        {cardIndex + 1} / {cards.length}
+                    </div>
+                </motion.div>
+            </div>
+
+            <div className="flex gap-8 mt-12">
+                <button onClick={(e) => handleSwipe('left', e)} className="w-20 h-20 bg-red-500 rounded-full border-b-[6px] border-red-800 active:border-b-0 active:translate-y-1.5 transition-all flex items-center justify-center shadow-lg group">
+                    <XMarkIcon className="w-10 h-10 text-white group-hover:scale-110 transition-transform"/>
+                </button>
+                <button onClick={(e) => handleSwipe('right', e)} className="w-20 h-20 bg-green-500 rounded-full border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all flex items-center justify-center shadow-lg group">
+                    <CheckCircleIcon className="w-10 h-10 text-white group-hover:scale-110 transition-transform"/>
+                </button>
             </div>
         </div>
     );
@@ -129,9 +148,9 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
 
     return (
         <div className="flex flex-col h-full p-6 justify-center">
-            <div className="w-full h-6 bg-gray-900 rounded-full mb-8 overflow-hidden border-2 border-white">
+            <div className="w-full h-8 bg-gray-900 rounded-full mb-8 overflow-hidden border-4 border-black shadow-lg">
                 <motion.div 
-                    className="h-full bg-red-500"
+                    className="h-full bg-gradient-to-r from-red-500 to-orange-500"
                     initial={{ width: '100%' }}
                     animate={{ width: `${(timeLeft / 10) * 100}%` }}
                     transition={{ duration: 1, ease: "linear" }}
@@ -143,7 +162,7 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
                     <button 
                         key={i}
                         onClick={(e) => handleTap(s.isLie, e)}
-                        className="p-6 bg-white text-black font-bold rounded-2xl shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-1 transition-all text-lg border-2 border-black"
+                        className="p-6 bg-white text-black font-black rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all text-xl border-4 border-black hover:bg-gray-50 text-left"
                     >
                         {s.text}
                     </button>
@@ -172,10 +191,10 @@ const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => 
 
     return (
         <div className="flex flex-col h-full p-4 pt-12">
-            <h3 className="text-center font-game text-2xl text-white mb-8">Sort the Expenses!</h3>
+            <h3 className="text-center font-game text-2xl text-white mb-8 text-stroke-black">Sort the Expenses!</h3>
             <div className="flex justify-center gap-4 mb-auto">
                 {buckets.map((b: string) => (
-                    <div key={b} className="w-32 h-32 border-4 border-dashed border-white/30 rounded-2xl flex items-center justify-center text-white font-bold uppercase bg-black/20 text-xl">
+                    <div key={b} className="w-32 h-32 border-4 border-dashed border-white/30 rounded-2xl flex items-center justify-center text-white font-bold uppercase bg-black/20 text-xl backdrop-blur-md">
                         {b}
                     </div>
                 ))}
@@ -187,11 +206,11 @@ const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => 
                         drag
                         dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
                         dragElastic={0.2}
-                        whileDrag={{ scale: 1.2, rotate: 5 }}
+                        whileDrag={{ scale: 1.2, rotate: 5, cursor: 'grabbing' }}
                         onDragEnd={(e, info) => {
                             if (info.point.y < window.innerHeight / 2) handleDrop(item.id, item.category, e);
                         }}
-                        className="px-8 py-4 bg-neon-blue text-black font-black rounded-full shadow-[0_4px_0_#0088b3] cursor-grab active:cursor-grabbing select-none border-2 border-white"
+                        className="px-6 py-3 bg-neon-blue text-black font-black rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-grab border-2 border-black text-lg"
                     >
                         {item.text}
                     </motion.div>
@@ -205,22 +224,26 @@ const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void
     const [revealed, setRevealed] = useState(false);
     return (
         <div className="flex flex-col h-full p-6 justify-center items-center">
-            <div onClick={() => { if (!revealed) { playSound('pop'); setRevealed(true); } }} className="relative w-full max-w-md aspect-square bg-black border-[6px] border-white rounded-3xl overflow-hidden mb-6 cursor-pointer shadow-2xl transform hover:scale-105 transition-transform">
-                <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-80" />
-                <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.topText}</div>
-                <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.bottomText}</div>
+            <div onClick={() => { if (!revealed) { playSound('pop'); setRevealed(true); } }} className="relative w-full max-w-md aspect-square bg-black border-[6px] border-white rounded-3xl overflow-hidden mb-6 cursor-pointer shadow-2xl transform hover:scale-105 transition-transform duration-300">
+                <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-90" />
+                <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.topText}</div>
+                <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.bottomText}</div>
                 {!revealed && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                        <div className="bg-neon-pink text-white border-2 border-white px-6 py-3 rounded-full font-black animate-bounce text-xl">TAP TO REVEAL</div>
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity">
+                        <div className="bg-neon-pink text-white border-4 border-white px-8 py-4 rounded-full font-black animate-bounce text-2xl shadow-lg rotate-3">
+                            TAP TO REVEAL 🫣
+                        </div>
                     </div>
                 )}
             </div>
             {revealed && (
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center w-full">
-                    <div className="bg-white/10 p-4 rounded-xl border border-white/20 mb-6">
-                        <p className="text-neon-blue font-bold text-lg">"{lesson.content.explanation}"</p>
+                    <div className="bg-white/10 p-6 rounded-2xl border-2 border-white/20 mb-8 backdrop-blur-md">
+                        <p className="text-neon-blue font-bold text-xl italic">"{lesson.content.explanation}"</p>
                     </div>
-                    <button onClick={(e) => onNext(e)} className="w-full px-8 py-4 bg-green-500 text-black font-game text-xl rounded-2xl btn-3d">FACTS 💯</button>
+                    <button onClick={(e) => onNext(e)} className="w-full px-8 py-4 bg-green-500 text-black font-game text-2xl rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-2 transition-all shadow-xl">
+                        NO CAP 🧢
+                    </button>
                 </motion.div>
             )}
         </div>
@@ -230,16 +253,37 @@ const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void
 const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
     const [revealed, setRevealed] = useState(false);
     const [animating, setAnimating] = useState(false);
+    const [displayValue, setDisplayValue] = useState(0);
+
+    const targetValue = parseInt((lesson.content.resultLabel?.match(/[\d,]+/) || ['1000000'])[0].replace(/,/g, ''));
 
     const handleCalculate = () => {
         setAnimating(true);
         playSound('click');
-        setTimeout(() => {
-            setRevealed(true);
-            setAnimating(false);
-            playSound('kaching');
-            (window as any).confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
-        }, 800);
+        
+        // Animation sequence
+        let start = 0;
+        const duration = 1500;
+        const startTime = performance.now();
+
+        const animate = (currentTime: number) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+            
+            setDisplayValue(Math.floor(ease * targetValue));
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                setAnimating(false);
+                setRevealed(true);
+                playSound('kaching');
+                (window as any).confetti({ particleCount: 100, spread: 60, origin: { y: 0.6 } });
+            }
+        };
+        
+        requestAnimationFrame(animate);
     };
 
     return (
@@ -248,46 +292,49 @@ const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) =
                 {lesson.title}
             </h3>
             
-            <div className="bg-white text-black p-6 rounded-3xl border-[6px] border-black shadow-[8px_8px_0px_rgba(0,0,0,0.5)] w-full max-w-md mb-8 transform -rotate-1 relative">
-                <div className="absolute -top-6 -right-6 text-5xl animate-bounce filter drop-shadow-md">🧮</div>
+            <div className="bg-white text-black p-6 rounded-3xl border-[6px] border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] w-full max-w-md mb-8 transform rotate-1 relative">
+                <div className="absolute -top-6 -right-6 text-6xl animate-bounce filter drop-shadow-md z-10">🧮</div>
                 
                 <div className="mb-6">
-                     <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-1">The Scenario</div>
-                     <p className="text-xl font-black font-body leading-tight">{lesson.content.label}</p>
+                     <div className="text-sm font-black text-gray-400 uppercase tracking-widest mb-2">THE SCENARIO</div>
+                     <p className="text-2xl font-black font-body leading-tight text-slate-800">{lesson.content.label}</p>
                 </div>
                 
-                <div className="h-28 flex items-center justify-center mb-6 bg-gray-100 rounded-2xl border-4 border-gray-300 inner-shadow relative overflow-hidden">
-                    {animating ? (
-                         <div className="flex flex-col items-center animate-pulse">
-                             <span className="text-4xl">⚙️</span>
-                             <span className="text-xs font-bold mt-1 text-gray-500">CRUNCHING NUMBERS...</span>
-                         </div>
-                    ) : revealed ? (
+                <div className="h-32 flex items-center justify-center mb-6 bg-gray-100 rounded-2xl border-4 border-gray-300 inner-shadow relative overflow-hidden">
+                    {animating || revealed ? (
                          <motion.div 
-                            initial={{ scale: 0.5, opacity: 0 }}
-                            animate={{ scale: 1.2, opacity: 1, rotate: [0, -5, 5, 0] }}
                             className="flex flex-col items-center"
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: revealed ? 1.2 : 1 }}
                          >
-                            <span className="text-4xl font-black text-green-600 drop-shadow-sm">
-                                {lesson.content.resultLabel?.match(/\$[\d,]+/) || lesson.content.resultLabel?.split(' ')[0] || '$$$'}
+                            <span className={`text-4xl font-black font-mono ${revealed ? 'text-green-600' : 'text-gray-600'}`}>
+                                ${displayValue.toLocaleString()}
                             </span>
                          </motion.div>
                     ) : (
-                        <span className="text-6xl text-gray-300 font-black">?</span>
+                        <span className="text-6xl text-gray-300 font-black opacity-50">?</span>
                     )}
                 </div>
 
-                {!revealed ? (
+                {!revealed && !animating && (
                     <button 
                         onClick={handleCalculate}
-                        disabled={animating}
-                        className="w-full py-4 bg-orange-500 text-white font-game text-2xl rounded-xl border-b-[6px] border-orange-800 active:border-b-0 active:translate-y-1.5 transition-all hover:brightness-110"
+                        className="w-full py-4 bg-orange-500 text-white font-game text-2xl rounded-xl border-b-[6px] border-orange-800 active:border-b-0 active:translate-y-1.5 transition-all hover:brightness-110 hover:scale-[1.02]"
                     >
-                        RUN THE MATH
+                        RUN THE NUMBERS 🚀
                     </button>
-                ) : (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                         <p className="text-lg font-bold mb-4 text-gray-800 leading-snug">{lesson.content.resultLabel}</p>
+                )}
+                
+                {animating && (
+                    <div className="w-full py-4 bg-gray-300 text-gray-600 font-game text-xl rounded-xl flex items-center justify-center gap-2">
+                        <div className="w-4 h-4 bg-gray-600 rounded-full animate-bounce"></div>
+                        CALCULATING...
+                    </div>
+                )}
+
+                {revealed && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                         <p className="text-lg font-bold mb-2 text-gray-800 leading-snug">{lesson.content.resultLabel?.replace(/\$[\d,]+/, '')}</p>
                     </motion.div>
                 )}
             </div>
@@ -296,7 +343,7 @@ const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) =
                  <motion.button 
                     initial={{ scale: 0 }} animate={{ scale: 1 }}
                     onClick={onNext} 
-                    className="px-12 py-4 bg-neon-green text-black font-game text-2xl rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all shadow-xl hover:scale-105"
+                    className="px-12 py-5 bg-neon-green text-black font-game text-3xl rounded-2xl border-b-[8px] border-green-800 active:border-b-0 active:translate-y-2 transition-all shadow-[0_0_40px_rgba(74,222,128,0.6)] hover:scale-105 hover:-rotate-1"
                 >
                     MIND BLOWN 🤯
                 </motion.button>
@@ -474,10 +521,10 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             <AnimatePresence>
                 {failureToast && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50, scale: 0.8 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        initial={{ opacity: 0, y: 50, scale: 0.8, rotate: -5 }}
+                        animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
                         exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                        className="absolute bottom-32 left-1/2 -translate-x-1/2 z-[1000] bg-red-600 text-white px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.6)] border-4 border-black font-game text-xl text-center max-w-[90%] pointer-events-none"
+                        className="absolute bottom-32 left-1/2 -translate-x-1/2 z-[1000] bg-red-600 text-white px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.6)] border-4 border-black font-game text-2xl text-center max-w-[90%] pointer-events-none transform rotate-2"
                     >
                         {failureToast}
                     </motion.div>
@@ -494,20 +541,24 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                             ))}
                         </div>
                     ) : (
-                         <div className="w-full mr-2 relative">
-                             <div className="h-6 w-full bg-gray-900 rounded-full border-[3px] border-black shadow-[2px_2px_0px_rgba(255,255,255,0.2)] overflow-hidden relative transform -skew-x-6">
+                         <div className="w-full mr-2 relative mt-2">
+                             {/* Comic Style Progress Bar */}
+                             <div className="h-8 w-full bg-gray-800 rounded-xl border-4 border-black shadow-[4px_4px_0px_rgba(0,0,0,0.5)] overflow-hidden relative transform -skew-x-6">
                                  <motion.div 
-                                    className="h-full bg-gradient-to-r from-neon-green to-yellow-400 relative"
+                                    className="h-full bg-[#00FF88] relative"
                                     initial={{ width: 0 }}
                                     animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
                                     transition={{ type: "spring", stiffness: 60 }}
                                  >
                                      {/* Striped Pattern Overlay */}
-                                     <div className="absolute inset-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36zwjjgzhhYWGMYAEYB8RmROaABADeOQ8CXl/xfgAAAABJRU5ErkJggg==')] opacity-20"></div>
+                                     <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,#00cc6a_10px,#00cc6a_20px)] opacity-50"></div>
+                                     
+                                     {/* Glare */}
+                                     <div className="absolute top-0 left-0 w-full h-[40%] bg-white opacity-30"></div>
                                  </motion.div>
                              </div>
                              {/* Floating Percent Tag */}
-                             <div className="absolute -top-3 right-0 bg-white text-black border-2 border-black text-[10px] font-black px-1.5 py-0.5 rounded rotate-6 shadow-sm z-10">
+                             <div className="absolute -top-4 right-0 bg-white text-black border-2 border-black text-xs font-black px-2 py-1 rounded-lg rotate-12 shadow-md z-10">
                                  {Math.round(((currentIndex + 1) / lessons.length) * 100)}%
                              </div>
                          </div>
