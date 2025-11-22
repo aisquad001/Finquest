@@ -27,6 +27,9 @@ export interface UserState {
     xp: number;
     coins: number;
     
+    // Profile Status
+    isProfileComplete?: boolean;
+
     // Security & Auth
     isAdmin: boolean; 
     role: 'user' | 'admin' | 'mod';
@@ -337,24 +340,14 @@ export const createInitialUser = (onboardingData: any): UserState => {
     const today = new Date().toISOString().split('T')[0];
     const code = Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(Math.random() * 900 + 100);
 
-    // Generate a base random profile for defaults (ensures avatar is never undefined)
+    // Generate a base random profile for defaults
     const randomProfile = generateRandomProfile();
 
-    // FORCE RANDOM NICKNAME (Avatar Name) instead of Real Name
-    // The user specifically requested "use users avatar name not the real name"
-    // so we override any Google Display Name with our generated one.
+    // We intentionally set isProfileComplete to false so the user 
+    // is forced to confirm/change these random values on first login.
+    
     let nickname = randomProfile.nickname; 
-    let avatar = onboardingData.avatar;
-    
-    // If avatar is missing (common for Google Auth), use random
-    if (!avatar) {
-        avatar = randomProfile.avatar;
-    }
-    
-    // FINAL SAFEGUARD: Ensure avatar is an object to prevent Firestore undefined errors
-    if (!avatar || typeof avatar !== 'object' || !avatar.emoji) {
-        avatar = randomProfile.avatar;
-    }
+    let avatar = randomProfile.avatar;
 
     return {
         nickname: nickname,
@@ -364,6 +357,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
         coins: 500,
         subscriptionStatus: 'free',
         lifetimeSpend: 0,
+        isProfileComplete: false, // Forces profile setup screen
         
         // Security Defaults
         isAdmin: false,

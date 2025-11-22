@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,11 +13,13 @@ import { PortalDashboard } from './components/PortalDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { PremiumModal } from './components/PremiumModal';
 import { VisualEffects } from './components/VisualEffects';
+import { ProfileSetup } from './components/ProfileSetup';
 import { playSound } from './services/audio';
 import { trackEvent } from './services/analytics';
 import { 
     WORLDS_METADATA,
     WorldData,
+    UserState
 } from './services/gamification';
 import { requestNotificationPermission, scheduleDemoNotifications } from './services/notifications';
 
@@ -34,6 +37,7 @@ const App: React.FC = () => {
   // UI State
   const [showOnboarding, setShowOnboarding] = useState(true); // Default to true until auth check
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [domainStatus, setDomainStatus] = useState<'correct' | 'old' | 'localhost'>('correct');
   const [isTargetReady, setIsTargetReady] = useState(false);
 
@@ -207,6 +211,15 @@ const App: React.FC = () => {
       if (user?.uid) await updateUser(user.uid, { portfolio: newPortfolio });
   };
 
+  const handleProfileSave = async (data: Partial<UserState>) => {
+      if (user?.uid) {
+          await updateUser(user.uid, data);
+          // Optimistic update for immediate UI feedback
+          setUser({ ...user, ...data });
+          setIsEditingProfile(false);
+      }
+  };
+
   // TRIGGERED BY ONBOARDING BUTTONS
   const handleOnboardingAuth = async (data: any) => {
       try {
@@ -268,6 +281,17 @@ const App: React.FC = () => {
       return <Onboarding onComplete={handleOnboardingAuth} />;
   }
 
+  // PROFILE SETUP (New User or Editing)
+  if (user && (!user.isProfileComplete || isEditingProfile)) {
+      return (
+          <ProfileSetup 
+              user={user} 
+              onSave={handleProfileSave} 
+              isNewUser={!user.isProfileComplete} 
+          />
+      );
+  }
+
   return (
     <div className="min-h-[100dvh] bg-[#1a0b2e] text-white overflow-x-hidden font-body selection:bg-neon-pink selection:text-white relative">
       
@@ -294,6 +318,7 @@ const App: React.FC = () => {
                 onOpenZoo={() => setView('zoo')}
                 onOpenPremium={() => setShowPremiumModal(true)}
                 onOpenAdmin={() => { window.history.pushState({}, '', '/admin'); setView('admin'); }}
+                onEditProfile={() => setIsEditingProfile(true)}
             />
           )}
           

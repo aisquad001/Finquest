@@ -17,7 +17,8 @@ import {
     ShareIcon,
     ExclamationTriangleIcon,
     BoltIcon,
-    ArrowRightOnRectangleIcon
+    ArrowRightOnRectangleIcon,
+    PencilSquareIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -44,9 +45,10 @@ interface DashboardProps {
     onOpenZoo: () => void;
     onOpenPremium: () => void;
     onOpenAdmin: () => void;
+    onEditProfile: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin, onEditProfile }) => {
     const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
@@ -235,6 +237,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                     <div className="text-white font-bold truncate">{user.nickname}</div>
                                     <div className="text-xs text-slate-500">{user.loginType === 'guest' ? 'Guest Account' : user.email}</div>
                                 </div>
+                                <button onClick={() => { onEditProfile(); setShowProfileMenu(false); }} className="w-full text-left px-3 py-2 text-white hover:bg-slate-800 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    <PencilSquareIcon className="w-4 h-4 text-neon-blue" /> Edit Profile
+                                </button>
                                 {user.isAdmin && (
                                     <button onClick={onOpenAdmin} className="w-full text-left px-3 py-2 text-yellow-400 hover:bg-slate-800 rounded-lg text-sm font-bold flex items-center gap-2">
                                         <BoltIcon className="w-4 h-4" /> God Mode
