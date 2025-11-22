@@ -20,12 +20,16 @@ import { StockAsset, ASSET_LIST } from './stockMarket';
 export interface UserState {
     uid?: string; // Firebase UID
     nickname: string;
+    email?: string;
     avatar: any;
     level: number;
     xp: number;
     coins: number;
     
-    isAdmin?: boolean; // Access Control
+    // Security & Auth
+    isAdmin: boolean; 
+    role: 'user' | 'admin' | 'mod';
+    loginType: 'guest' | 'google' | 'apple' | 'email';
 
     // Monetization
     subscriptionStatus: 'free' | 'pro';
@@ -298,19 +302,49 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
     return Math.max(1, Math.min(10, score));
 };
 
+export const generateRandomProfile = () => {
+    const nicknames = [
+        "MoneyNinja", "CashKing", "ProfitPro", "StonksMaster", 
+        "WealthWiz", "CryptoKid", "BudgetBoss", "SavingsSquad"
+    ];
+    const randomName = `${nicknames[Math.floor(Math.random() * nicknames.length)]}${Math.floor(Math.random() * 999)}`;
+    
+    const emojis = ['😎', '🤠', '👽', '👻', '🤖', '😼'];
+    const outfits = ['👕', '🧥', '👗', '🥋', '🦺'];
+    
+    return {
+        nickname: randomName,
+        avatar: {
+            emoji: emojis[Math.floor(Math.random() * emojis.length)],
+            outfit: outfits[Math.floor(Math.random() * outfits.length)],
+            accessory: '🧢',
+            bg: 'bg-neon-blue'
+        }
+    };
+};
+
 export const createInitialUser = (onboardingData: any): UserState => {
     const today = new Date().toISOString().split('T')[0];
     const code = Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(Math.random() * 900 + 100);
 
+    // Handle Random Generation if Guest/Empty
+    let profile = { nickname: onboardingData.nickname, avatar: onboardingData.avatar };
+    if (!profile.nickname || onboardingData.authMethod === 'guest') {
+        profile = generateRandomProfile();
+    }
+
     return {
-        nickname: onboardingData.nickname,
-        avatar: onboardingData.avatar,
+        nickname: profile.nickname,
+        avatar: profile.avatar,
         level: 1, 
         xp: onboardingData.xp || 500, 
         coins: 500,
         subscriptionStatus: 'free',
         
+        // Security Defaults
         isAdmin: false,
+        role: 'user',
+        loginType: onboardingData.authMethod || 'guest',
 
         referralCode: code,
         referralCount: 0,

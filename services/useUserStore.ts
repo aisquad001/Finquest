@@ -82,7 +82,7 @@ export const useUserStore = create<UserStore>((set) => ({
                     
                     let msg = err.message;
                     if (err.code === 'permission-denied') {
-                        msg = "Database Locked. Please enable 'allow read, write: if request.auth != null' in Firebase Console > Firestore Rules.";
+                        msg = "DATABASE LOCKED: Please go to Firebase Console -> Firestore Database -> Rules and set 'allow read, write: if request.auth != null;'";
                     }
                     if (err.code === 'unavailable') msg = "Network Offline. Please check connection.";
 

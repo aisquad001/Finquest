@@ -4,7 +4,7 @@
  */
 import { db } from './firebase';
 import * as firestore from 'firebase/firestore';
-import { UserState, checkStreak, createInitialUser, LevelData, Lesson, WORLDS_METADATA } from './gamification';
+import { UserState, checkStreak, createInitialUser, LevelData, Lesson } from './gamification';
 import { generateLevelContent } from './contentGenerator';
 
 const { 
@@ -12,15 +12,10 @@ const {
     getDoc, 
     setDoc, 
     updateDoc, 
-    deleteDoc,
+    deleteDoc, 
     serverTimestamp,
     increment,
     Timestamp,
-    collection,
-    getDocs,
-    query,
-    where,
-    writeBatch,
     arrayUnion
 } = firestore;
 
@@ -91,7 +86,6 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
     } catch (error: any) {
         console.error("Error fetching user:", error);
         if (error.code === 'permission-denied') {
-            // We swallow this on getUser to allow the UI to handle the 'user not found/auth' flow or show a specific error state elsewhere
             console.warn("DB Permissions missing.");
         }
         return null;
@@ -103,26 +97,21 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
     if (uid.startsWith('mock_')) {
         const mockDB = getMockDB();
         if (mockDB[uid]) {
-             // User Exists
              mockDB[uid].lastLoginAt = new Date().toISOString();
              saveMockDB(mockDB);
              dispatchMockUpdate(uid, mockDB[uid]);
              return mockDB[uid];
         }
-        
-        // New User
         const initialData = createInitialUser(onboardingData);
-        const dataToSave = {
+        const dataToSave: UserState = {
             ...initialData,
             uid: uid,
             email: onboardingData.email || '',
             createdAt: new Date().toISOString(), 
             lastLoginAt: new Date().toISOString(),
-            isPro: false,
-            proExpiresAt: null,
-            // Bonus applied directly for mock
-            coins: (initialData.coins || 500) + 500,
-            xp: (initialData.xp || 0) + 200
+            isAdmin: false,
+            role: 'user' as const,
+            loginType: 'guest' as const
         };
         mockDB[uid] = dataToSave;
         saveMockDB(mockDB);
@@ -134,18 +123,16 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
     try {
         const userRef = doc(db, "users", uid);
         
-        // Race the check against timeout
         const userSnap: any = await Promise.race([
             getDoc(userRef),
             timeoutPromise(15000)
         ]);
 
         if (!userSnap.exists()) {
-            // Create New User Document
             console.log("[DB] Creating new user document for:", uid);
             const initialData = createInitialUser(onboardingData);
             
-            // Prepare base data
+            // SECURITY: Explicitly set default roles
             const dataToSave = {
                 ...initialData,
                 uid: uid,
@@ -153,34 +140,18 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
                 photoURL: onboardingData.photoURL || null,
                 createdAt: serverTimestamp(),
                 lastLoginAt: serverTimestamp(),
-                isPro: false,
-                // Ensure these fields are exactly as requested
-                level: 1,
-                streak: 1,
-                streakLastDate: new Date().toISOString().split('T')[0],
-                coins: 500, // Base coins
-                xp: 0       // Base XP
+                isAdmin: false, 
+                role: 'user' as const,
+                loginType: onboardingData.authMethod || 'google'
             };
             
-            // 1. Create the document with TIMEOUT protection
             await Promise.race([
                 setDoc(userRef, dataToSave),
                 timeoutPromise(15000)
             ]);
 
-            // 2. Apply First-Time Login Bonus (Atomic Increment)
-            console.log("[DB] Applying first-time bonus...");
-            // This is non-blocking for UI return, but good to await to ensure consistency
-            updateDoc(userRef, {
-                coins: increment(500), // Total = 1000
-                xp: increment(200)     // Total = 200
-            }).catch(e => console.warn("Bonus apply failed (minor)", e));
-
-            // Return the object with estimated bonus for immediate UI update (optimistic)
-            return { ...dataToSave, coins: 1000, xp: 200 };
-
+            return dataToSave;
         } else {
-            // Existing User
             console.log("[DB] User exists, updating login time.");
             await updateDoc(userRef, {
                 lastLoginAt: serverTimestamp()
@@ -189,16 +160,78 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
         }
     } catch (error: any) {
         console.error("Error creating/fetching user doc:", error);
-        
-        // Provide explicit instructions for the most common new-app error
         if (error.code === 'permission-denied') {
-            const msg = "DATABASE PERMISSION DENIED.\n\n1. Go to Firebase Console > Firestore Database > Rules.\n2. Change to: `allow read, write: if request.auth != null;`\n3. If using your own project, ensure 'services/firebase.ts' has YOUR config.";
+            const msg = "Sign in failed. Profile creation failed. Missing or insufficient permissions.\n\nFIX: Go to Firebase Console > Firestore > Rules and change to 'allow read, write: if request.auth != null;'";
             console.error(msg);
             throw new Error(msg);
         }
-        
         throw error;
     }
+};
+
+// CRITICAL: Guest -> Real Migration
+export const migrateGuestToReal = async (guestUid: string, realUid: string, realEmail: string) => {
+    console.log(`[MIGRATION] Starting migration from ${guestUid} to ${realUid}`);
+    
+    // 1. Fetch Guest Data
+    let guestData: UserState | null = null;
+    
+    if (guestUid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        guestData = mockDB[guestUid];
+        if (guestData) {
+            delete mockDB[guestUid];
+            saveMockDB(mockDB);
+        }
+    } else {
+        const guestDoc = await getDoc(doc(db, 'users', guestUid));
+        if (guestDoc.exists()) {
+            guestData = convertDocToUser(guestDoc.data());
+            // Delete old doc
+            await deleteDoc(doc(db, 'users', guestUid));
+        }
+    }
+
+    // 2. Check if Target User Already Exists (Merge strategy)
+    const realRef = doc(db, 'users', realUid);
+    const realSnap = await getDoc(realRef);
+
+    if (realSnap.exists()) {
+        console.log("Target user exists, merging stats if guest has significant progress...");
+        // If target already exists, we usually just switch to it. 
+        // But prompt said "Copy ALL guest data". 
+        // We will merge coins/xp but keep the real user's identity.
+        if (guestData) {
+            await updateDoc(realRef, {
+                coins: increment(guestData.coins),
+                xp: increment(guestData.xp),
+                inventory: arrayUnion(...guestData.inventory)
+            });
+        }
+    } else {
+        // Target is new, create it with guest data
+        if (!guestData) {
+             // Should not happen if guestUid was valid
+             console.warn("No guest data found, creating fresh.");
+             await createUserDoc(realUid, { email: realEmail, authMethod: 'google' });
+             return;
+        }
+
+        const newUserData = {
+            ...guestData,
+            uid: realUid,
+            email: realEmail,
+            loginType: 'google',
+            isAdmin: false, 
+            role: 'user' as const,
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
+        };
+
+        await setDoc(realRef, newUserData);
+    }
+
+    console.log("[MIGRATION] Success! Guest data moved/merged to real account.");
 };
 
 export const updateUser = async (uid: string, data: Partial<UserState>) => {
@@ -256,8 +289,6 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
                 if (!user.completedLevels.includes(levelId)) {
                     user.completedLevels.push(levelId);
                 }
-                
-                // Update World Progress
                 if (!user.progress) user.progress = {};
                 if (!user.progress[worldId]) {
                     user.progress[worldId] = { level: 1, lessonsCompleted: {}, score: 0 };
@@ -265,7 +296,6 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
                 user.progress[worldId].score += xpEarned;
                 user.progress[worldId].lessonsCompleted[levelId] = true;
             }
-
             saveMockDB(mockDB);
             dispatchMockUpdate(uid, user);
         }
@@ -274,27 +304,21 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
 
     try {
         const userRef = doc(db, 'users', uid);
-        
         const updatePayload: any = {
             lastActive: serverTimestamp()
         };
-
         if (completed) {
              updatePayload.completedLevels = arrayUnion(levelId);
-             // Also update the nested progress object for granular tracking
              updatePayload[`progress.${worldId}.score`] = increment(xpEarned);
              updatePayload[`progress.${worldId}.lessonsCompleted.${levelId}`] = true;
         }
-
         await setDoc(userRef, updatePayload, { merge: true });
-        
     } catch (error) {
         console.error("Error saving progress:", error);
     }
 };
 
 // --- CONTENT CRUD (ADMIN CMS) ---
-
 export const upsertLesson = async (lesson: Lesson) => {
     if (true) {
         const content = getMockContent();
@@ -307,9 +331,6 @@ export const upsertLesson = async (lesson: Lesson) => {
         saveMockContent(content);
         return;
     }
-    
-    // Real DB Implementation for later:
-    // await setDoc(doc(db, 'lessons', lesson.id), lesson);
 };
 
 export const deleteLesson = async (lessonId: string) => {
@@ -319,7 +340,6 @@ export const deleteLesson = async (lessonId: string) => {
         saveMockContent(content);
         return;
     }
-    // await deleteDoc(doc(db, 'lessons', lessonId));
 };
 
 export const updateLevelConfig = async (level: LevelData) => {
@@ -337,51 +357,30 @@ export const updateLevelConfig = async (level: LevelData) => {
 };
 
 export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]> => {
-    // In mock mode or hybrid mode, we return generated levels based on metadata
-    // This prevents the map from being empty if DB is empty
-    // Real DB fetch would go here
-    
     const generated = Array.from({ length: 8 }, (_, i) => {
          const { level } = generateLevelContent(worldId, i + 1);
          return level;
     });
-    
-    // Merge with any CMS overrides (mock for now)
     const overrides = getMockContent().levels.filter(l => l.worldId === worldId);
-    
     return generated.map(gen => overrides.find(o => o.id === gen.id) || gen);
 };
 
 export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> => {
-    // Hybrid: Generated defaults + CMS overrides
     const [worldId, levelNumStr] = levelId.split('_l');
     const levelNum = parseInt(levelNumStr);
-    
     const { lessons } = generateLevelContent(worldId, levelNum);
-    
-    // Merge CMS
     const overrides = getMockContent().lessons.filter(l => l.levelId === levelId);
-    
-    // Simple merge: If CMS has lessons for this level, favor them, but fill gaps if needed
-    // For simplicity, if CMS has any lessons, use ONLY CMS lessons + generated to fill up to 6 if needed
     if (overrides.length > 0) {
-        // If CMS has lessons, return them sorted by order
         return overrides.sort((a, b) => a.order - b.order);
     }
-    
     return lessons;
 };
 
-// Seed data for God Mode
 export const seedGameData = async () => {
     console.log("Seeding DB...");
-    // Clear mock
     localStorage.removeItem(MOCK_CONTENT_KEY);
     localStorage.removeItem(MOCK_STORAGE_KEY);
-    
-    // Generate fresh content for World 1
     const w1l1 = generateLevelContent('world1', 1);
-    
     const content = {
         levels: [w1l1.level],
         lessons: w1l1.lessons

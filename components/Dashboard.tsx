@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
 import { 
@@ -13,7 +13,10 @@ import {
     TrophyIcon,
     QrCodeIcon,
     UserPlusIcon,
-    ShareIcon
+    ShareIcon,
+    ArrowRightOnRectangleIcon,
+    ExclamationTriangleIcon,
+    BoltIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -29,6 +32,8 @@ import { claimDailyChest, devAddResources } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { GET_WORLD_LEVELS } from '../services/content';
+import { signInWithGoogle, logout } from '../services/firebase';
+import { migrateGuestToReal } from '../services/db';
 
 interface DashboardProps {
     user: UserState;
@@ -45,8 +50,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>(getMockLeaderboard());
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(null);
-    const [devClickCount, setDevClickCount] = useState(0);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
+    
+    // Admin Secret Trigger
+    const avatarPressTimer = useRef<any>(null);
+    
+    // Dropdown State
+    const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+    // Guest Upgrade State
+    const [isUpgrading, setIsUpgrading] = useState(false);
 
     // PWA Install Logic
     useEffect(() => {
@@ -90,17 +103,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         onBuyItem(item);
     };
 
-    // Dev Tool Trigger
-    const handleStreakClick = () => {
-        setDevClickCount(prev => prev + 1);
-        if (devClickCount + 1 >= 5) {
-            if (user.uid) {
-                devAddResources(user.uid);
-                setDevClickCount(0);
-            }
-        }
-    };
-
     const handleGenerateCode = () => {
         playSound('pop');
         setFamilyCode(generateLinkCode());
@@ -114,29 +116,126 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
     const zooUnlocked = user.level >= 20;
 
+    // --- GUEST UPGRADE ---
+    const handleUpgradeAccount = async () => {
+        if (isUpgrading) return;
+        setIsUpgrading(true);
+        playSound('click');
+
+        try {
+            const oldUid = user.uid!;
+            // 1. Sign in with Google
+            const googleUser = await signInWithGoogle();
+            if (!googleUser) throw new Error("Login failed");
+
+            // 2. Migrate Data
+            await migrateGuestToReal(oldUid, googleUser.uid, googleUser.email || '');
+            
+            playSound('levelup');
+            (window as any).confetti({ particleCount: 300, spread: 180 });
+            alert("SUCCESS! Your empire is now saved forever.");
+            window.location.reload(); // Reload to sync new user ID
+        } catch (e: any) {
+            console.error(e);
+            if(!e.message?.includes('cancelled')) {
+                alert("Upgrade failed: " + e.message);
+            }
+            setIsUpgrading(false);
+        }
+    };
+
+    // --- ADMIN SECRET ---
+    const handleAvatarDown = () => {
+        avatarPressTimer.current = setTimeout(() => {
+            if (user.isAdmin) {
+                playSound('chest');
+                if (confirm("ENTER GOD MODE?")) {
+                    onOpenAdmin();
+                }
+            }
+        }, 3000); // 3 seconds hold
+    };
+
+    const handleAvatarUp = () => {
+        if (avatarPressTimer.current) clearTimeout(avatarPressTimer.current);
+    };
+
+    const handleLogout = async () => {
+        if (confirm("Are you sure you want to log out?")) {
+            await logout();
+            window.location.reload();
+        }
+    };
+
     return (
         <div className="relative pb-24 max-w-md mx-auto md:max-w-2xl">
             
+            {/* GUEST WARNING BANNER */}
+            {user.loginType === 'guest' && (
+                <div className="bg-red-600 text-white p-3 flex items-center justify-between shadow-lg animate-slide-down sticky top-0 z-[60]">
+                    <div className="flex items-center gap-2">
+                        <ExclamationTriangleIcon className="w-5 h-5 text-yellow-300 animate-pulse" />
+                        <div className="text-xs">
+                            <div className="font-bold">GUEST MODE (UNSAVED)</div>
+                            <div className="opacity-80">Sign in to save {user.coins.toLocaleString()} coins</div>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={handleUpgradeAccount}
+                        disabled={isUpgrading}
+                        className="bg-white text-red-600 text-xs font-bold px-3 py-1.5 rounded-full shadow-md active:scale-95 transition-transform"
+                    >
+                        {isUpgrading ? 'SAVING...' : 'SAVE PROGRESS'}
+                    </button>
+                </div>
+            )}
+
             {/* SEASONAL BANNER */}
             {SEASONAL_EVENTS.active && (
-                <div className={`bg-gradient-to-r ${SEASONAL_EVENTS.themeColor} text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-pulse-fast cursor-pointer sticky top-0 z-[60]`}>
+                <div className={`bg-gradient-to-r ${SEASONAL_EVENTS.themeColor} text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-pulse-fast cursor-pointer sticky top-0 z-[50]`}>
                     <span className="text-lg">{SEASONAL_EVENTS.icon}</span>
                     <span className="uppercase tracking-widest">{SEASONAL_EVENTS.title} LIVE!</span>
                 </div>
             )}
 
             {/* HEADER */}
-            <div className="sticky top-8 z-50 px-4 pt-2 pb-2 bg-[#1a0b2e]/95 backdrop-blur-sm border-b border-white/5">
+            <div className="sticky top-8 z-40 px-4 pt-2 pb-2 bg-[#1a0b2e]/95 backdrop-blur-sm border-b border-white/5">
                 <div className="flex items-center justify-between mb-4">
                     
                     {/* User Info */}
-                    <div className="flex items-center gap-3">
-                        <div className="relative group cursor-pointer" onClick={() => setShowSocialShare({type: 'levelup', data: { value: `LVL ${user.level}`, subtitle: 'Rising Star', avatar: user.avatar, nickname: user.nickname}})}>
+                    <div className="flex items-center gap-3 relative">
+                        <div 
+                            className="relative group cursor-pointer"
+                            onMouseDown={handleAvatarDown}
+                            onMouseUp={handleAvatarUp}
+                            onTouchStart={handleAvatarDown}
+                            onTouchEnd={handleAvatarUp}
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        >
                             <Avatar level={user.level} size="sm" customConfig={user.avatar} />
                             <div className="absolute -bottom-1 -right-1 bg-neon-blue text-black text-[10px] font-black px-1.5 rounded-full border border-white">
                                 {user.level}
                             </div>
                         </div>
+                        
+                        {/* Profile Dropdown */}
+                        {showProfileMenu && (
+                            <div className="absolute top-14 left-0 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 w-48 z-[100] animate-pop-in">
+                                <div className="px-3 py-2 border-b border-slate-800 mb-1">
+                                    <div className="text-white font-bold truncate">{user.nickname}</div>
+                                    <div className="text-xs text-slate-500">{user.loginType === 'guest' ? 'Guest Account' : user.email}</div>
+                                </div>
+                                {user.isAdmin && (
+                                    <button onClick={onOpenAdmin} className="w-full text-left px-3 py-2 text-yellow-400 hover:bg-slate-800 rounded-lg text-sm font-bold flex items-center gap-2">
+                                        <BoltIcon className="w-4 h-4" /> God Mode
+                                    </button>
+                                )}
+                                <button onClick={handleLogout} className="w-full text-left px-3 py-2 text-red-400 hover:bg-slate-800 rounded-lg text-sm font-bold flex items-center gap-2">
+                                    <ArrowRightOnRectangleIcon className="w-4 h-4" /> Log Out
+                                </button>
+                            </div>
+                        )}
+
                         <div>
                              <div className="flex items-center gap-2">
                                 <div className="text-white font-bold text-lg leading-none font-game">{user.nickname}</div>
@@ -163,7 +262,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                          )}
 
                         {/* STREAK BUTTON */}
-                        <button onClick={handleStreakClick} className="flex flex-col items-center relative group active:scale-90 transition-transform">
+                        <button className="flex flex-col items-center relative group active:scale-90 transition-transform">
                             <div className={`text-5xl drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
                                 {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
                             </div>
@@ -285,7 +384,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             {isUnlocked ? <Icon className="w-8 h-8" /> : <LockClosedIcon className="w-6 h-6 text-gray-500" />}
                                         </div>
                                         <div className="flex-1 text-left">
-                                            <h3 className={`font-game text-lg leading-none mb-1 ${isUnlocked ? 'text-white text-stroke-black' : 'text-gray-500'}`}>
+                                            <h3 className="font-game text-lg leading-none mb-1 text-white text-stroke-black">
                                                 {world.title}
                                             </h3>
                                             {isUnlocked && (
@@ -360,7 +459,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 {/* SOCIAL TAB */}
                 {activeTab === 'social' && (
                     <div className="text-center py-8 space-y-8">
-                        
                         {/* Referral Widget */}
                         <div className="bg-gradient-to-br from-purple-900 to-blue-900 rounded-3xl p-6 border border-white/10 shadow-xl">
                             <div className="text-6xl mb-4 animate-bounce">👯‍♀️</div>
@@ -425,12 +523,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     onClose={() => setShowSocialShare(null)} 
                 />
             )}
-            
-            <div className="text-center py-8 opacity-10 hover:opacity-100 transition-opacity">
-                 <button onClick={onOpenAdmin} className="text-[10px] font-mono uppercase text-white">
-                     ⚡ Access God Mode
-                 </button>
-            </div>
         </div>
     );
 };
