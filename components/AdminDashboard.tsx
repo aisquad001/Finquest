@@ -23,7 +23,8 @@ import {
     CloudArrowUpIcon,
     CloudArrowDownIcon,
     XMarkIcon,
-    CommandLineIcon
+    CommandLineIcon,
+    UserIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -76,11 +77,9 @@ const useAdminData = () => {
 };
 
 // --- HELPER: GENERATE DEFAULT SEED DATA ---
-// This acts as the "stored JSON" on the server side, generated deterministically.
 const getGeneratedSeedData = (): Lesson[] => {
     const data: Lesson[] = [];
     WORLDS_METADATA.forEach(world => {
-        // Generate 8 levels per world
         for (let l = 1; l <= 8; l++) {
             const { lessons } = generateLevelContent(world.id, l);
             data.push(...lessons);
@@ -148,14 +147,43 @@ const DashboardHome = ({ users }: { users: UserState[] }) => {
 
 // 2. USER MANAGEMENT
 const UserManagement = ({ users }: { users: UserState[] }) => {
+    const [filterType, setFilterType] = useState<'all' | 'registered' | 'guest'>('all');
     const [searchTerm, setSearchTerm] = useState('');
-    const filteredUsers = users.filter(u => 
-        u.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.uid?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+
+    // Stats
+    const totalUsers = users.length;
+    const registeredCount = users.filter(u => u.loginType !== 'guest').length;
+    const guestCount = users.filter(u => u.loginType === 'guest').length;
+
+    const filteredUsers = users.filter(u => {
+        const matchesSearch = 
+            u.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.uid?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        const matchesFilter = 
+            filterType === 'all' ? true :
+            filterType === 'registered' ? u.loginType !== 'guest' :
+            u.loginType === 'guest';
+
+        return matchesSearch && matchesFilter;
+    });
 
     const handleAction = async (uid: string, action: string) => {
+        if (!uid) return;
+
+        if (action === 'delete') {
+            if(confirm(`PERMANENTLY DELETE USER ${uid}? This cannot be undone.`)) {
+                try {
+                    await deleteDoc(doc(db, 'users', uid));
+                    playSound('error'); // sound for delete
+                } catch (e: any) {
+                    alert("Delete failed: " + e.message);
+                }
+            }
+            return;
+        }
+
         if (action === 'ban') {
             if(confirm('Ban this user?')) await adminUpdateUser(uid, { role: 'user', loginType: 'guest', coins: 0 }); 
         }
@@ -172,18 +200,44 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
     return (
         <div className="p-8 h-full flex flex-col animate-pop-in">
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-game text-white">User Database ({users.length})</h2>
-                <div className="relative">
+                <h2 className="text-3xl font-game text-white">User Database</h2>
+                <div className="flex gap-4 items-center">
+                     <div className="bg-slate-800 px-4 py-2 rounded-xl flex gap-4 text-xs font-bold">
+                        <div className="text-slate-400">Total: <span className="text-white">{totalUsers}</span></div>
+                        <div className="text-blue-400">Reg: <span className="text-white">{registeredCount}</span></div>
+                        <div className="text-yellow-400">Guest: <span className="text-white">{guestCount}</span></div>
+                     </div>
+                </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="relative flex-1">
                     <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                     <input 
                         type="text" 
-                        placeholder="Search real users..." 
-                        className="bg-slate-800 border border-slate-600 p-3 pl-10 rounded-xl w-96 text-white outline-none focus:border-blue-500"
+                        placeholder="Search by name, email or ID..." 
+                        className="bg-slate-800 border border-slate-600 p-3 pl-10 rounded-xl w-full text-white outline-none focus:border-blue-500"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-600">
+                    {[
+                        { id: 'all', label: 'All Users' },
+                        { id: 'registered', label: 'Registered' },
+                        { id: 'guest', label: 'Guests' }
+                    ].map(tab => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setFilterType(tab.id as any)}
+                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-colors ${filterType === tab.id ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
             </div>
+
             <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden flex flex-col">
                 <div className="grid grid-cols-6 bg-slate-900 p-4 font-bold text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
                     <div className="col-span-2">User / ID</div>
@@ -196,8 +250,11 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
                     {filteredUsers.map(user => (
                         <div key={user.uid} className="grid grid-cols-6 p-4 items-center hover:bg-slate-700/50 rounded-xl transition-colors border-b border-slate-700/50 last:border-0">
                             <div className="col-span-2 flex items-center gap-3">
-                                <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center text-xl">
+                                <div className="w-10 h-10 bg-slate-600 rounded-full flex items-center justify-center text-xl relative">
                                     {user.avatar?.emoji || '👤'}
+                                    {user.loginType === 'guest' && (
+                                        <div className="absolute -bottom-1 -right-1 bg-yellow-500 text-[8px] text-black font-bold px-1 rounded">GUEST</div>
+                                    )}
                                 </div>
                                 <div className="overflow-hidden">
                                     <div className="font-bold text-white truncate">{user.nickname}</div>
@@ -222,7 +279,7 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
                             <div className="text-right flex justify-end gap-2">
                                 <button onClick={() => handleAction(user.uid!, 'gift')} className="p-2 bg-green-500/10 text-green-400 rounded hover:bg-green-500/20" title="+1000 Coins"><CurrencyDollarIcon className="w-4 h-4" /></button>
                                 <button onClick={() => handleAction(user.uid!, 'promote')} className="p-2 bg-yellow-500/10 text-yellow-400 rounded hover:bg-yellow-500/20" title="Make Pro"><BoltIcon className="w-4 h-4" /></button>
-                                <button onClick={() => handleAction(user.uid!, 'ban')} className="p-2 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20" title="Reset/Ban"><ArrowLeftOnRectangleIcon className="w-4 h-4" /></button>
+                                <button onClick={() => handleAction(user.uid!, 'delete')} className="p-2 bg-red-500/10 text-red-400 rounded hover:bg-red-500/20" title="Delete User"><TrashIcon className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ))}
