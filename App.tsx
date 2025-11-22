@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -24,8 +23,7 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
 import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
-import { auth, signInWithGoogle, signInAsGuest, logout } from './services/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, signInWithGoogle, signInAsGuest, logout, subscribeToAuthChanges } from './services/firebase';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 import { logger } from './services/logger';
 
@@ -88,7 +86,8 @@ const App: React.FC = () => {
   useEffect(() => {
       let unsubscribeSync: () => void;
 
-      const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      // Use wrapper function to avoid direct import issues from firebase/auth in App.tsx
+      const unsubscribeAuth = subscribeToAuthChanges(async (firebaseUser) => {
           if (firebaseUser) {
               logger.info("Auth State: User Logged In", { uid: firebaseUser.uid });
               if (unsubscribeSync) unsubscribeSync();

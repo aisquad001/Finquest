@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,10 +11,11 @@ import {
     signInAnonymously,
     signOut as firebaseSignOut,
     onAuthStateChanged,
-    User
+    type User,
+    type NextOrObserver
 } from 'firebase/auth';
 import * as firestore from 'firebase/firestore';
-import * as analyticsMod from 'firebase/analytics';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 import { logger } from './logger';
 
 // ------------------------------------------------------------------
@@ -39,9 +39,9 @@ export const getFirestore = firestore.getFirestore;
 
 // Initialize Analytics safely
 export let analytics: any = null;
-analyticsMod.isSupported().then(yes => {
+isSupported().then(yes => {
   if (yes) {
-    analytics = analyticsMod.getAnalytics(app);
+    analytics = getAnalytics(app);
   }
 });
 
@@ -111,6 +111,11 @@ export const logout = async () => {
     } catch (error) {
         logger.error("Sign Out Error", error);
     }
+};
+
+// Wrapper for onAuthStateChanged to avoid import errors in App.tsx
+export const subscribeToAuthChanges = (callback: NextOrObserver<User>) => {
+    return onAuthStateChanged(auth, callback);
 };
 
 // Helper to create a fake user for demo mode (fallback)
