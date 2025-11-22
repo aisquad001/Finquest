@@ -113,6 +113,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         const unsub = subscribeToLeaderboard((entries) => {
             setLeaderboard(entries);
             if (user) {
+                // Match by nickname since leaderboard uses nicknames (Avatar Names)
                 const myEntry = entries.find(e => e.name === user.nickname);
                 if (myEntry) setUserRank(myEntry.rank);
             }
@@ -192,10 +193,18 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         };
         newPortfolio.transactions.unshift(tx);
         
-        // Update History (for simplified tracking)
+        // Update History with POST-TRADE Net Worth for accuracy
+        // Re-calculate quickly
+        let postTradeValue = newPortfolio.cash;
+        Object.entries(newPortfolio.holdings).forEach(([sym, q]) => {
+             // Use current prices
+             const stock = marketData.find(s => s.symbol === sym);
+             if (stock) postTradeValue += stock.price * (q as number);
+        });
+
         newPortfolio.history.push({
             date: new Date().toISOString(),
-            netWorth: currentNetWorth
+            netWorth: postTradeValue
         });
 
         onUpdatePortfolio(newPortfolio);

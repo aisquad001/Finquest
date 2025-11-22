@@ -8,6 +8,7 @@ import * as firestore from 'firebase/firestore';
 import { UserState, checkStreak, createInitialUser, LevelData, Lesson, LeaderboardEntry } from './gamification';
 import { generateLevelContent } from './contentGenerator';
 import { logger } from './logger';
+import { getMarketData } from './stockMarket';
 
 const { 
     doc, 
@@ -337,29 +338,30 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
 
 // --- LEADERBOARD ---
 export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) => void) => {
-    // Query top 50 users by net worth (calculated as coins roughly or if portfolio value is stored)
-    // Since netWorth in portfolio is inside an object, sorting by it directly in Firestore requires an index on `portfolio.history` or `portfolio.netWorth`
-    // For now, we'll sort by XP/Level as a proxy for "Racked" success, OR if we sync netWorth to root.
-    // Let's assume we want XP for now as it's most reliable without complex indexing on sub-objects.
-    
     const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
 
     return onSnapshot(q, (snapshot) => {
-        const entries: LeaderboardEntry[] = snapshot.docs.map((doc, index) => {
+        const marketData = getMarketData(); // Get current prices
+        
+        const entries: LeaderboardEntry[] = snapshot.docs.map((doc) => {
             const u = doc.data() as UserState;
             
-            // Calculate Net Worth dynamically for display
-            let netWorth = u.coins;
-            if (u.portfolio?.cash) {
-                netWorth = u.portfolio.cash; // Approximation if real-time calculation is client-side
-                // Note: Accurate net worth requires stock prices. We just use cash + stored history value here.
-                if (u.portfolio.history?.length) {
-                    netWorth = u.portfolio.history[u.portfolio.history.length - 1].netWorth;
-                }
+            // Calculate Net Worth dynamically using REAL stock prices
+            let netWorth = u.portfolio?.cash || 0;
+            
+            if (u.portfolio?.holdings) {
+                Object.entries(u.portfolio.holdings).forEach(([symbol, qty]) => {
+                    const stock = marketData.find(s => s.symbol === symbol);
+                    if (stock) {
+                        // Valid stock found in current market data
+                        netWorth += stock.price * (qty as number);
+                    }
+                });
             }
-
+            
+            // Use nickname (Avatar Name) always, as requested
             return {
-                rank: index + 1,
+                rank: 0, // Will assign after sort
                 name: u.nickname || 'Anonymous',
                 xp: u.xp,
                 avatar: u.avatar?.emoji || '👤',
@@ -367,7 +369,14 @@ export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) =
                 netWorth: netWorth
             };
         });
-        callback(entries);
+
+        // Sort by Net Worth for the Wall Street Zoo leaderboard
+        entries.sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0));
+        
+        // Re-assign ranks after sort
+        const rankedEntries = entries.map((e, i) => ({...e, rank: i + 1}));
+        
+        callback(rankedEntries);
     }, (err) => {
         logger.error("Leaderboard Error", err);
         callback([]);

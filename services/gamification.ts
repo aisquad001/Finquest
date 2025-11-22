@@ -340,30 +340,17 @@ export const createInitialUser = (onboardingData: any): UserState => {
     // Generate a base random profile for defaults (ensures avatar is never undefined)
     const randomProfile = generateRandomProfile();
 
-    let nickname = onboardingData.nickname;
+    // FORCE RANDOM NICKNAME (Avatar Name) instead of Real Name
+    // The user specifically requested "use users avatar name not the real name"
+    // so we override any Google Display Name with our generated one.
+    let nickname = randomProfile.nickname; 
     let avatar = onboardingData.avatar;
     
-    // 1. Use Google Display Name if available (and not strictly guest)
-    if (onboardingData.displayName && onboardingData.authMethod !== 'guest') {
-        nickname = onboardingData.displayName;
-    }
-
-    // 2. If nickname is missing, use random
-    if (!nickname) {
-        nickname = randomProfile.nickname;
-    }
-    
-    // 3. If avatar is missing (common for Google Auth), use random
+    // If avatar is missing (common for Google Auth), use random
     if (!avatar) {
         avatar = randomProfile.avatar;
     }
     
-    // 4. For Guest Mode specifically...
-    if (onboardingData.authMethod === 'guest' && !onboardingData.nickname) {
-        nickname = randomProfile.nickname;
-        avatar = randomProfile.avatar;
-    }
-
     // FINAL SAFEGUARD: Ensure avatar is an object to prevent Firestore undefined errors
     if (!avatar || typeof avatar !== 'object' || !avatar.emoji) {
         avatar = randomProfile.avatar;
