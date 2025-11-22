@@ -84,9 +84,12 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
     const [activeTab, setActiveTab] = useState<'market' | 'portfolio' | 'rankings'>('market');
     const [marketData, setMarketData] = useState<StockAsset[]>(getMarketData());
     const [feedStatus, setFeedStatus] = useState<string>('CONNECTING...');
+    
+    // Trading State
     const [selectedStock, setSelectedStock] = useState<StockAsset | null>(null);
     const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
-    const [tradeAmount, setTradeAmount] = useState<string>('');
+    const [tradeMode, setTradeMode] = useState<'usd' | 'shares'>('usd'); // NEW: Trade by Amount ($) or Quantity (Shares)
+    const [tradeInput, setTradeInput] = useState<string>('');
     
     // Real Leaderboard State
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -113,7 +116,6 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         const unsub = subscribeToLeaderboard((entries) => {
             setLeaderboard(entries);
             if (user) {
-                // Match by nickname since leaderboard uses nicknames (Avatar Names)
                 const myEntry = entries.find(e => e.name === user.nickname);
                 if (myEntry) setUserRank(myEntry.rank);
             }
@@ -140,26 +142,81 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
 
     // "Beat S&P" Badge
     const beatSp500 = useMemo(() => {
-        // Simple logic: if net worth > 105k (5% gain)
         return currentNetWorth > 105000;
     }, [currentNetWorth]);
 
+    // --- PERSONALIZED BANNER LOGIC ---
+    const bannerMessage = useMemo(() => {
+        const hasTrades = portfolio.transactions.length > 0;
+        
+        if (!hasTrades) {
+            const hooks = [
+                "You’re sitting on $100,000 fake cash… scared money don’t make money 🐔",
+                "Buy your first stock = instant flex 💪",
+                "Your future Lambo is waiting. Tap any stock to start. 🏎️"
+            ];
+            return { text: hooks[Math.floor(Math.random() * hooks.length)], mood: 'neutral' };
+        }
+
+        // Estimate Daily P/L based on current holdings * today's change
+        let dailyChange = 0;
+        Object.entries(portfolio.holdings).forEach(([sym, qty]) => {
+            const stock = marketData.find(s => s.symbol === sym);
+            if (stock) {
+                 // Approx dollar change today
+                 const changeAmt = (stock.price * (stock.changePercent / 100)) * (qty as number);
+                 dailyChange += changeAmt;
+            }
+        });
+
+        if (dailyChange >= 0) {
+            const wins = [
+                `Your portfolio is up $${dailyChange.toFixed(2)} today. Nice. 🚀`,
+                `You’re crushing 82% of teens this week 🔥`,
+                `Green charts, green hearts. You made $${dailyChange.toFixed(0)} today 💚`,
+                `Your net worth grew $${dailyChange.toFixed(0)} while you slept 😴`
+            ];
+            return { text: wins[Math.floor(Math.random() * wins.length)], mood: 'good' };
+        } else {
+            const losses = [
+                `Down $${Math.abs(dailyChange).toFixed(2)} today… diamond hands or panic sell? 💎🙌`,
+                `Market is red. Perfect time to buy the dip? 📉`,
+                `Oof. $${Math.abs(dailyChange).toFixed(0)} vanished. It's just paper loss until you sell! 🤷‍♂️`,
+                `Bear market vibes. Stay strong! 🐻`
+            ];
+            return { text: losses[Math.floor(Math.random() * losses.length)], mood: 'bad' };
+        }
+    }, [marketData, portfolio.holdings, portfolio.transactions.length]);
+
+
+    // --- TRADE HANDLER ---
     const handleTrade = () => {
-        if (!selectedStock || !tradeAmount) return;
-        const amount = parseFloat(tradeAmount);
-        if (isNaN(amount) || amount <= 0) {
-            alert("Enter a valid amount");
+        if (!selectedStock || !tradeInput) return;
+        
+        const inputVal = parseFloat(tradeInput);
+        if (isNaN(inputVal) || inputVal <= 0) {
+            alert("Enter a valid number");
             return;
         }
 
         const price = selectedStock.price;
-        const qty = amount / price;
+        let amount = 0; // Value in USD
+        let qty = 0;    // Number of shares
+
+        if (tradeMode === 'usd') {
+            amount = inputVal;
+            qty = amount / price;
+        } else {
+            qty = inputVal;
+            amount = qty * price;
+        }
+
         const newPortfolio = { ...portfolio };
         
         if (tradeType === 'buy') {
             if (newPortfolio.cash < amount) {
                 playSound('error');
-                alert("You're broke! Sell something first.");
+                alert(`You're broke! You need $${amount.toFixed(2)} but have $${newPortfolio.cash.toFixed(2)}`);
                 return;
             }
             newPortfolio.cash -= amount;
@@ -167,10 +224,9 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
             playSound('kaching');
         } else {
             const currentQty = newPortfolio.holdings[selectedStock.symbol] || 0;
-            const currentValue = currentQty * price;
-            if (currentValue < amount) {
+            if (currentQty < qty) {
                 playSound('error');
-                alert("You don't own that much!");
+                alert(`You only have ${currentQty.toFixed(4)} shares!`);
                 return;
             }
             newPortfolio.cash += amount;
@@ -193,11 +249,9 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
         };
         newPortfolio.transactions.unshift(tx);
         
-        // Update History with POST-TRADE Net Worth for accuracy
-        // Re-calculate quickly
+        // Update History with POST-TRADE Net Worth
         let postTradeValue = newPortfolio.cash;
         Object.entries(newPortfolio.holdings).forEach(([sym, q]) => {
-             // Use current prices
              const stock = marketData.find(s => s.symbol === sym);
              if (stock) postTradeValue += stock.price * (q as number);
         });
@@ -209,7 +263,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
 
         onUpdatePortfolio(newPortfolio);
         
-        // Visuals
+        // Visuals & Toast
         (window as any).confetti({
             particleCount: 100,
             spread: 70,
@@ -217,8 +271,28 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
             colors: tradeType === 'buy' ? ['#00FF88', '#FFFFFF'] : ['#FF00B8', '#FFFFFF']
         });
         
-        setTradeAmount('');
+        // Reset
+        setTradeInput('');
         setSelectedStock(null);
+    };
+
+    const handleSetMax = () => {
+        if (!selectedStock) return;
+        if (tradeType === 'buy') {
+            if (tradeMode === 'usd') {
+                setTradeInput(portfolio.cash.toFixed(2));
+            } else {
+                setTradeInput((portfolio.cash / selectedStock.price).toFixed(4));
+            }
+        } else {
+            // Sell Max
+            const owned = portfolio.holdings[selectedStock.symbol] || 0;
+            if (tradeMode === 'usd') {
+                setTradeInput((owned * selectedStock.price).toFixed(2));
+            } else {
+                setTradeInput(owned.toString());
+            }
+        }
     };
 
     return (
@@ -254,6 +328,15 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
             {/* SCROLLABLE BODY */}
             <div className="flex-1 overflow-y-auto pb-24">
                 
+                {/* PERSONALIZED BANNER */}
+                <div className={`p-4 text-center font-bold text-sm border-b border-white/5 animate-pop-in
+                    ${bannerMessage.mood === 'good' ? 'bg-green-900/30 text-green-300' : 
+                      bannerMessage.mood === 'bad' ? 'bg-red-900/30 text-red-300' : 
+                      'bg-blue-900/30 text-blue-300'}`
+                }>
+                    {bannerMessage.text}
+                </div>
+
                 {/* PORTFOLIO SUMMARY */}
                 <div className="p-6 bg-gradient-to-b from-[#1a0b2e] to-[#0f0518]">
                     <div className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1 text-center">Total Net Worth</div>
@@ -432,20 +515,57 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                                  </button>
                              </div>
 
-                             {/* AMOUNT INPUT */}
+                             {/* TRADE MODE TABS */}
+                             <div className="flex justify-center mb-4">
+                                 <div className="bg-black/40 p-1 rounded-lg flex gap-1">
+                                     <button 
+                                        onClick={() => setTradeMode('usd')}
+                                        className={`px-4 py-1 rounded text-xs font-bold transition-all ${tradeMode === 'usd' ? 'bg-white/20 text-white' : 'text-gray-500'}`}
+                                     >
+                                         By Amount ($)
+                                     </button>
+                                     <button 
+                                        onClick={() => setTradeMode('shares')}
+                                        className={`px-4 py-1 rounded text-xs font-bold transition-all ${tradeMode === 'shares' ? 'bg-white/20 text-white' : 'text-gray-500'}`}
+                                     >
+                                         By Shares (Qty)
+                                     </button>
+                                 </div>
+                             </div>
+
+                             {/* INPUT AREA */}
                              <div className="mb-8">
-                                 <label className="block text-xs font-bold uppercase text-gray-500 mb-2">Amount (USD)</label>
+                                 <div className="flex justify-between text-xs font-bold text-gray-500 mb-2 uppercase">
+                                     <label>{tradeMode === 'usd' ? 'Amount (USD)' : 'Shares (QTY)'}</label>
+                                     <button onClick={handleSetMax} className="text-neon-blue hover:text-white underline">
+                                         MAX
+                                     </button>
+                                 </div>
                                  <div className="relative">
-                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-400">$</span>
+                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl text-gray-400">
+                                         {tradeMode === 'usd' ? '$' : '#'}
+                                     </span>
                                      <input 
                                         type="number" 
-                                        value={tradeAmount}
-                                        onChange={(e) => setTradeAmount(e.target.value)}
+                                        value={tradeInput}
+                                        onChange={(e) => setTradeInput(e.target.value)}
                                         placeholder="0.00"
                                         className="w-full bg-black/50 border-2 border-white/20 rounded-2xl py-4 pl-10 pr-4 text-3xl font-bold text-white focus:border-neon-blue outline-none"
                                      />
                                  </div>
-                                 <div className="text-right text-xs text-gray-400 mt-2">
+                                 
+                                 {/* LIVE CONVERSION PREVIEW */}
+                                 <div className="text-right mt-2 text-sm font-mono font-bold text-white/70">
+                                     {tradeInput && parseFloat(tradeInput) > 0 ? (
+                                         tradeMode === 'usd' ? 
+                                             `≈ ${(parseFloat(tradeInput) / selectedStock.price).toFixed(4)} Shares` : 
+                                             `≈ $${(parseFloat(tradeInput) * selectedStock.price).toFixed(2)} USD`
+                                     ) : (
+                                         tradeMode === 'usd' ? '0.0000 Shares' : '$0.00 USD'
+                                     )}
+                                 </div>
+
+                                 <div className="text-left text-xs text-gray-400 mt-2">
                                      Available Cash: ${portfolio.cash.toLocaleString()}
                                  </div>
                              </div>
