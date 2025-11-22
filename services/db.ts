@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -16,7 +17,8 @@ import {
     getDocs,
     query,
     where,
-    writeBatch
+    writeBatch,
+    arrayUnion
 } from 'firebase/firestore';
 import { UserState, checkStreak, createInitialUser, LevelData, Lesson, WORLDS_METADATA } from './gamification';
 import { generateLevelContent } from './contentGenerator';
@@ -64,6 +66,9 @@ export const convertDocToUser = (data: any): UserState => {
     return user as UserState;
 };
 
+// --- UTILS ---
+const timeoutPromise = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Database operation timed out.")), ms));
+
 // --- USER METHODS ---
 
 export const getUser = async (uid: string): Promise<UserState | null> => {
@@ -72,7 +77,12 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
         return mockDB[uid] || null;
     }
     try {
-        const userDoc = await getDoc(doc(db, 'users', uid));
+        // Race getDoc against a timeout to prevent hanging
+        const userDoc: any = await Promise.race([
+            getDoc(doc(db, 'users', uid)),
+            timeoutPromise(15000)
+        ]);
+        
         if (userDoc.exists()) {
             return convertDocToUser(userDoc.data());
         }
@@ -118,7 +128,12 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
     // --- REAL FIRESTORE HANDLER ---
     try {
         const userRef = doc(db, "users", uid);
-        const userSnap = await getDoc(userRef);
+        
+        // Race the check against timeout
+        const userSnap: any = await Promise.race([
+            getDoc(userRef),
+            timeoutPromise(15000)
+        ]);
 
         if (!userSnap.exists()) {
             // Create New User Document
@@ -142,15 +157,19 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
                 xp: 0       // Base XP
             };
             
-            // 1. Create the document
-            await setDoc(userRef, dataToSave);
+            // 1. Create the document with TIMEOUT protection
+            await Promise.race([
+                setDoc(userRef, dataToSave),
+                timeoutPromise(15000)
+            ]);
 
             // 2. Apply First-Time Login Bonus (Atomic Increment)
             console.log("[DB] Applying first-time bonus...");
-            await updateDoc(userRef, {
+            // This is non-blocking for UI return, but good to await to ensure consistency
+            updateDoc(userRef, {
                 coins: increment(500), // Total = 1000
                 xp: increment(200)     // Total = 200
-            });
+            }).catch(e => console.warn("Bonus apply failed (minor)", e));
 
             // Return the object with estimated bonus for immediate UI update (optimistic)
             return { ...dataToSave, coins: 1000, xp: 200 };
@@ -214,6 +233,53 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
     return { updatedUser, message };
 };
 
+export const saveLevelProgress = async (uid: string, worldId: string, levelId: string, xpEarned: number, completed: boolean) => {
+    if (uid.startsWith('mock_')) {
+        const mockDB = getMockDB();
+        if (mockDB[uid]) {
+            const user = mockDB[uid];
+            
+            if (completed) {
+                if (!user.completedLevels.includes(levelId)) {
+                    user.completedLevels.push(levelId);
+                }
+                
+                // Update World Progress
+                if (!user.progress) user.progress = {};
+                if (!user.progress[worldId]) {
+                    user.progress[worldId] = { level: 1, lessonsCompleted: {}, score: 0 };
+                }
+                user.progress[worldId].score += xpEarned;
+                user.progress[worldId].lessonsCompleted[levelId] = true;
+            }
+
+            saveMockDB(mockDB);
+            dispatchMockUpdate(uid, user);
+        }
+        return;
+    }
+
+    try {
+        const userRef = doc(db, 'users', uid);
+        
+        const updatePayload: any = {
+            lastActive: serverTimestamp()
+        };
+
+        if (completed) {
+             updatePayload.completedLevels = arrayUnion(levelId);
+             // Also update the nested progress object for granular tracking
+             updatePayload[`progress.${worldId}.score`] = increment(xpEarned);
+             updatePayload[`progress.${worldId}.lessonsCompleted.${levelId}`] = true;
+        }
+
+        await setDoc(userRef, updatePayload, { merge: true });
+        
+    } catch (error) {
+        console.error("Error saving progress:", error);
+    }
+};
+
 // --- CONTENT CRUD (ADMIN CMS) ---
 
 export const upsertLesson = async (lesson: Lesson) => {
@@ -226,9 +292,11 @@ export const upsertLesson = async (lesson: Lesson) => {
             content.lessons.push(lesson);
         }
         saveMockContent(content);
-        console.log(`[DB] Upserted Lesson: ${lesson.id}`);
         return;
     }
+    
+    // Real DB Implementation for later:
+    // await setDoc(doc(db, 'lessons', lesson.id), lesson);
 };
 
 export const deleteLesson = async (lessonId: string) => {
@@ -236,98 +304,75 @@ export const deleteLesson = async (lessonId: string) => {
         const content = getMockContent();
         content.lessons = content.lessons.filter(l => l.id !== lessonId);
         saveMockContent(content);
-        console.log(`[DB] Deleted Lesson: ${lessonId}`);
         return;
     }
+    // await deleteDoc(doc(db, 'lessons', lessonId));
 };
 
 export const updateLevelConfig = async (level: LevelData) => {
     if (true) {
         const content = getMockContent();
         const idx = content.levels.findIndex(l => l.id === level.id);
-        if (idx >= 0) content.levels[idx] = level;
-        else content.levels.push(level);
-        saveMockContent(content);
-        console.log(`[DB] Updated Level: ${level.id}`);
-        return;
-    }
-};
-
-export const seedGameData = async () => {
-    console.log("SEEDING PROCEDURAL CONTENT... 🚀");
-    const levels: LevelData[] = [];
-    const lessons: Lesson[] = [];
-
-    WORLDS_METADATA.forEach((world) => {
-        for (let lvl = 1; lvl <= 8; lvl++) {
-            const { level, lessons: levelLessons } = generateLevelContent(world.id, lvl);
-            levels.push(level);
-            lessons.push(...levelLessons);
+        if (idx >= 0) {
+            content.levels[idx] = level;
+        } else {
+            content.levels.push(level);
         }
-    });
-
-    const isMock = true;
-    if (isMock) {
-        saveMockContent({ levels, lessons });
-        console.log(`[SEED] Generated ${levels.length} unique levels and ${lessons.length} lessons.`);
+        saveMockContent(content);
+        return;
     }
 };
 
 export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]> => {
-    const content = getMockContent();
-    const mockLevels = content.levels.filter(l => l.worldId === worldId);
-    if (mockLevels.length > 0) return mockLevels.sort((a, b) => a.levelNumber - b.levelNumber);
-
-    return Array.from({ length: 8 }, (_, i) => ({
-        id: `${worldId}_l${i + 1}`,
-        worldId,
-        levelNumber: i + 1,
-        title: `Level ${i + 1}`,
-        description: 'New Level',
-        bossName: 'Boss',
-        bossImage: '👹',
-        bossIntro: 'Fight me!',
-        bossQuiz: []
-    }));
+    // In mock mode or hybrid mode, we return generated levels based on metadata
+    // This prevents the map from being empty if DB is empty
+    // Real DB fetch would go here
+    
+    const generated = Array.from({ length: 8 }, (_, i) => {
+         const { level } = generateLevelContent(worldId, i + 1);
+         return level;
+    });
+    
+    // Merge with any CMS overrides (mock for now)
+    const overrides = getMockContent().levels.filter(l => l.worldId === worldId);
+    
+    return generated.map(gen => overrides.find(o => o.id === gen.id) || gen);
 };
 
 export const fetchLessonsForLevel = async (levelId: string): Promise<Lesson[]> => {
-    const content = getMockContent();
-    const mockLessons = content.lessons.filter(l => l.levelId === levelId);
-    return mockLessons.sort((a, b) => a.order - b.order);
+    // Hybrid: Generated defaults + CMS overrides
+    const [worldId, levelNumStr] = levelId.split('_l');
+    const levelNum = parseInt(levelNumStr);
+    
+    const { lessons } = generateLevelContent(worldId, levelNum);
+    
+    // Merge CMS
+    const overrides = getMockContent().lessons.filter(l => l.levelId === levelId);
+    
+    // Simple merge: If CMS has lessons for this level, favor them, but fill gaps if needed
+    // For simplicity, if CMS has any lessons, use ONLY CMS lessons + generated to fill up to 6 if needed
+    if (overrides.length > 0) {
+        // If CMS has lessons, return them sorted by order
+        return overrides.sort((a, b) => a.order - b.order);
+    }
+    
+    return lessons;
 };
 
-export const saveLevelProgress = async (uid: string, worldId: string, levelId: string, score: number, isCompleted: boolean) => {
-    if (uid.startsWith('mock_')) {
-        const mockDB = getMockDB();
-        const user = mockDB[uid];
-        if (!user) return;
-        
-        if (!user.progress) user.progress = {};
-        if (!user.progress[worldId]) user.progress[worldId] = { level: 0, lessonsCompleted: {}, score: 0 };
-        
-        const levelNum = parseInt(levelId.split('_l')[1] || '1');
-        
-        if (isCompleted && levelNum > user.progress[worldId].level) {
-            user.progress[worldId].level = levelNum;
-        }
-        user.progress[worldId].score += score;
-        
-        if (isCompleted && !user.completedLevels.includes(levelId)) {
-             user.completedLevels.push(levelId);
-        }
-        
-        saveMockDB(mockDB);
-        dispatchMockUpdate(uid, user);
-        return;
-    }
-
-    try {
-        const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, {
-             [`progress.${worldId}.score`]: serverTimestamp() 
-        });
-    } catch (e) {
-        console.error("Save progress failed", e);
-    }
+// Seed data for God Mode
+export const seedGameData = async () => {
+    console.log("Seeding DB...");
+    // Clear mock
+    localStorage.removeItem(MOCK_CONTENT_KEY);
+    localStorage.removeItem(MOCK_STORAGE_KEY);
+    
+    // Generate fresh content for World 1
+    const w1l1 = generateLevelContent('world1', 1);
+    
+    const content = {
+        levels: [w1l1.level],
+        lessons: w1l1.lessons
+    };
+    saveMockContent(content);
+    console.log("Seeded World 1 Level 1");
 };

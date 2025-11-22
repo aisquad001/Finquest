@@ -24,13 +24,13 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
 import { addXP, addCoins, purchaseItem, processDailyStreak, devAddResources, triggerMoneyCheat } from './services/gameLogic';
-import { auth, signInWithGoogle, signInWithApple, signInAsGuest } from './services/firebase';
+import { auth, signInWithGoogle, signInWithApple, signInAsGuest, logout } from './services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 
 const App: React.FC = () => {
   // Global State from Zustand
-  const { user, loading: storeLoading, syncUser, clearUser } = useUserStore();
+  const { user, loading: storeLoading, error: storeError, syncUser, clearUser } = useUserStore();
   
   // UI State
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -63,7 +63,8 @@ const App: React.FC = () => {
       }
 
       // 2. Check Domain Status
-      if (host === 'racked.gg' || host === 'www.racked.gg') {
+      // Accept racked.gg, localhost, and google cloud run/firebase domains as valid
+      if (host === 'racked.gg' || host === 'www.racked.gg' || host.endsWith('.run.app') || host.includes('firebaseapp.com')) {
          setDomainStatus('correct');
       } else if (host === 'localhost' || host.includes('127.0.0.1')) {
          setDomainStatus('localhost');
@@ -144,6 +145,21 @@ const App: React.FC = () => {
           processDailyStreak(user.uid, user);
       }
   }, [user?.uid]);
+
+  const handleLogout = async () => {
+      await logout();
+      localStorage.removeItem('racked_mock_session_uid');
+      clearUser();
+      setShowOnboarding(true);
+      setView('dashboard');
+  };
+
+  const handlePlayDemo = async () => {
+      await logout(); // Ensure clean slate
+      const mockId = `mock_demo_${Date.now()}`;
+      localStorage.setItem('racked_mock_session_uid', mockId);
+      window.location.reload(); // Reload to force syncUser to pick up the mock ID
+  };
 
   // Navigation Handlers
   const handleOpenWorld = (worldId: string) => {
@@ -238,12 +254,10 @@ const App: React.FC = () => {
                       localStorage.setItem('racked_mock_session_uid', firebaseUser.uid);
                       syncUser(firebaseUser.uid);
                   }
-                  // Only hide onboarding after successful DB operations
-                  setShowOnboarding(false);
                   playSound('levelup');
-              } catch (dbError) {
+              } catch (dbError: any) {
                   console.error("DB Profile Creation Failed:", dbError);
-                  throw new Error("Profile creation failed. Please try again.");
+                  throw new Error("Profile creation failed. " + (dbError.message || "Check internet."));
               }
           } else {
               throw new Error("Authentication failed (No User)");
@@ -270,14 +284,46 @@ const App: React.FC = () => {
       }} />;
   }
 
-  // Initial Loading
+  // Initial Loading or Syncing
   if (storeLoading && !user) {
       return (
-          <div className="min-h-screen bg-[#1a0b2e] flex items-center justify-center">
-              <div className="flex flex-col items-center animate-pulse">
+          <div className="min-h-screen bg-[#1a0b2e] flex flex-col items-center justify-center p-6 text-center">
+              <div className="flex flex-col items-center animate-pulse mb-8">
                   <div className="text-6xl mb-4 animate-bounce">💸</div>
                   <h2 className="font-game text-white text-2xl">RACKING UP...</h2>
+                  <p className="text-white/50 text-sm mt-2">Syncing your empire</p>
               </div>
+              
+              {storeError && (
+                  <div className="bg-red-500/20 border border-red-500 text-red-200 p-4 rounded-xl max-w-md mb-8 animate-pop-in">
+                      <p className="font-bold mb-2">⚠️ Connection Error</p>
+                      <p className="text-xs mb-4">{storeError}</p>
+                      
+                      <div className="flex flex-col gap-3">
+                          <button 
+                            onClick={() => window.location.reload()}
+                            className="w-full py-3 bg-white text-black font-bold rounded-xl btn-3d hover:scale-105 transition-transform"
+                          >
+                              🔄 RETRY CONNECTION
+                          </button>
+
+                          <button 
+                            onClick={handlePlayDemo}
+                            className="w-full py-3 bg-transparent border border-white/20 text-white/50 font-bold rounded-xl hover:bg-white/5 hover:text-white transition-colors text-xs"
+                          >
+                              🎮 Or Play in Demo Mode
+                          </button>
+                      </div>
+                  </div>
+              )}
+
+              {/* Escape Hatch */}
+              <button 
+                onClick={handleLogout}
+                className="text-gray-500 underline text-sm hover:text-white transition-colors mt-4"
+              >
+                  Sign Out / Cancel
+              </button>
           </div>
       );
   }
@@ -312,6 +358,13 @@ const App: React.FC = () => {
                       <span className="text-[10px] opacity-70 hidden md:inline">Checking connectivity...</span>
                   </>
               )}
+          </div>
+      )}
+
+      {/* Mock Mode Indicator */}
+      {user.uid.startsWith('mock_') && (
+          <div className="fixed top-0 left-0 z-[9999] bg-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded-br-lg opacity-80 pointer-events-none">
+              DEMO MODE (OFFLINE)
           </div>
       )}
 

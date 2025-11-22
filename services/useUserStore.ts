@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -25,7 +26,7 @@ export const useUserStore = create<UserStore>((set) => ({
     error: null,
 
     syncUser: (uid: string) => {
-        set({ loading: true });
+        set({ loading: true, error: null });
         console.log(`[STORE] Starting sync for ${uid}`);
         
         // MOCK MODE SYNC
@@ -49,29 +50,56 @@ export const useUserStore = create<UserStore>((set) => ({
         }
 
         // FIREBASE SYNC
+        let connectionTimeout: any;
+        let unsub: () => void = () => {};
+
         try {
-            const unsub = onSnapshot(doc(db, 'users', uid), 
+            // Set a robust timeout to allow for cold starts
+            connectionTimeout = setTimeout(() => {
+                console.warn("[STORE] Firestore connection slow/timed out.");
+                set({ 
+                    loading: false, 
+                    error: "Server connection timed out. Please check your internet or try again." 
+                });
+            }, 15000); // 15 seconds timeout
+
+            unsub = onSnapshot(doc(db, 'users', uid), 
                 (docSnap) => {
+                    clearTimeout(connectionTimeout);
                     if (docSnap.exists()) {
                         const userData = convertDocToUser(docSnap.data());
-                        set({ user: userData, loading: false });
+                        set({ user: userData, loading: false, error: null });
                     } else {
-                        set({ user: null, loading: false, error: 'User not found' });
+                        // User authenticated but no doc found yet (likely creating...)
+                        console.log("[STORE] User doc not found yet (waiting for creation...)");
+                        // We don't stop loading here, waiting for creation to complete
                     }
                 },
                 (err) => {
+                    clearTimeout(connectionTimeout);
                     console.error('[STORE] Sync error:', err);
-                    set({ error: err.message, loading: false });
+                    
+                    let msg = err.message;
+                    if (err.code === 'permission-denied') msg = "Access Denied. Please refresh.";
+                    if (err.code === 'unavailable') msg = "Network Offline. Please check connection.";
+
+                    set({ error: msg, loading: false });
                 }
             );
-            return unsub;
+            
+            return () => {
+                clearTimeout(connectionTimeout);
+                unsub();
+            };
+
         } catch (e: any) {
+             clearTimeout(connectionTimeout);
              console.error('[STORE] Firebase Init Error:', e);
              set({ error: e.message, loading: false });
              return () => {};
         }
     },
 
-    clearUser: () => set({ user: null, loading: false }),
+    clearUser: () => set({ user: null, loading: false, error: null }),
     setLoading: (loading) => set({ loading })
 }));
