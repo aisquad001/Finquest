@@ -25,12 +25,220 @@ interface FloatingReward {
     type: 'xp' | 'coin' | 'bonus';
 }
 
+const WRONG_ANSWER_ROASTS = [
+    "Oof, that hurt my wallet just watching 😂",
+    "Your future self just face-palmed so hard 😭",
+    "Even my grandma knows that one 🤭",
+    "Bro really said ‘YOLO’ on that answer 💀",
+    "That’s the sound of your allowance crying 😢",
+    "Almost! The money gods are judging… gently 🙈",
+    "Plot twist: that was the broke option 🤡",
+    "Your piggy bank just fainted 🐷",
+    "The Inflation Dragon just laughed at you 🐉",
+    "That’s how you stay broke in 2025 😅",
+    "My calculator is shaking its head 📉",
+    "Financial advisor has left the chat ✌️",
+    "Refund on that answer? No? Okay 😬",
+    "Did you guess? Be honest. 🤨",
+    "Math isn't mathing right now ✖️",
+    "Try again, but with more ripples 🧠",
+    "Error 404: Financial Literacy not found 💻",
+    "Yikes. Just... yikes. 😬",
+    "Don't quit your day job yet! 😂",
+    "Wallet: 'Am I a joke to you?' 😐"
+];
+
+// --- SUB-COMPONENTS (Moved outside to prevent re-mounts on parent state change) ---
+
+const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
+    const [cardIndex, setCardIndex] = useState(0);
+    const cards = lesson.content.cards || [];
+    const currentCard = cards[cardIndex];
+
+    const handleSwipe = (direction: 'left' | 'right', e?: any) => {
+        const isRight = direction === 'right';
+        const correct = currentCard.isRight === isRight;
+        
+        if (correct) {
+            playSound('pop');
+            if (cardIndex < cards.length - 1) {
+                setCardIndex(prev => prev + 1);
+            } else {
+                onNext(e);
+            }
+        } else {
+            playSound('error');
+            triggerRoast();
+        }
+    };
+
+    if (!currentCard) return <div>Done</div>;
+
+    return (
+        <div className="flex flex-col items-center justify-center h-full p-4">
+            <h3 className="font-game text-2xl mb-8 text-white drop-shadow-md">Swipe Right if Smart ✅</h3>
+            <motion.div 
+                key={cardIndex}
+                initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                className="w-72 h-96 bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6 text-center border-[6px] border-black relative"
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                onDragEnd={(e, { offset }) => {
+                    if (offset.x > 100) handleSwipe('right', e);
+                    else if (offset.x < -100) handleSwipe('left', e);
+                }}
+            >
+                <div className="text-black font-black text-3xl mb-4 leading-tight">{currentCard.text}</div>
+                <div className={`text-white font-bold uppercase tracking-widest px-4 py-1 rounded-full ${currentCard.isRight ? 'bg-green-500' : 'bg-red-500'}`}>
+                    {currentCard.isRight ? 'Good' : 'Bad'} Idea?
+                </div>
+            </motion.div>
+            <div className="flex gap-12 mt-12">
+                <button onClick={(e) => handleSwipe('left', e)} className="p-6 bg-red-500 rounded-full border-b-[6px] border-red-800 active:translate-y-1 transition-transform hover:scale-110"><XMarkIcon className="w-10 h-10 text-white"/></button>
+                <button onClick={(e) => handleSwipe('right', e)} className="p-6 bg-green-500 rounded-full border-b-[6px] border-green-800 active:translate-y-1 transition-transform hover:scale-110"><CheckCircleIcon className="w-10 h-10 text-white"/></button>
+            </div>
+        </div>
+    );
+};
+
+const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
+    const [timeLeft, setTimeLeft] = useState(10);
+    const [isActive, setIsActive] = useState(true);
+
+    useEffect(() => {
+        if (!isActive) return;
+        const timer = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 0) {
+                    clearInterval(timer);
+                    return 10;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [isActive]);
+
+    const handleTap = (isLie: boolean, e: any) => {
+        if (isLie) {
+            setIsActive(false);
+            onNext(e);
+        } else {
+            playSound('error');
+            triggerRoast();
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full p-6 justify-center">
+            <div className="w-full h-6 bg-gray-900 rounded-full mb-8 overflow-hidden border-2 border-white">
+                <motion.div 
+                    className="h-full bg-red-500"
+                    initial={{ width: '100%' }}
+                    animate={{ width: `${(timeLeft / 10) * 100}%` }}
+                    transition={{ duration: 1, ease: "linear" }}
+                />
+            </div>
+            <h3 className="text-center font-game text-4xl text-white mb-8 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
+            <div className="grid grid-cols-1 gap-4">
+                {(lesson.content.statements || []).map((s: any, i: number) => (
+                    <button 
+                        key={i}
+                        onClick={(e) => handleTap(s.isLie, e)}
+                        className="p-6 bg-white text-black font-bold rounded-2xl shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-1 transition-all text-lg border-2 border-black"
+                    >
+                        {s.text}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
+    const fallbackItems = [
+        { id: 'f1', text: 'Starbucks', category: 'Wants' },
+        { id: 'f2', text: 'Rent', category: 'Needs' },
+        { id: 'f3', text: 'Groceries', category: 'Needs' },
+        { id: 'f4', text: 'New iPhone', category: 'Wants' }
+    ];
+    const [items, setItems] = useState(() => (lesson.content && Array.isArray(lesson.content.items) && lesson.content.items.length > 0) ? lesson.content.items : fallbackItems);
+    const buckets = lesson.content.buckets || ['Needs', 'Wants'];
+
+    const handleDrop = (itemId: string, bucket: string, e: any) => {
+        playSound('coin');
+        const remaining = items.filter((i: any) => i.id !== itemId);
+        setItems(remaining);
+        if (remaining.length === 0) setTimeout(() => onNext(e), 500);
+    };
+
+    return (
+        <div className="flex flex-col h-full p-4 pt-12">
+            <h3 className="text-center font-game text-2xl text-white mb-8">Sort the Expenses!</h3>
+            <div className="flex justify-center gap-4 mb-auto">
+                {buckets.map((b: string) => (
+                    <div key={b} className="w-32 h-32 border-4 border-dashed border-white/30 rounded-2xl flex items-center justify-center text-white font-bold uppercase bg-black/20 text-xl">
+                        {b}
+                    </div>
+                ))}
+            </div>
+            <div className="flex flex-wrap justify-center gap-4 pb-12 min-h-[150px]">
+                {items.map((item: any) => (
+                    <motion.div
+                        key={item.id}
+                        drag
+                        dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
+                        dragElastic={0.2}
+                        whileDrag={{ scale: 1.2, rotate: 5 }}
+                        onDragEnd={(e, info) => {
+                            if (info.point.y < window.innerHeight / 2) handleDrop(item.id, item.category, e);
+                        }}
+                        className="px-8 py-4 bg-neon-blue text-black font-black rounded-full shadow-[0_4px_0_#0088b3] cursor-grab active:cursor-grabbing select-none border-2 border-white"
+                    >
+                        {item.text}
+                    </motion.div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
+    const [revealed, setRevealed] = useState(false);
+    return (
+        <div className="flex flex-col h-full p-6 justify-center items-center">
+            <div onClick={() => { if (!revealed) { playSound('pop'); setRevealed(true); } }} className="relative w-full max-w-md aspect-square bg-black border-[6px] border-white rounded-3xl overflow-hidden mb-6 cursor-pointer shadow-2xl transform hover:scale-105 transition-transform">
+                <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-80" />
+                <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.topText}</div>
+                <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.bottomText}</div>
+                {!revealed && (
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
+                        <div className="bg-neon-pink text-white border-2 border-white px-6 py-3 rounded-full font-black animate-bounce text-xl">TAP TO REVEAL</div>
+                    </div>
+                )}
+            </div>
+            {revealed && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center w-full">
+                    <div className="bg-white/10 p-4 rounded-xl border border-white/20 mb-6">
+                        <p className="text-neon-blue font-bold text-lg">"{lesson.content.explanation}"</p>
+                    </div>
+                    <button onClick={(e) => onNext(e)} className="w-full px-8 py-4 bg-green-500 text-black font-game text-xl rounded-2xl btn-3d">FACTS 💯</button>
+                </motion.div>
+            )}
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
+
 export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onComplete }) => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [hearts, setHearts] = useState(3);
     const [isLoading, setIsLoading] = useState(true);
     const [rewards, setRewards] = useState<FloatingReward[]>([]);
+    const [failureToast, setFailureToast] = useState<string | null>(null);
     
     // Boss State
     const [showBossIntro, setShowBossIntro] = useState(false);
@@ -93,6 +301,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
         }, 1500);
     };
 
+    // Helper to trigger wrong answer roast
+    const triggerRoast = () => {
+        const roast = WRONG_ANSWER_ROASTS[Math.floor(Math.random() * WRONG_ANSWER_ROASTS.length)];
+        setFailureToast(roast);
+        setTimeout(() => setFailureToast(null), 2000);
+    };
+
     const handleLessonComplete = (xp: number, coins: number, e: any) => {
         playSound('success');
         triggerReward(e, xp, coins, "CORRECT!");
@@ -131,6 +346,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             }
         } else {
             playSound('error');
+            triggerRoast(); // Roast 'em
             const newHearts = hearts - 1;
             setHearts(newHearts);
             
@@ -143,190 +359,12 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
             if (newHearts <= 0) {
                 playSound('fail');
-                alert("THE BOSS DEFEATED YOU! 💀\nTry again!");
-                onClose();
+                setTimeout(() => {
+                    alert("THE BOSS DEFEATED YOU! 💀\nTry again!");
+                    onClose();
+                }, 500);
             }
         }
-    };
-
-    // --- SUB-COMPONENTS FOR LESSON TYPES ---
-
-    const SwipeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
-        const [cardIndex, setCardIndex] = useState(0);
-        const cards = lesson.content.cards || [];
-        const currentCard = cards[cardIndex];
-
-        const handleSwipe = (direction: 'left' | 'right', e?: any) => {
-            const isRight = direction === 'right';
-            const correct = currentCard.isRight === isRight;
-            
-            if (correct) {
-                playSound('pop');
-                if (cardIndex < cards.length - 1) {
-                    setCardIndex(prev => prev + 1);
-                } else {
-                    onNext(e);
-                }
-            } else {
-                playSound('error');
-            }
-        };
-
-        if (!currentCard) return <div>Done</div>;
-
-        return (
-            <div className="flex flex-col items-center justify-center h-full p-4">
-                <h3 className="font-game text-2xl mb-8 text-white drop-shadow-md">Swipe Right if Smart ✅</h3>
-                <motion.div 
-                    key={cardIndex}
-                    initial={{ scale: 0.8, opacity: 0, rotate: -10 }}
-                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                    className="w-72 h-96 bg-white rounded-3xl shadow-2xl flex flex-col items-center justify-center p-6 text-center border-[6px] border-black relative"
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    onDragEnd={(e, { offset }) => {
-                        if (offset.x > 100) handleSwipe('right', e);
-                        else if (offset.x < -100) handleSwipe('left', e);
-                    }}
-                >
-                    <div className="text-black font-black text-3xl mb-4 leading-tight">{currentCard.text}</div>
-                    <div className={`text-white font-bold uppercase tracking-widest px-4 py-1 rounded-full ${currentCard.isRight ? 'bg-green-500' : 'bg-red-500'}`}>
-                        {currentCard.isRight ? 'Good' : 'Bad'} Idea?
-                    </div>
-                </motion.div>
-                <div className="flex gap-12 mt-12">
-                    <button onClick={(e) => handleSwipe('left', e)} className="p-6 bg-red-500 rounded-full border-b-[6px] border-red-800 active:translate-y-1 transition-transform hover:scale-110"><XMarkIcon className="w-10 h-10 text-white"/></button>
-                    <button onClick={(e) => handleSwipe('right', e)} className="p-6 bg-green-500 rounded-full border-b-[6px] border-green-800 active:translate-y-1 transition-transform hover:scale-110"><CheckCircleIcon className="w-10 h-10 text-white"/></button>
-                </div>
-            </div>
-        );
-    };
-
-    const TapLieView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
-        const [timeLeft, setTimeLeft] = useState(10);
-        const [isActive, setIsActive] = useState(true);
-
-        useEffect(() => {
-            if (!isActive) return;
-            const timer = setInterval(() => {
-                setTimeLeft(prev => {
-                    if (prev <= 0) {
-                        clearInterval(timer);
-                        return 10;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-            return () => clearInterval(timer);
-        }, [isActive]);
-
-        const handleTap = (isLie: boolean, e: any) => {
-            if (isLie) {
-                setIsActive(false);
-                onNext(e);
-            } else {
-                playSound('error');
-            }
-        };
-
-        return (
-            <div className="flex flex-col h-full p-6 justify-center">
-                <div className="w-full h-6 bg-gray-900 rounded-full mb-8 overflow-hidden border-2 border-white">
-                    <motion.div 
-                        className="h-full bg-red-500"
-                        initial={{ width: '100%' }}
-                        animate={{ width: `${(timeLeft / 10) * 100}%` }}
-                        transition={{ duration: 1, ease: "linear" }}
-                    />
-                </div>
-                <h3 className="text-center font-game text-4xl text-white mb-8 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
-                <div className="grid grid-cols-1 gap-4">
-                    {(lesson.content.statements || []).map((s: any, i: number) => (
-                        <button 
-                            key={i}
-                            onClick={(e) => handleTap(s.isLie, e)}
-                            className="p-6 bg-white text-black font-bold rounded-2xl shadow-[0_4px_0_#ccc] active:shadow-none active:translate-y-1 transition-all text-lg border-2 border-black"
-                        >
-                            {s.text}
-                        </button>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
-        const fallbackItems = [
-            { id: 'f1', text: 'Starbucks', category: 'Wants' },
-            { id: 'f2', text: 'Rent', category: 'Needs' },
-            { id: 'f3', text: 'Groceries', category: 'Needs' },
-            { id: 'f4', text: 'New iPhone', category: 'Wants' }
-        ];
-        const [items, setItems] = useState(() => (lesson.content && Array.isArray(lesson.content.items) && lesson.content.items.length > 0) ? lesson.content.items : fallbackItems);
-        const buckets = lesson.content.buckets || ['Needs', 'Wants'];
-
-        const handleDrop = (itemId: string, bucket: string, e: any) => {
-            playSound('coin');
-            const remaining = items.filter((i: any) => i.id !== itemId);
-            setItems(remaining);
-            if (remaining.length === 0) setTimeout(() => onNext(e), 500);
-        };
-
-        return (
-            <div className="flex flex-col h-full p-4 pt-12">
-                <h3 className="text-center font-game text-2xl text-white mb-8">Sort the Expenses!</h3>
-                <div className="flex justify-center gap-4 mb-auto">
-                    {buckets.map((b: string) => (
-                        <div key={b} className="w-32 h-32 border-4 border-dashed border-white/30 rounded-2xl flex items-center justify-center text-white font-bold uppercase bg-black/20 text-xl">
-                            {b}
-                        </div>
-                    ))}
-                </div>
-                <div className="flex flex-wrap justify-center gap-4 pb-12 min-h-[150px]">
-                    {items.map((item: any) => (
-                        <motion.div
-                            key={item.id}
-                            drag
-                            dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
-                            dragElastic={0.2}
-                            whileDrag={{ scale: 1.2, rotate: 5 }}
-                            onDragEnd={(e, info) => {
-                                if (info.point.y < window.innerHeight / 2) handleDrop(item.id, item.category, e);
-                            }}
-                            className="px-8 py-4 bg-neon-blue text-black font-black rounded-full shadow-[0_4px_0_#0088b3] cursor-grab active:cursor-grabbing select-none border-2 border-white"
-                        >
-                            {item.text}
-                        </motion.div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
-
-    const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
-        const [revealed, setRevealed] = useState(false);
-        return (
-            <div className="flex flex-col h-full p-6 justify-center items-center">
-                <div onClick={() => { if (!revealed) { playSound('pop'); setRevealed(true); } }} className="relative w-full max-w-md aspect-square bg-black border-[6px] border-white rounded-3xl overflow-hidden mb-6 cursor-pointer shadow-2xl transform hover:scale-105 transition-transform">
-                    <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-80" />
-                    <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.topText}</div>
-                    <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2">{lesson.content.bottomText}</div>
-                    {!revealed && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm">
-                            <div className="bg-neon-pink text-white border-2 border-white px-6 py-3 rounded-full font-black animate-bounce text-xl">TAP TO REVEAL</div>
-                        </div>
-                    )}
-                </div>
-                {revealed && (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center w-full">
-                        <div className="bg-white/10 p-4 rounded-xl border border-white/20 mb-6">
-                            <p className="text-neon-blue font-bold text-lg">"{lesson.content.explanation}"</p>
-                        </div>
-                        <button onClick={(e) => onNext(e)} className="w-full px-8 py-4 bg-green-500 text-black font-game text-xl rounded-2xl btn-3d">FACTS 💯</button>
-                    </motion.div>
-                )}
-            </div>
-        );
     };
 
     // --- RENDER MAIN ---
@@ -356,6 +394,20 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                     ))}
                 </AnimatePresence>
             </div>
+
+            {/* FAILURE TOAST ROAST */}
+            <AnimatePresence>
+                {failureToast && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50, scale: 0.8 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                        className="absolute bottom-32 left-1/2 -translate-x-1/2 z-[1000] bg-red-600 text-white px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.6)] border-4 border-black font-game text-xl text-center max-w-[90%] pointer-events-none"
+                    >
+                        {failureToast}
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* HEADER */}
             <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-sm border-b border-white/5 z-50">
@@ -456,9 +508,9 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         exit={{ opacity: 0, x: -100 }}
                         className="h-full"
                     >
-                        {currentLesson.type === 'swipe' && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} />}
+                        {currentLesson.type === 'swipe' && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'drag_drop' && <DragDropView lesson={currentLesson} onNext={(e) => handleLessonComplete(150, 50, e)} />}
-                        {currentLesson.type === 'tap_lie' && <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} />}
+                        {currentLesson.type === 'tap_lie' && <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'calculator' && <div onClick={(e) => handleLessonComplete(100, 50, e)}>Calc (Placeholder)</div>}
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 20, e)} />}
                         {(currentLesson.type === 'video' || currentLesson.type === 'info') && (
