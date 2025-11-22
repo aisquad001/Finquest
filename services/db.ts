@@ -16,7 +16,14 @@ const {
     serverTimestamp,
     increment,
     Timestamp,
-    arrayUnion
+    arrayUnion,
+    collection,
+    onSnapshot,
+    query,
+    limit,
+    orderBy,
+    writeBatch,
+    getDocs
 } = firestore;
 
 // --- MOCK DB HELPERS ---
@@ -142,7 +149,7 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
                 lastLoginAt: serverTimestamp(),
                 isAdmin: false, 
                 role: 'user' as const,
-                loginType: onboardingData.authMethod || 'google'
+                loginType: (onboardingData.authMethod || 'google') as any
             };
             
             await Promise.race([
@@ -387,4 +394,45 @@ export const seedGameData = async () => {
     };
     saveMockContent(content);
     console.log("Seeded World 1 Level 1");
+};
+
+// --- ADMIN REAL-TIME DATA ---
+export const subscribeToAllUsers = (callback: (users: UserState[]) => void) => {
+    console.log("[ADMIN] Subscribing to ALL users...");
+    const q = query(collection(db, 'users'), orderBy('lastLoginAt', 'desc'), limit(100));
+    
+    return onSnapshot(q, (snapshot) => {
+        const users = snapshot.docs.map(doc => convertDocToUser(doc.data()));
+        callback(users);
+    }, (error) => {
+        console.error("Admin Sub Error:", error);
+    });
+};
+
+export const adminUpdateUser = async (uid: string, data: Partial<UserState>) => {
+    const ref = doc(db, 'users', uid);
+    await updateDoc(ref, data);
+};
+
+export const writeGlobalConfig = async (key: string, value: any) => {
+    await setDoc(doc(db, 'config', key), { value, updatedAt: serverTimestamp() });
+};
+
+export const adminMassUpdate = async (action: 'give_coins' | 'reset' | 'reward_all') => {
+    // Limitation: Batch only supports 500 ops. 
+    // For prototype, we fetch top 100 and update them.
+    const snapshot = await getDocs(query(collection(db, 'users'), limit(100)));
+    const batch = writeBatch(db);
+
+    snapshot.docs.forEach(doc => {
+        if (action === 'give_coins') {
+            batch.update(doc.ref, { coins: increment(1000) });
+        } else if (action === 'reset') {
+            batch.update(doc.ref, { coins: 500, level: 1, xp: 0, inventory: [] });
+        } else if (action === 'reward_all') {
+             batch.update(doc.ref, { lastDailyChestClaim: '' }); // Reset chest
+        }
+    });
+
+    await batch.commit();
 };

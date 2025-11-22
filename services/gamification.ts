@@ -33,6 +33,7 @@ export interface UserState {
 
     // Monetization
     subscriptionStatus: 'free' | 'pro';
+    lifetimeSpend: number; // REAL REVENUE TRACKING
     
     // Referrals
     referralCode: string;
@@ -67,6 +68,7 @@ export interface UserState {
     friends: string[]; // Friend IDs
     
     lastLoginAt?: string;
+    lastLocation?: { lat: number, lng: number, country: string }; // For Admin Map
     createdAt?: string;
 }
 
@@ -329,6 +331,12 @@ export const createInitialUser = (onboardingData: any): UserState => {
 
     // Handle Random Generation if Guest/Empty
     let profile = { nickname: onboardingData.nickname, avatar: onboardingData.avatar };
+    
+    // Use Google Display Name if available
+    if (onboardingData.displayName && onboardingData.authMethod !== 'guest') {
+        profile.nickname = onboardingData.displayName;
+    }
+
     if (!profile.nickname || onboardingData.authMethod === 'guest') {
         profile = generateRandomProfile();
     }
@@ -340,6 +348,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
         xp: onboardingData.xp || 500, 
         coins: 500,
         subscriptionStatus: 'free',
+        lifetimeSpend: 0,
         
         // Security Defaults
         isAdmin: false,
@@ -363,6 +372,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
         inventory: [],
         knowledgeGems: [],
         joinedAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
         portfolio: {
             cash: 100000, 
             holdings: {},
