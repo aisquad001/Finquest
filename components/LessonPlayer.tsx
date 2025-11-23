@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -6,7 +5,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/solid';
-import { Lesson } from '../services/gamification';
+import { Lesson, LessonDragItem } from '../services/gamification';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
 import { getRandomRoast } from '../services/contentGenerator';
@@ -102,10 +101,24 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
     const cards = lesson.content.cards || [];
     // Fallback for scenario/swipe mapping
     const effectiveCards = cards.length > 0 ? cards : [
-        { text: lesson.content.left || "Left", isRight: false },
-        { text: lesson.content.right || "Right", isRight: true }
+        { text: lesson.content.left || "Left", isRight: false, label: "Option A" },
+        { text: lesson.content.right || "Right", isRight: true, label: "Option B" }
     ];
     const currentCard = effectiveCards[cardIndex];
+
+    // Handle Scenario JSON format where it's just one question
+    if (!currentCard && lesson.type === 'scenario') {
+        return (
+             <div className="flex flex-col h-full p-6 justify-center items-center text-center">
+                <h3 className="font-game text-3xl text-white mb-8">{lesson.title}</h3>
+                <p className="text-xl font-bold text-white mb-8">{lesson.content.question}</p>
+                <p className="text-sm text-gray-400 mb-8 italic">{lesson.content.text}</p>
+                <button onClick={(e) => onNext(e)} className="w-full py-4 bg-neon-blue text-black font-game text-2xl rounded-xl btn-3d">
+                    MAKE THE CALL 🤙
+                </button>
+            </div>
+        );
+    }
 
     const handleSwipe = (direction: 'left' | 'right', e?: any) => {
         const isRight = direction === 'right';
@@ -163,11 +176,7 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
 
 const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
     const statements = lesson.content.statements || [];
-    // Fallback if using options array from JSON
-    const displayOptions = statements.length > 0 ? statements : (lesson.content.options || []).map((opt, i) => ({
-        text: opt, isLie: i === lesson.content.correct
-    }));
-
+    
     const handleTap = (isLie: boolean, e: any) => {
         if (isLie) {
             onNext(e);
@@ -182,7 +191,7 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
             <h3 className="text-center font-game text-4xl text-white mb-2 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
              <p className="text-center text-white/80 mb-8 text-sm font-bold">{lesson.content.text}</p>
             <div className="grid grid-cols-1 gap-4">
-                {displayOptions.map((s: any, i: number) => (
+                {statements.map((s: any, i: number) => (
                     <button 
                         key={i}
                         onClick={(e) => handleTap(s.isLie, e)}
@@ -197,12 +206,13 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
 };
 
 const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
-    const [items, setItems] = useState(() => (lesson.content.items || []));
+    const [items, setItems] = useState<(LessonDragItem | string)[]>(() => (lesson.content.items || []));
     const buckets = lesson.content.buckets || ['Needs', 'Wants'];
 
-    const handleDrop = (itemId: string, bucket: string, e: any) => {
+    const handleDrop = (itemId: string, e: any) => {
         playSound('coin');
-        const remaining = items.filter((i: any) => i.id !== itemId);
+        // Allow string items from JSON simplified format
+        const remaining = items.filter((i: any) => (typeof i === 'string' ? i : i.id) !== itemId);
         setItems(remaining);
         if (remaining.length === 0) setTimeout(() => onNext(e), 500);
     };
@@ -218,20 +228,24 @@ const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => 
                 ))}
             </div>
             <div className="flex flex-wrap justify-center gap-4 pb-12 min-h-[150px]">
-                {items.map((item: any) => (
-                    <motion.div
-                        key={item.id}
-                        drag
-                        dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
-                        whileDrag={{ scale: 1.2, cursor: 'grabbing' }}
-                        onDragEnd={(e, info) => {
-                            if (info.point.y < window.innerHeight / 2) handleDrop(item.id, item.category, e);
-                        }}
-                        className="px-6 py-3 bg-neon-blue text-black font-black rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-grab border-2 border-black text-lg"
-                    >
-                        {item.text}
-                    </motion.div>
-                ))}
+                {items.map((item: any) => {
+                    const id = typeof item === 'string' ? item : item.id;
+                    const text = typeof item === 'string' ? item : item.text;
+                    return (
+                        <motion.div
+                            key={id}
+                            drag
+                            dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
+                            whileDrag={{ scale: 1.2, cursor: 'grabbing' }}
+                            onDragEnd={(e, info) => {
+                                if (info.point.y < window.innerHeight / 2) handleDrop(id, e);
+                            }}
+                            className="px-6 py-3 bg-neon-blue text-black font-black rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-grab border-2 border-black text-lg"
+                        >
+                            {text}
+                        </motion.div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -245,7 +259,7 @@ const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void
                 <img src={lesson.content.imageUrl || "https://i.imgflip.com/30b1gx.jpg"} className="w-full h-full object-cover opacity-90" />
                 {lesson.content.topText && <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.topText}</div>}
                 {lesson.content.bottomText && <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.bottomText}</div>}
-                {lesson.content.caption && <div className="absolute bottom-0 bg-black/80 text-white w-full p-2 text-center font-bold">{lesson.content.caption}</div>}
+                {lesson.content.caption && <div className="absolute bottom-0 bg-black/80 text-white w-full p-4 text-center font-bold text-lg">{lesson.content.caption}</div>}
                 {!revealed && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity">
                         <div className="bg-neon-pink text-white border-4 border-white px-8 py-4 rounded-full font-black animate-bounce text-2xl shadow-lg rotate-3">
@@ -534,11 +548,11 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         {(currentLesson.type === 'swipe' || currentLesson.type === 'scenario') && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'poll' && <PollView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'drag_drop' && <DragDropView lesson={currentLesson} onNext={(e) => handleLessonComplete(150, 50, e)} />}
-                        {currentLesson.type === 'tap_lie' && <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
+                        {currentLesson.type === 'tapLie' ? <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} /> : null}
                         {currentLesson.type === 'calculator' && <CalculatorView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} />}
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 20, e)} />}
-                        {currentLesson.type === 'fun_fact' && <FunFactView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 10, e)} />}
-                        {(currentLesson.type === 'info' || currentLesson.type === 'video') && (
+                        {(currentLesson.type === 'funFact') && <FunFactView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 10, e)} />}
+                        {(currentLesson.type === 'info' || currentLesson.type === 'video' || currentLesson.type === 'badge') && (
                             <div className="flex flex-col h-full p-6 pt-12 items-center text-center">
                                 <h2 className="font-game text-3xl text-white mb-8">{currentLesson.title}</h2>
                                 <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 text-xl text-white leading-relaxed">

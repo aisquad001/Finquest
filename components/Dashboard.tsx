@@ -398,8 +398,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             {WORLDS_METADATA.map((world) => {
                                 const isUnlocked = user.level >= world.unlockLevel;
                                 const worldLevels = GET_WORLD_LEVELS(world.id);
-                                const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
-                                const isCompleted = completedInWorld >= worldLevels.length;
+                                const completedInWorld = user.completedLevels.filter(l => l.startsWith(world.id.replace(/\s+/g, ''))).length;
+                                const isCompleted = completedInWorld >= 8; // 8 levels per world
                                 const Icon = world.icon;
 
                                 return (
@@ -423,7 +423,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                                 {world.title}
                                             </h3>
                                             {isUnlocked && (
-                                                <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/{worldLevels.length} Levels</div>
+                                                <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/8 Levels</div>
                                             )}
                                         </div>
                                         {isCompleted && <CheckBadgeIcon className="w-8 h-8 text-white drop-shadow-md" />}

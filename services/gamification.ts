@@ -153,7 +153,7 @@ export interface LeaderboardEntry {
 
 // --- Content Types for Firestore ---
 
-export type LessonType = 'swipe' | 'drag_drop' | 'tap_lie' | 'calculator' | 'meme' | 'video' | 'info' | 'fun_fact' | 'poll' | 'scenario';
+export type LessonType = 'swipe' | 'drag_drop' | 'tapLie' | 'calculator' | 'meme' | 'video' | 'info' | 'funFact' | 'poll' | 'scenario' | 'badge';
 
 // CMS Types
 export interface LessonSwipeCard { text: string; isRight: boolean; label: string; }
@@ -165,7 +165,7 @@ export interface LessonContent {
     cards?: LessonSwipeCard[];
     // Drag Drop
     buckets?: string[];
-    items?: LessonDragItem[];
+    items?: LessonDragItem[] | string[]; // string[] for compatibility with simpler JSON
     // Tap Lie
     statements?: LessonStatement[];
     // Meme
@@ -204,6 +204,8 @@ export interface Lesson {
     likes?: number;
     popularity?: string; // e.g. "12.4k"
     tags?: string[];
+    world?: string; // From JSON import
+    level?: number; // From JSON import
 }
 
 export interface LevelData {
@@ -262,14 +264,14 @@ export const BADGES: Badge[] = [
 ];
 
 export const WORLDS_METADATA: WorldData[] = [
-    { id: 'world1', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
-    { id: 'world2', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule.", unlockLevel: 2, badgeId: 'badge_budget' },
-    { id: 'world3', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_savings' },
-    { id: 'world4', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },
-    { id: 'world5', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Credit Cards & Loans.", unlockLevel: 8, badgeId: 'badge_debt' },
-    { id: 'world6', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes & Side Hustles.", unlockLevel: 12, badgeId: 'badge_taxes' },
-    { id: 'world7', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Investing & Risk.", unlockLevel: 15, badgeId: 'badge_invest' },
-    { id: 'world8', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net Worth & Freedom.", unlockLevel: 20, badgeId: 'badge_wealth' }
+    { id: 'Moola Basics', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
+    { id: 'Budget Beach', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule.", unlockLevel: 2, badgeId: 'badge_budget' },
+    { id: 'Compound Cliffs', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_savings' },
+    { id: 'Bank Vault', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },
+    { id: 'Debt Dungeon', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Credit Cards & Loans.", unlockLevel: 8, badgeId: 'badge_debt' },
+    { id: 'Hustle Hub', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes & Side Hustles.", unlockLevel: 12, badgeId: 'badge_taxes' },
+    { id: 'Stony Stocks', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Investing & Risk.", unlockLevel: 15, badgeId: 'badge_invest' },
+    { id: 'Wealth Empire', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net Worth & Freedom.", unlockLevel: 20, badgeId: 'badge_wealth' }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [

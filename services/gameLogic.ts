@@ -174,11 +174,11 @@ export const checkWorldCompletion = async (uid: string, worldId: string, levelCo
         const user = snap.data() as UserState;
 
         // Count completed levels in this world
-        const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(worldId)).length;
+        const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(worldId.replace(/\s+/g, ''))).length;
         
         // If all 8 levels are done (or close to it, keeping it loose for now)
-        if (completedInWorld >= 6) {
-             const worldMeta = WORLDS_METADATA.find(w => w.id === worldId);
+        if (completedInWorld >= 7) {
+             const worldMeta = WORLDS_METADATA.find(w => w.id === worldId || w.title === worldId);
              if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
                  await updateDoc(userRef, {
                      badges: arrayUnion(worldMeta.badgeId)
