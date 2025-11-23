@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -289,7 +288,13 @@ const App: React.FC = () => {
 
   // LOGIN SCREEN
   if (showOnboarding || !user) {
-      return <Onboarding onComplete={handleOnboardingAuth} onOpenPortal={() => setView('portal')} />;
+      return <Onboarding onComplete={handleOnboardingAuth} onOpenPortal={() => {
+          // Update URL to query param style so refresh keeps user on portal without 404
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set('view', 'portal');
+          window.history.pushState({}, '', newUrl.toString());
+          setView('portal');
+      }} />;
   }
 
   // PROFILE SETUP (New User or Editing)

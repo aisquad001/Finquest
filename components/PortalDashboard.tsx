@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -53,8 +52,13 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
             const child = await fetchChildByCode(codeToUse.toUpperCase());
             if (child) {
                 setLinkedChild(child);
-                // Clean URL without reload
-                window.history.replaceState({}, '', '/portal');
+                // Clean URL without reload, using query params to prevent 404 on refresh
+                const newUrl = new URL(window.location.href);
+                newUrl.searchParams.set('view', 'portal');
+                // Keep code if it was there, or maybe clear it? Keeping view=portal is essential.
+                // We can remove code from URL for cleanliness if desired, but view param is must.
+                if (manualCode) newUrl.searchParams.delete('code'); 
+                window.history.replaceState({}, '', newUrl.toString());
             } else {
                 if (!manualCode) alert("Invalid magic link code."); // Only alert if it was auto-attempt
                 else alert("Invalid code. Please ask your teen to generate a new one in the app.");
