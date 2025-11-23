@@ -29,7 +29,9 @@ export const CreationHistory: React.FC<BadgeCollectionProps> = ({ user }) => {
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {BADGES.map((badge) => {
-            const isUnlocked = ownedBadges.includes(badge.id);
+            // Check if user owns this badge by ID
+            const earnedBadge = ownedBadges.find(b => b.id === badge.id);
+            const isUnlocked = !!earnedBadge;
             
             return (
               <div 
@@ -57,9 +59,21 @@ export const CreationHistory: React.FC<BadgeCollectionProps> = ({ user }) => {
                         {badge.name}
                     </h4>
                     
-                    <p className="text-[10px] font-bold leading-tight opacity-80">
-                        {isUnlocked ? badge.description : badge.unlockCondition}
+                    <p className="text-[10px] font-bold leading-tight opacity-80 mb-1">
+                        {badge.description}
                     </p>
+
+                    {isUnlocked && earnedBadge && (
+                        <p className="text-[8px] font-mono text-white/50 mt-1">
+                            Earned: {new Date(earnedBadge.earned).toLocaleDateString()}
+                        </p>
+                    )}
+                    
+                    {!isUnlocked && (
+                        <p className="text-[9px] font-bold text-white/40 mt-1 italic">
+                            Unlock: {badge.unlockCondition}
+                        </p>
+                    )}
                  </div>
 
                  {!isUnlocked && (

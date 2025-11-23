@@ -3,7 +3,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { UserState, SHOP_ITEMS, WORLDS_METADATA, getXpForNextLevel, checkStreak } from './gamification';
+import { UserState, SHOP_ITEMS, WORLDS_METADATA, getXpForNextLevel, checkStreak, EarnedBadge } from './gamification';
 import { playSound } from './audio';
 import { updateUser, getUser } from './db';
 import * as firestore from 'firebase/firestore';
@@ -183,7 +183,7 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
 
     let message = '';
     let rewards = { coins: 0, xp: 0 };
-    let badgeToUnlock = null;
+    let badgeToUnlock: string | null = null;
 
     // Only calculate rewards if streak INCREASED (not broken/frozen)
     if (updatedUser.streak > user.streak) {
@@ -194,7 +194,8 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
         else if (updatedUser.streak === 30) { 
             rewards = { coins: 50000, xp: 10000 }; 
             message += " (GODLIKE!)"; 
-            if (!user.badges?.includes('badge_streak_30')) badgeToUnlock = 'badge_streak_30';
+            // Check if badge already owned by ID
+            if (!user.badges?.some(b => b.id === 'badge_streak_30')) badgeToUnlock = 'badge_streak_30';
         }
         else { rewards = { coins: 100, xp: 50 }; }
     } else if (savedByFreeze) {
@@ -213,7 +214,8 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
         };
         
         if (badgeToUnlock) {
-            updatePayload.badges = [...(user.badges || []), badgeToUnlock];
+            const newBadge: EarnedBadge = { id: badgeToUnlock, earned: new Date().toISOString() };
+            updatePayload.badges = [...(user.badges || []), newBadge];
         }
 
         await updateUser(uid, updatePayload);
@@ -253,8 +255,12 @@ export const checkWorldCompletion = async (uid: string, worldId: string) => {
                  const newBadges = [...(user.badges || [])];
                  let badgeAdded = false;
                  
-                 if (worldMeta.badgeId && !newBadges.includes(worldMeta.badgeId)) {
-                     newBadges.push(worldMeta.badgeId);
+                 // Check if badge is already earned by looking up ID in the array of objects
+                 if (worldMeta.badgeId && !newBadges.some(b => b.id === worldMeta.badgeId)) {
+                     newBadges.push({
+                         id: worldMeta.badgeId,
+                         earned: new Date().toISOString()
+                     });
                      badgeAdded = true;
                  }
 

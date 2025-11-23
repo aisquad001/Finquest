@@ -30,7 +30,8 @@ import {
     UserState, 
     getXpForNextLevel, 
     SHOP_ITEMS,
-    SEASONAL_EVENTS
+    SEASONAL_EVENTS,
+    BADGES
 } from '../services/gamification';
 import { claimDailyChest } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
@@ -94,6 +95,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             return () => unsub();
         }
     }, [activeTab]);
+
+    // Get Latest Badge
+    const latestBadgeEntry = user.badges && user.badges.length > 0 ? user.badges[user.badges.length - 1] : null;
+    const latestBadge = latestBadgeEntry ? BADGES.find(b => b.id === latestBadgeEntry.id) : null;
 
     const handleInstall = () => {
         if (installPrompt) {
@@ -296,23 +301,36 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                     <span className="bg-yellow-400 text-black text-[10px] font-black px-1 rounded uppercase">PRO</span>
                                 )}
                              </div>
-                             <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold uppercase mt-1">
-                                <span className={`font-bold transition-colors ${user.coins < 1000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
-                                    🪙 {user.coins.toLocaleString()}
-                                </span>
+                             
+                             {/* BADGE DISPLAY */}
+                             <div 
+                                onClick={() => { playSound('pop'); setActiveTab('badges'); }}
+                                className="flex items-center gap-2 mt-1 cursor-pointer group"
+                             >
+                                {latestBadge ? (
+                                    <>
+                                        <div className="text-xl filter drop-shadow-[0_0_5px_rgba(255,255,255,0.8)] group-hover:scale-110 transition-transform">
+                                            {latestBadge.icon}
+                                        </div>
+                                        <div className="text-[10px] font-bold text-neon-green uppercase tracking-wider border border-neon-green/30 bg-neon-green/10 px-2 py-0.5 rounded-md group-hover:bg-neon-green/20 transition-colors">
+                                            {latestBadge.name}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider animate-pulse">
+                                        No badges yet...
+                                    </div>
+                                )}
                              </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                         {user.subscriptionStatus !== 'pro' && (
-                            <button 
-                                onClick={onOpenPremium}
-                                className="hidden sm:flex items-center gap-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-black text-xs px-3 py-1.5 rounded-full hover:scale-105 transition-transform animate-pulse"
-                            >
-                                <SparklesIcon className="w-3 h-3" /> RACKED PRO
-                            </button>
-                         )}
+                         <div className="flex flex-col items-end">
+                             <span className={`font-bold transition-colors text-xs ${user.coins < 1000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
+                                🪙 {user.coins.toLocaleString()}
+                             </span>
+                         </div>
 
                         {/* STREAK BUTTON */}
                         <button className="flex flex-col items-center relative group active:scale-90 transition-transform">

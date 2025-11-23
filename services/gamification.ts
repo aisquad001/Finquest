@@ -27,6 +27,11 @@ export interface Badge {
     color: string;
 }
 
+export interface EarnedBadge {
+    id: string;
+    earned: string; // ISO Timestamp
+}
+
 export interface UserState {
     uid?: string; // Firebase UID
     nickname: string;
@@ -73,7 +78,7 @@ export interface UserState {
     progress: Record<string, WorldProgress>; // worldId -> data
 
     inventory: string[];
-    badges: string[]; // List of badge IDs owned
+    badges: EarnedBadge[]; // List of badge objects
     
     joinedAt: string;
     knowledgeGems: string[]; // Collected gems IDs
@@ -251,15 +256,15 @@ export const SEASONAL_EVENTS = {
 // --- CURRICULUM DEFINITION (FINAL PACK) ---
 
 export const BADGES: Badge[] = [
-    { id: 'badge_basics', name: 'Basics Boss', description: 'Completed Moola Basics', icon: '💰', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
-    { id: 'badge_budget', name: 'Budget Ninja', description: 'Mastered Budget Beach', icon: '🥷', unlockCondition: 'Complete World 2', color: 'bg-neon-blue' },
-    { id: 'badge_savings', name: 'Savings Snowball', description: 'Conquered Compound Cliffs', icon: '❄️', unlockCondition: 'Complete World 3', color: 'bg-neon-purple' },
-    { id: 'badge_banking', name: 'Bank Vault Key', description: 'Opened the Bank Vault', icon: '🗝️', unlockCondition: 'Complete World 4', color: 'bg-neon-pink' },
-    { id: 'badge_debt', name: 'Debt Destroyer', description: 'Escaped Debt Dungeon', icon: '⛓️', unlockCondition: 'Complete World 5', color: 'bg-orange-500' },
-    { id: 'badge_taxes', name: 'Tax Tactical', description: 'Survived Hustle Hub', icon: '🕵️', unlockCondition: 'Complete World 6', color: 'bg-yellow-400' },
-    { id: 'badge_invest', name: 'Stock Star', description: 'Dominated Stony Stocks', icon: '🐂', unlockCondition: 'Complete World 7', color: 'bg-emerald-500' },
-    { id: 'badge_wealth', name: 'Wealth Wizard', description: 'Ruled Empire City', icon: '👑', unlockCondition: 'Complete World 8', color: 'bg-indigo-500' },
-    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎', unlockCondition: 'Login 30 days in a row', color: 'bg-blue-400' },
+    { id: 'badge_basics', name: 'Basics Boss', description: 'Mastered Moola Basics', icon: '🐷👑', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
+    { id: 'badge_budget', name: 'Budget Ninja', description: 'Mastered Budget Beach', icon: '🥷📊', unlockCondition: 'Complete World 2', color: 'bg-neon-blue' },
+    { id: 'badge_savings', name: 'Snowball God', description: 'Conquered Compound Cliffs', icon: '❄️✨', unlockCondition: 'Complete World 3', color: 'bg-neon-purple' },
+    { id: 'badge_banking', name: 'Vault Breaker', description: 'Opened the Bank Vault', icon: '🏦🔨', unlockCondition: 'Complete World 4', color: 'bg-neon-pink' },
+    { id: 'badge_debt', name: 'Debt Slayer', description: 'Escaped Debt Dungeon', icon: '⚔️💳', unlockCondition: 'Complete World 5', color: 'bg-orange-500' },
+    { id: 'badge_taxes', name: 'Hustle Wolf', description: 'Survived Hustle Hub', icon: '🐺💼', unlockCondition: 'Complete World 6', color: 'bg-yellow-400' },
+    { id: 'badge_invest', name: 'Stock Bull', description: 'Dominated Stony Stocks', icon: '🐂💹', unlockCondition: 'Complete World 7', color: 'bg-emerald-500' },
+    { id: 'badge_wealth', name: 'Wealth Wizard', description: 'Ruled Empire City', icon: '🧙‍♂️💎', unlockCondition: 'Complete World 8', color: 'bg-indigo-500' },
+    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎🙌', unlockCondition: 'Login 30 days in a row', color: 'bg-blue-400' },
     { id: 'badge_zoo_win', name: 'Wolf of Wall St', description: 'Made profit in the Zoo', icon: '🐺', unlockCondition: 'Trade a stock for profit', color: 'bg-red-500' },
 ];
 
