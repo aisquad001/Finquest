@@ -50,9 +50,9 @@ import {
 import { db } from '../services/firebase';
 import { collection, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { playSound } from '../services/audio';
-import { sendMockNotification } from '../services/notifications';
+import { sendMockNotification, NOTIFICATION_TYPES } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
-import { ASSET_LIST } from '../services/stockMarket';
+import { ASSET_LIST, getMarketData } from '../services/stockMarket';
 import { generateLevelContent } from '../services/contentGenerator';
 import { logger, LogEntry } from '../services/logger';
 
@@ -80,18 +80,6 @@ const useAdminData = () => {
     return { users, loading };
 };
 
-// --- HELPER: GENERATE DEFAULT SEED DATA ---
-const getGeneratedSeedData = (): Lesson[] => {
-    const data: Lesson[] = [];
-    WORLDS_METADATA.forEach(world => {
-        for (let l = 1; l <= 8; l++) {
-            const { lessons } = generateLevelContent(world.id, l);
-            data.push(...lessons);
-        }
-    });
-    return data;
-};
-
 // --- SUB-COMPONENTS ---
 
 // 1. DASHBOARD HOME (Stats)
@@ -100,7 +88,6 @@ const DashboardHome = ({ users }: { users: UserState[] }) => {
         const now = new Date();
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         const dau = users.filter(u => new Date(u.lastLoginAt || 0) > yesterday).length;
-        // Removed revenue logic since real money is gone
         const revenue = users.reduce((acc, u) => acc + (u.lifetimeSpend || 0), 0); 
         const paying = users.filter(u => (u.lifetimeSpend || 0) > 0).length;
         const conversion = users.length > 0 ? ((paying / users.length) * 100).toFixed(1) : "0.0";
@@ -150,13 +137,11 @@ const DashboardHome = ({ users }: { users: UserState[] }) => {
     );
 };
 
-// 2. USER MANAGEMENT (Updated for no Pro)
+// 2. USER MANAGEMENT
 const UserManagement = ({ users }: { users: UserState[] }) => {
-    // ... (Rest of UserManagement code remains similar but without promote action)
     const [filterType, setFilterType] = useState<'all' | 'registered' | 'guest'>('all');
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Stats
     const totalUsers = users.length;
     const registeredCount = users.filter(u => u.loginType !== 'guest').length;
     const guestCount = users.filter(u => u.loginType === 'guest').length;
@@ -290,6 +275,236 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
     );
 };
 
+// 3. CONTENT CMS
+const ContentCMS = () => {
+    const [selectedWorld, setSelectedWorld] = useState<string | null>(null);
+    const [isRegenerating, setIsRegenerating] = useState(false);
+
+    const handleRegenerate = async (worldId: string) => {
+        if (!confirm(`Regenerate ALL content for ${worldId}? This simulates AI generation.`)) return;
+        setIsRegenerating(true);
+        
+        try {
+            // Simulate batch generation
+            const updates = [];
+            for (let i = 1; i <= 8; i++) {
+                const { level, lessons } = generateLevelContent(worldId, i);
+                // In a real app, we'd save these to Firestore 'levels' and 'lessons' collections
+                // Here we just simulate the delay
+            }
+            await new Promise(r => setTimeout(r, 1500));
+            alert(`Content regenerated for ${worldId}`);
+        } catch (e) {
+            console.error(e);
+        }
+        setIsRegenerating(false);
+    };
+
+    return (
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
+            <div className="flex justify-between items-center mb-8">
+                <div>
+                    <h2 className="text-3xl font-game text-white">Content CMS</h2>
+                    <p className="text-slate-400 text-sm">Manage Worlds, Levels, and Bosses.</p>
+                </div>
+            </div>
+
+            {selectedWorld ? (
+                <div className="animate-slide-up">
+                    <button onClick={() => setSelectedWorld(null)} className="flex items-center gap-2 text-slate-400 hover:text-white mb-6">
+                        <ArrowLeftOnRectangleIcon className="w-4 h-4" /> Back to Worlds
+                    </button>
+                    <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold text-white">{selectedWorld}</h3>
+                            <button 
+                                onClick={() => handleRegenerate(selectedWorld)}
+                                disabled={isRegenerating}
+                                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"
+                            >
+                                <CloudArrowUpIcon className="w-4 h-4" />
+                                {isRegenerating ? 'Generating...' : 'Regenerate Levels'}
+                            </button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                                    <div>
+                                        <div className="text-neon-green font-bold text-xs uppercase">Level {i + 1}</div>
+                                        <div className="text-white font-bold">The Boss Battle</div>
+                                    </div>
+                                    <button className="p-2 hover:bg-white/10 rounded-lg text-slate-400">
+                                        <PencilSquareIcon className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    {WORLDS_METADATA.map(world => {
+                        const Icon = world.icon;
+                        return (
+                            <div 
+                                key={world.id}
+                                onClick={() => setSelectedWorld(world.title)}
+                                className={`cursor-pointer bg-slate-800 hover:bg-slate-700 border-2 border-slate-700 hover:border-white/20 rounded-2xl p-6 flex flex-col items-center text-center transition-all group`}
+                            >
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white mb-4 ${world.color} shadow-lg group-hover:scale-110 transition-transform`}>
+                                    <Icon className="w-6 h-6" />
+                                </div>
+                                <div className="font-bold text-white text-lg leading-none mb-2">{world.title}</div>
+                                <div className="text-xs text-slate-500">8 Levels • 24 Lessons</div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
+
+// 4. SHOP & ECONOMY
+const ShopEconomy = () => {
+    const [items, setItems] = useState<ShopItem[]>(SHOP_ITEMS);
+    
+    // Simulate fetching dynamic pricing
+    useEffect(() => {
+        const unsub = subscribeToCollection('shop_items', (cloudItems) => {
+            if (cloudItems.length > 0) {
+                const merged = SHOP_ITEMS.map(local => {
+                    const cloud = cloudItems.find(c => c.id === local.id);
+                    return cloud ? { ...local, ...cloud } : local;
+                });
+                setItems(merged);
+            }
+        });
+        return () => unsub();
+    }, []);
+
+    const handlePriceChange = async (id: string, newPrice: number) => {
+        const item = items.find(i => i.id === id);
+        if (item) {
+            // Optimistic update
+            setItems(prev => prev.map(i => i.id === id ? { ...i, cost: newPrice } : i));
+            await saveDoc('shop_items', id, { cost: newPrice });
+        }
+    };
+
+    return (
+        <div className="p-8 h-full overflow-y-auto animate-pop-in">
+            <h2 className="text-3xl font-game text-white mb-2">Shop Economy</h2>
+            <p className="text-slate-400 text-sm mb-8">Adjust item prices and availability dynamically.</p>
+            
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-900 text-slate-400 text-xs uppercase">
+                            <th className="p-4">Item</th>
+                            <th className="p-4">Category</th>
+                            <th className="p-4">Cost (Coins)</th>
+                            <th className="p-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700">
+                        {items.map(item => (
+                            <tr key={item.id} className="hover:bg-slate-700/50">
+                                <td className="p-4 flex items-center gap-3">
+                                    <span className="text-2xl">{item.emoji}</span>
+                                    <span className="text-white font-bold text-sm">{item.name}</span>
+                                </td>
+                                <td className="p-4">
+                                    <span className="bg-slate-900 text-slate-300 px-2 py-1 rounded text-xs font-bold uppercase">{item.category}</span>
+                                </td>
+                                <td className="p-4">
+                                    <input 
+                                        type="number" 
+                                        className="bg-black/30 border border-slate-600 rounded px-2 py-1 text-white w-24 text-right font-mono focus:border-blue-500 outline-none"
+                                        value={item.cost}
+                                        onChange={(e) => handlePriceChange(item.id, parseInt(e.target.value))}
+                                    />
+                                </td>
+                                <td className="p-4">
+                                    <span className="text-green-400 text-xs font-bold">ACTIVE</span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+// 5. NOTIFICATIONS
+const PushNotificationManager = () => {
+    const handleSend = (type: string) => {
+        if (confirm(`Broadcast ${type} to all users?`)) {
+            sendMockNotification(type as any);
+            alert("Sent!");
+        }
+    };
+
+    return (
+        <div className="p-8 animate-pop-in">
+            <h2 className="text-3xl font-game text-white mb-2">Push Notifications</h2>
+            <p className="text-slate-400 text-sm mb-8">Send alerts to users (Web Push).</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.entries(NOTIFICATION_TYPES).map(([key, config]) => (
+                    <div key={key} className="bg-slate-800 p-6 rounded-2xl border border-slate-700 hover:border-blue-500 transition-colors cursor-pointer group" onClick={() => handleSend(key)}>
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                                🔔
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-white mb-1">{config.title}</h3>
+                                <p className="text-slate-400 text-xs">{config.body}</p>
+                            </div>
+                        </div>
+                        <div className="mt-4 pt-4 border-t border-slate-700 flex justify-end">
+                            <button className="text-blue-400 text-xs font-bold uppercase group-hover:text-white">Send Test Broadcast &rarr;</button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+// 6. ZOO ADMIN
+const ZooAdmin = () => {
+    const [market, setMarket] = useState(getMarketData());
+
+    return (
+        <div className="p-8 animate-pop-in">
+            <h2 className="text-3xl font-game text-white mb-2">Wall Street Zoo</h2>
+            <p className="text-slate-400 text-sm mb-8">Monitor the simulated market feed.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {market.map(stock => (
+                    <div key={stock.symbol} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="text-2xl">{stock.logo}</div>
+                            <div>
+                                <div className="font-bold text-white">{stock.symbol}</div>
+                                <div className="text-xs text-slate-500">{stock.name}</div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="font-mono text-white">${stock.price.toFixed(2)}</div>
+                            <div className={`text-xs font-bold ${stock.changePercent >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {stock.changePercent > 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 // 7. GOD TOOLS (With Ads Toggle)
 const GodTools = ({ users }: { users: UserState[] }) => {
     const [loading, setLoading] = useState(false);
@@ -379,15 +594,42 @@ const GodTools = ({ users }: { users: UserState[] }) => {
     );
 };
 
-// ... (Other Admin components like ContentCMS, ShopEconomy, ZooAdmin, LogsViewer remain mostly same but imported)
-// For brevity in this XML response, assuming they are preserved or imported if split.
-// Merging ContentCMS, ShopEconomy, etc. into this file as it was before.
+// 8. LOGS
+const LogsViewer = () => {
+    const [logs, setLogs] = useState<LogEntry[]>([]);
 
-const ContentCMS = () => { /* ... existing code ... */ return <div>CMS Loaded</div> }; // Placeholder for brevity, assume implementation exists
-const ShopEconomy = () => { /* ... existing code ... */ return <div>Shop Loaded</div> };
-const PushNotificationManager = () => { /* ... existing code ... */ return <div>Push Loaded</div> };
-const ZooAdmin = () => { /* ... existing code ... */ return <div>Zoo Loaded</div> };
-const LogsViewer = () => { /* ... existing code ... */ return <div>Logs Loaded</div> };
+    useEffect(() => {
+        setLogs(logger.getLogs());
+    }, []);
+
+    return (
+        <div className="p-8 h-full overflow-hidden flex flex-col animate-pop-in">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-game text-white">System Logs</h2>
+                <button onClick={() => { logger.clearLogs(); setLogs([]); }} className="text-red-400 text-xs font-bold uppercase hover:text-white">Clear Logs</button>
+            </div>
+            <div className="flex-1 bg-slate-950 rounded-xl border border-slate-800 p-4 overflow-y-auto font-mono text-xs">
+                {logs.length === 0 && <div className="text-slate-600 text-center mt-20">No logs recorded.</div>}
+                {logs.map((log, i) => (
+                    <div key={i} className="mb-2 border-b border-slate-800 pb-2 last:border-0">
+                        <div className="flex gap-2 mb-1">
+                            <span className="text-slate-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                            <span className={`font-bold ${log.level === 'error' ? 'text-red-500' : log.level === 'warn' ? 'text-orange-400' : 'text-blue-400'}`}>
+                                {log.level.toUpperCase()}
+                            </span>
+                            <span className="text-white">{log.message}</span>
+                        </div>
+                        {log.details && (
+                            <pre className="bg-black/30 p-2 rounded text-slate-400 overflow-x-auto">
+                                {log.details}
+                            </pre>
+                        )}
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 // --- MAIN ADMIN COMPONENT ---
 
@@ -455,12 +697,12 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
                 <div className="absolute inset-0 overflow-y-auto">
                     {view === 'dashboard' && <DashboardHome users={users} />}
                     {view === 'users' && <UserManagement users={users} />}
-                    {/* {view === 'cms' && <ContentCMS />} */}
-                    {/* {view === 'shop' && <ShopEconomy />} */}
-                    {/* {view === 'push' && <PushNotificationManager />} */}
-                    {/* {view === 'zoo' && <ZooAdmin />} */}
+                    {view === 'cms' && <ContentCMS />}
+                    {view === 'shop' && <ShopEconomy />}
+                    {view === 'push' && <PushNotificationManager />}
+                    {view === 'zoo' && <ZooAdmin />}
                     {view === 'god' && <GodTools users={users} />}
-                    {/* {view === 'logs' && <LogsViewer />} */}
+                    {view === 'logs' && <LogsViewer />}
                 </div>
             </div>
         </div>
