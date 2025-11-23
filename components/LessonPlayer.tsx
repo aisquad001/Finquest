@@ -1,10 +1,11 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon, ArrowLeftIcon, ArrowRightIcon, LightBulbIcon } from '@heroicons/react/24/solid';
 import { Lesson, LessonDragItem } from '../services/gamification';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
@@ -39,16 +40,19 @@ const PollView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e
 
     return (
         <div className="flex flex-col h-full p-6 justify-center items-center text-center">
-            <h3 className="font-game text-3xl text-white mb-6 drop-shadow-md leading-tight">{lesson.title}</h3>
-            <div className="bg-white/10 p-6 rounded-3xl mb-8 border-2 border-white/20 text-2xl md:text-3xl font-black text-white w-full shadow-lg leading-tight">
-                {lesson.content.text || lesson.content.question}
+            <h3 className="font-game text-2xl text-white/70 mb-6 uppercase tracking-widest">{lesson.title}</h3>
+            <div className="bg-white/10 p-6 rounded-3xl mb-8 border-2 border-white/20 w-full shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white to-transparent opacity-50"></div>
+                <h2 className="text-3xl md:text-4xl font-black text-white leading-tight drop-shadow-md">
+                    {lesson.content.text || lesson.content.question}
+                </h2>
             </div>
             <div className="grid gap-4 w-full">
                 {options.map((opt, i) => (
                     <button 
                         key={i}
                         onClick={(e) => handleVote(i, e)}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all text-xl"
+                        className="w-full py-5 bg-white text-black font-bold rounded-2xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all text-xl md:text-2xl shadow-lg hover:bg-gray-50"
                     >
                         {opt}
                     </button>
@@ -222,7 +226,7 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
                     <button 
                         key={i}
                         onClick={(e) => handleTap(s.isLie, e)}
-                        className="p-6 bg-white text-black font-black rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all text-xl border-4 border-black hover:bg-gray-50 text-left"
+                        className="p-6 bg-white text-black font-black rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-x-[4px] active:translate-y-[4px] transition-all text-xl md:text-2xl border-4 border-black hover:bg-gray-50 text-left"
                     >
                         {s.text}
                     </button>
@@ -601,10 +605,33 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 20, e)} />}
                         {(currentLesson.type === 'funFact') && <FunFactView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 10, e)} />}
                         {(currentLesson.type === 'info' || currentLesson.type === 'video' || currentLesson.type === 'badge') && (
-                            <div className="flex flex-col h-full p-6 pt-12 items-center text-center">
-                                <h2 className="font-game text-3xl text-white mb-8">{currentLesson.title}</h2>
-                                <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 text-xl text-white leading-relaxed">
-                                    {currentLesson.content.text}
+                            <div className="flex flex-col h-full p-6 pt-12 items-center text-center overflow-y-auto">
+                                <h2 className="font-game text-3xl text-white mb-6 uppercase tracking-widest">{currentLesson.title}</h2>
+                                
+                                {currentLesson.content.imageUrl && (
+                                    <div className="w-full max-w-sm mb-6 rounded-3xl overflow-hidden border-4 border-black shadow-lg">
+                                        <img src={currentLesson.content.imageUrl} alt="Analogy" className="w-full h-48 object-cover" />
+                                    </div>
+                                )}
+
+                                <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 w-full shadow-lg relative">
+                                     {/* BIGGER FONT FOR MAIN CONCEPT */}
+                                    <p className="text-2xl md:text-4xl font-black text-white leading-tight drop-shadow-md">
+                                        {currentLesson.content.text}
+                                    </p>
+                                    
+                                    {/* Analogy Section */}
+                                    {currentLesson.content.analogy && (
+                                        <div className="mt-6 bg-black/40 p-4 rounded-xl border border-yellow-500/50 flex items-start gap-3 text-left">
+                                            <LightBulbIcon className="w-8 h-8 text-yellow-400 flex-shrink-0" />
+                                            <div>
+                                                <span className="text-xs font-bold text-yellow-500 uppercase tracking-widest block mb-1">Think of it like this:</span>
+                                                <p className="text-yellow-100 font-bold text-lg leading-snug">
+                                                    "{currentLesson.content.analogy}"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <button onClick={(e) => handleLessonComplete(100, 50, e)} className="px-12 py-4 bg-white text-black font-game text-xl rounded-full btn-3d hover:scale-105 transition-transform">CONTINUE ➡</button>
                             </div>

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -127,14 +128,46 @@ const CONTENT_DB: Record<string, any> = {
             { q: "School?", o: ["Public", "Private", "YouTube"], a: 2, t: "Self-education is free." }
         ],
         infos: [
-            { t: "Money is just a tool. Don't worship it, master it." },
-            { t: "The first step to wealth is spending less than you earn." },
-            { t: "Inflation is the silent killer of cash savings." },
-            { t: "Your habits today determine your bank account tomorrow." },
-            { t: "Assets put money in your pocket. Liabilities take it out." },
-            { t: "Start small. Even $5 a week adds up over time." },
-            { t: "Don't try to look rich. Try to BE rich." },
-            { t: "Knowledge pays the best interest. Keep learning." }
+            { 
+                t: "Money is just a tool. Don't worship it, master it.",
+                analogy: "A hammer can build a house or hit your thumb. Money is the same—it depends how you use it.",
+                img: "https://images.unsplash.com/photo-1554672723-b208dc2d7197?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "The first step to wealth is spending less than you earn.",
+                analogy: "If you fill a bucket with water but it has a hole (spending), it will never be full, no matter how much you pour in.",
+                img: "https://images.unsplash.com/photo-1561414927-6d86591d0c4f?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Inflation is the silent killer of cash savings.",
+                analogy: "Imagine an ice cube melting in your hand. That's your dollar losing value every year.",
+                img: "https://images.unsplash.com/photo-1565514020176-6c2235c8d27d?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Your habits today determine your bank account tomorrow.",
+                analogy: "Brushing your teeth once doesn't work. It's the daily habit that prevents decay. Saving is the same.",
+                img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Assets put money in your pocket. Liabilities take it out.",
+                analogy: "An asset is a golden goose that lays eggs. A liability is a pet tiger that just eats meat (cash).",
+                img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Start small. Even $5 a week adds up over time.",
+                analogy: "A giant oak tree starts as a tiny acorn. Don't underestimate small beginnings.",
+                img: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Don't try to look rich. Try to BE rich.",
+                analogy: "A fake Rolex tells time, but has zero value. Real wealth is quiet.",
+                img: "https://images.unsplash.com/photo-1450226926693-b407e37e21c2?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Knowledge pays the best interest. Keep learning.",
+                analogy: "Your brain is your most expensive asset. Upgrade its software daily.",
+                img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=60"
+            }
         ]
     },
     "Budget Beach": {
@@ -189,8 +222,16 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Treats?", o: ["Budgeted", "Random", "Guilty"], a: 0, t: "Budget for fun so it's guilt-free." }
         ],
         infos: [
-            { t: "The 50/30/20 rule is a guideline, not a law. Adjust it to your life." },
-            { t: "Small leaks sink great ships. Watch those $5 subscriptions." },
+            { 
+                t: "The 50/30/20 rule is a guideline, not a law. Adjust it to your life.", 
+                analogy: "It's like a recipe. If you're allergic to 'wants' (broke), you adjust the ingredients.",
+                img: "https://images.unsplash.com/photo-1543286386-2e659306cd6c?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Small leaks sink great ships. Watch those $5 subscriptions.", 
+                analogy: "A tiny hole in a boat doesn't look scary, until you're underwater.",
+                img: "https://images.unsplash.com/photo-1517457210348-703079e57d4b?w=800&auto=format&fit=crop&q=60"
+            },
             { t: "Automate your savings so you don't accidentally spend it." },
             { t: "An emergency fund prevents debt when life happens." },
             { t: "Use cash for categories you struggle with (like dining out)." },
@@ -251,8 +292,16 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Fees?", o: ["Don't Care", "Hate 'em"], a: 1, t: "Fees destroy compound growth." }
         ],
         infos: [
-            { t: "Time is your greatest asset. Start today, even with $5." },
-            { t: "Compound interest is the snowball effect for your money." },
+            { 
+                t: "Time is your greatest asset. Start today, even with $5.",
+                analogy: "Time acts like a magnifying glass for money. The longer you hold it, the bigger it gets.",
+                img: "https://images.unsplash.com/photo-1501139083538-0139583c61df?w=800&auto=format&fit=crop&q=60"
+            },
+            { 
+                t: "Compound interest is the snowball effect for your money.",
+                analogy: "A snowball rolling down a hill starts small, but eventually becomes an avalanche. That's your savings.",
+                img: "https://images.unsplash.com/photo-1516763953400-02552825b440?w=800&auto=format&fit=crop&q=60"
+            },
             { t: "Don't interrupt the compounding process unnecessarily." },
             { t: "The Rule of 72 helps you estimate doubling time mentally." },
             { t: "Inflation works against you. Compounding works for you." },
@@ -666,7 +715,11 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
             // UPDATED: Now pulls unique Infos from DB
             const item = pickContent(worldDB.infos) || { t: "Save money." };
             title = "Knowledge Drop";
-            content = { text: item.t };
+            content = { 
+                text: item.t,
+                analogy: item.analogy, // NEW: Pass analogy
+                imageUrl: item.img     // NEW: Pass image
+            };
         }
 
         lessons.push({
