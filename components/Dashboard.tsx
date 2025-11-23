@@ -583,10 +583,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                             {/* Shop Tabs */}
                             <div className="flex gap-2 mb-4 px-2 overflow-x-auto no-scrollbar">
-                                <button onClick={() => setShopTier(1)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 1 ? 'bg-green-500 text-black' : 'bg-white/10 text-gray-400'}`}>Cheap (&lt;2k)</button>
-                                <button onClick={() => setShopTier(2)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-400'}`}>Mid (3k-10k)</button>
-                                <button onClick={() => setShopTier(3)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 3 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-gray-400'}`}>Rich (15k+)</button>
-                                <button onClick={() => setShopTier(4)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 4 ? 'bg-purple-500 text-white border border-white/20' : 'bg-white/10 text-gray-400'}`}>Legendary</button>
+                                <button onClick={() => setShopTier(1)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 1 ? 'bg-green-500 text-black' : 'bg-white/10 text-gray-400'}`}>Starter (&lt;5k)</button>
+                                <button onClick={() => setShopTier(2)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-400'}`}>Baller (5k-10k)</button>
+                                <button onClick={() => setShopTier(3)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 3 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-gray-400'}`}>Empire (15k-50k)</button>
+                                <button onClick={() => setShopTier(4)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 4 ? 'bg-purple-500 text-white border border-white/20' : 'bg-white/10 text-gray-400'}`}>Legendary (50k+)</button>
                             </div>
 
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x px-2">
@@ -603,14 +603,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             
                                             <div className="text-4xl mb-2 mt-4 transition-transform group-hover:scale-110">{item.emoji}</div>
                                             <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
+                                            
+                                            {/* Explicit Price Display */}
+                                            {!owned && (
+                                                <div className="text-yellow-400 text-xs font-black mb-2 flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded">
+                                                    🪙 {item.cost.toLocaleString()}
+                                                </div>
+                                            )}
+
                                             <button 
                                                 onClick={() => !owned && handleBuy(item)}
                                                 disabled={owned}
-                                                className={`w-full mt-2 font-bold py-1 rounded-lg text-xs transition-all flex items-center justify-center gap-1 
-                                                    ${owned ? 'bg-transparent text-gray-500' : 'bg-white/10 hover:bg-neon-pink hover:text-black text-white border border-white/20'}
+                                                className={`w-full font-bold py-1.5 rounded-lg text-xs transition-all flex items-center justify-center gap-1 
+                                                    ${owned ? 'bg-transparent text-gray-500 border border-gray-700' : 'bg-white text-black hover:bg-neon-green hover:scale-105 shadow-lg'}
                                                 `}
                                             >
-                                                {owned ? 'In Inventory' : <><span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost.toLocaleString()}</>}
+                                                {owned ? 'Equip in Profile' : 'BUY NOW'}
                                             </button>
                                         </div>
                                     );

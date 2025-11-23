@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -25,7 +24,7 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
-import { addXP, addCoins, purchaseItem, processDailyStreak, checkWorldCompletion } from './services/gameLogic';
+import { addXP, addCoins, purchaseItem, processDailyStreak, checkWorldCompletion, triggerVisualEffect } from './services/gameLogic';
 import { auth, signInWithGoogle, signInAsGuest, logout, subscribeToAuthChanges } from './services/firebase';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 import { logger } from './services/logger';
@@ -221,8 +220,35 @@ const App: React.FC = () => {
 
   const handleBuyItem = async (item: any) => {
       if (!user?.uid) return;
-      await purchaseItem(user.uid, item.id, item.cost, user.coins);
-      trackEvent('purchase_item', { itemId: item.id, cost: item.cost });
+      
+      const success = await purchaseItem(user.uid, item.id, item.cost, user.coins);
+      
+      if (success) {
+          // Full-screen confetti celebration
+          (window as any).confetti({
+              particleCount: 150,
+              spread: 100,
+              origin: { y: 0.6 },
+              colors: ['#FFD700', '#FFFFFF', '#00FF88']
+          });
+
+          // Auto-Equip Logic for Cosmetics
+          if (item.category === 'cosmetic' && item.cosmeticType) {
+               const type = item.cosmeticType; 
+               const val = item.cosmeticValue;
+               
+               // Construct new avatar config
+               const newAvatar = { ...user.avatar, [type]: val };
+               
+               // Update DB and Local Store
+               await updateUser(user.uid, { avatar: newAvatar });
+               setUser({ ...user, avatar: newAvatar }); 
+               
+               triggerVisualEffect(`${item.name} Equipped!`, 'level');
+          }
+          
+          trackEvent('purchase_item', { itemId: item.id, cost: item.cost });
+      }
   };
 
   const handleUpdatePortfolio = async (newPortfolio: any) => {
