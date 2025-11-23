@@ -469,16 +469,26 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             {/* Rewards Layer - Centered */}
             <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">
                 <AnimatePresence>
-                    {rewards.map(r => (
+                    {rewards.map((r, i) => (
                         <motion.div
                             key={r.id}
-                            initial={{ opacity: 0, x: "-50%", y: 50, scale: 0.5 }} // Start lower
-                            animate={{ opacity: 1, x: "-50%", y: -200, scale: 2.5 }} // Move higher, scale larger
-                            exit={{ opacity: 0, scale: 3 }}
-                            transition={{ duration: 0.8, ease: "easeOut" }} // Slower, smoother
+                            initial={{ 
+                                opacity: 0, 
+                                x: "-50%", 
+                                y: r.type === 'xp' ? 0 : 50, // XP starts higher, Coin lower
+                                scale: 0.5 
+                            }} 
+                            animate={{ 
+                                opacity: 1, 
+                                x: "-50%", 
+                                y: r.type === 'xp' ? -120 : -40, // XP floats higher up, Coin floats less high
+                                scale: 1.5 // Reduced scale from previous massive size
+                            }} 
+                            exit={{ opacity: 0, scale: 2 }}
+                            transition={{ duration: 0.8, ease: "easeOut" }} 
                             style={{ left: '50%', top: '50%' }}
                             className={`absolute font-game text-shadow-neon whitespace-nowrap text-stroke-black border-black drop-shadow-2xl
-                                ${r.type === 'xp' ? 'text-neon-green text-6xl md:text-8xl' : 'text-yellow-400 text-5xl md:text-7xl'}`}
+                                ${r.type === 'xp' ? 'text-neon-green text-5xl md:text-7xl' : 'text-yellow-400 text-4xl md:text-6xl'}`}
                         >
                             {r.text}
                         </motion.div>
