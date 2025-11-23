@@ -25,7 +25,8 @@ import {
     XMarkIcon,
     CommandLineIcon,
     UserIcon,
-    PlayCircleIcon
+    PlayCircleIcon,
+    CheckIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -34,7 +35,8 @@ import {
     SHOP_ITEMS,
     Lesson,
     Stock,
-    SystemConfig
+    SystemConfig,
+    LevelData
 } from '../services/gamification';
 import { 
     subscribeToAllUsers,
@@ -45,7 +47,8 @@ import {
     deleteDocument,
     batchWrite,
     subscribeToSystemConfig,
-    updateSystemConfig
+    updateSystemConfig,
+    fetchLevelsForWorld
 } from '../services/db';
 import { db } from '../services/firebase';
 import { collection, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
@@ -278,29 +281,36 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
 // 3. CONTENT CMS
 const ContentCMS = () => {
     const [selectedWorld, setSelectedWorld] = useState<string | null>(null);
-    const [isRegenerating, setIsRegenerating] = useState(false);
+    const [levels, setLevels] = useState<LevelData[]>([]);
+    const [loadingLevels, setLoadingLevels] = useState(false);
+    const [editingLevel, setEditingLevel] = useState<LevelData | null>(null);
 
-    const handleRegenerate = async (worldId: string) => {
-        if (!confirm(`Regenerate ALL content for ${worldId}? This simulates AI generation.`)) return;
-        setIsRegenerating(true);
-        
-        try {
-            // Simulate batch generation
-            await new Promise(r => setTimeout(r, 1500));
-            // Using the generator to ensure it works, even if we don't save it
-            for (let i = 1; i <= 2; i++) {
-                const res = generateLevelContent(worldId, i);
-                console.log("Generated:", res.level.title);
+    // Fetch levels when a world is selected
+    useEffect(() => {
+        if (selectedWorld) {
+            setLoadingLevels(true);
+            const meta = WORLDS_METADATA.find(w => w.title === selectedWorld);
+            if (meta) {
+                fetchLevelsForWorld(meta.id).then((data) => {
+                    setLevels(data);
+                    setLoadingLevels(false);
+                });
+            } else {
+                setLoadingLevels(false);
             }
-            alert(`Content regenerated for ${worldId}`);
-        } catch (e) {
-            console.error(e);
         }
-        setIsRegenerating(false);
+    }, [selectedWorld]);
+
+    const handleSaveLevel = async () => {
+        if (!editingLevel) return;
+        alert("Saving changes to cloud... (Simulation)");
+        // In a real app, we would saveDoc('levels', editingLevel.id, editingLevel);
+        setEditingLevel(null);
+        playSound('success');
     };
 
     return (
-        <div className="p-8 animate-pop-in">
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h2 className="text-3xl font-game text-white">Content CMS</h2>
@@ -308,36 +318,87 @@ const ContentCMS = () => {
                 </div>
             </div>
 
-            {selectedWorld ? (
+            {editingLevel ? (
+                <div className="animate-slide-up bg-slate-800 p-6 rounded-2xl border border-slate-700">
+                    <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                        <h3 className="text-xl font-bold text-white">Editing: {editingLevel.title}</h3>
+                        <div className="flex gap-2">
+                            <button onClick={() => setEditingLevel(null)} className="text-slate-400 hover:text-white font-bold px-3">Cancel</button>
+                            <button onClick={handleSaveLevel} className="bg-green-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-green-500 flex items-center gap-2">
+                                <CheckIcon className="w-4 h-4" /> Save Changes
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 mb-1">Boss Name</label>
+                            <input 
+                                type="text" 
+                                value={editingLevel.bossName} 
+                                onChange={(e) => setEditingLevel({...editingLevel, bossName: e.target.value})}
+                                className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-400 mb-1">Boss Intro</label>
+                            <input 
+                                type="text" 
+                                value={editingLevel.bossIntro} 
+                                onChange={(e) => setEditingLevel({...editingLevel, bossIntro: e.target.value})}
+                                className="w-full bg-slate-900 border border-slate-600 rounded p-2 text-white"
+                            />
+                        </div>
+                        
+                        <div className="mt-4">
+                            <h4 className="font-bold text-neon-blue mb-2">Boss Questions ({editingLevel.bossQuiz.length})</h4>
+                            <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                                {editingLevel.bossQuiz.map((q, i) => (
+                                    <div key={i} className="bg-slate-900 p-3 rounded border border-slate-700">
+                                        <div className="text-xs text-slate-500 mb-1">Question {i+1}</div>
+                                        <div className="text-white font-bold text-sm">{q.question}</div>
+                                        <div className="text-green-400 text-xs mt-1">Answer: {q.options[q.correctIndex]}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : selectedWorld ? (
                 <div className="animate-slide-up">
                     <button onClick={() => setSelectedWorld(null)} className="flex items-center gap-2 text-slate-400 hover:text-white mb-6">
                         <ArrowLeftOnRectangleIcon className="w-4 h-4" /> Back to Worlds
                     </button>
+                    
                     <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-2xl font-bold text-white">{selectedWorld}</h3>
-                            <button 
-                                onClick={() => handleRegenerate(selectedWorld)}
-                                disabled={isRegenerating}
-                                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2"
-                            >
-                                <CloudArrowUpIcon className="w-4 h-4" />
-                                {isRegenerating ? 'Generating...' : 'Regenerate Levels'}
-                            </button>
+                            <div className="text-xs text-slate-500 font-bold uppercase">
+                                {loadingLevels ? 'Loading Data...' : `${levels.length} Levels Loaded`}
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {Array.from({ length: 8 }).map((_, i) => (
-                                <div key={i} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-                                    <div>
-                                        <div className="text-neon-green font-bold text-xs uppercase">Level {i + 1}</div>
-                                        <div className="text-white font-bold">Content Block</div>
+
+                        {loadingLevels ? (
+                            <div className="text-center py-10 text-slate-500 animate-pulse">Fetching Level Data...</div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {levels.map((level, i) => (
+                                    <div key={level.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-blue-500 transition-colors">
+                                        <div>
+                                            <div className="text-neon-green font-bold text-xs uppercase mb-1">Level {level.levelNumber}</div>
+                                            <div className="text-white font-bold">{level.title}</div>
+                                            <div className="text-xs text-slate-500">Boss: {level.bossName}</div>
+                                        </div>
+                                        <button 
+                                            onClick={() => setEditingLevel(level)}
+                                            className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-400 hover:text-white transition-colors"
+                                        >
+                                            <PencilSquareIcon className="w-5 h-5" />
+                                        </button>
                                     </div>
-                                    <button className="p-2 hover:bg-white/10 rounded-lg text-slate-400">
-                                        <PencilSquareIcon className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             ) : (
@@ -392,7 +453,7 @@ const ShopEconomy = () => {
     };
 
     return (
-        <div className="p-8 animate-pop-in">
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <h2 className="text-3xl font-game text-white mb-2">Shop Economy</h2>
             <p className="text-slate-400 text-sm mb-8">Adjust item prices and availability dynamically.</p>
             
@@ -446,7 +507,7 @@ const PushNotificationManager = () => {
     };
 
     return (
-        <div className="p-8 animate-pop-in">
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <h2 className="text-3xl font-game text-white mb-2">Push Notifications</h2>
             <p className="text-slate-400 text-sm mb-8">Send alerts to users (Web Push).</p>
             
@@ -483,7 +544,7 @@ const ZooAdmin = () => {
     }, []);
 
     return (
-        <div className="p-8 animate-pop-in">
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <h2 className="text-3xl font-game text-white mb-2">Wall Street Zoo</h2>
             <p className="text-slate-400 text-sm mb-8">Monitor the simulated market feed.</p>
             
@@ -543,7 +604,7 @@ const GodTools = ({ users }: { users: UserState[] }) => {
     };
 
     return (
-        <div className="p-8 animate-pop-in">
+        <div className="p-8 animate-pop-in h-full overflow-y-auto">
             <h2 className="text-3xl font-game text-white mb-6">God Tools</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
