@@ -105,8 +105,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     // Shop Sync Logic
     useEffect(() => {
         const unsub = subscribeToCollection('shop_items', (items) => {
-            if (items.length > 0) {
-                setShopItems(items as ShopItem[]);
+            if (items && items.length > 0) {
+                // CRITICAL FIX: Sanitize incoming items to ensure they have valid tiers
+                // This fixes the "Restocking soon" bug caused by old DB data missing the 'tier' field
+                const sanitizedItems = items.map((i: any) => ({
+                    ...i,
+                    // If tier is missing, calculate it based on cost
+                    tier: i.tier || (i.cost >= 50000 ? 4 : i.cost >= 15000 ? 3 : i.cost >= 5000 ? 2 : 1),
+                    // Ensure active is true if missing
+                    active: i.active !== false
+                })) as ShopItem[];
+                setShopItems(sanitizedItems);
             } else {
                 // Fallback to hardcoded items if Firestore empty
                 setShopItems(SHOP_ITEMS);
