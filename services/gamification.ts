@@ -28,6 +28,12 @@ export interface Badge {
     color: string;
 }
 
+export interface SystemConfig {
+    adsEnabled: boolean;
+    maintenanceMode?: boolean;
+    minVersion?: string;
+}
+
 export interface UserState {
     uid?: string; 
     nickname: string;
@@ -37,12 +43,17 @@ export interface UserState {
     xp: number;
     coins: number;
     
+    // COPPA Compliance
+    ageConfirmed?: boolean;
+    birthYear?: number;
+
     isProfileComplete?: boolean;
 
     isAdmin: boolean; 
     role: 'user' | 'admin' | 'mod';
     loginType: 'guest' | 'google' | 'apple' | 'email';
 
+    // Legacy fields kept for type safety but UI will ignore real money status
     subscriptionStatus: 'free' | 'pro';
     lifetimeSpend: number; 
     
@@ -352,6 +363,11 @@ export const createInitialUser = (onboardingData: any): UserState => {
         subscriptionStatus: 'free',
         lifetimeSpend: 0,
         isProfileComplete: false, 
+        
+        // COPPA
+        ageConfirmed: onboardingData.ageConfirmed || false,
+        birthYear: onboardingData.birthYear,
+
         isAdmin: false,
         role: 'user',
         loginType: onboardingData.authMethod || 'guest',

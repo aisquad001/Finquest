@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
-import { CreationHistory } from './CreationHistory'; // Badge Collection View
+import { CreationHistory } from './CreationHistory'; 
 import { 
     SparklesIcon, 
     LockClosedIcon, 
@@ -19,7 +19,8 @@ import {
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
     CheckBadgeIcon,
-    FireIcon
+    FireIcon,
+    PlayCircleIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -29,11 +30,11 @@ import {
     SHOP_ITEMS,
     BADGES
 } from '../services/gamification';
-import { claimDailyChest } from '../services/gameLogic';
+import { claimDailyChest, addCoins } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { signInWithGoogle, logout } from '../services/firebase';
-import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard } from '../services/db';
+import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard, subscribeToSystemConfig } from '../services/db';
 
 interface DashboardProps {
     user: UserState;
@@ -54,6 +55,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [installPrompt, setInstallPrompt] = useState<any>(null);
     const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); 
     
+    // System Config (Ads)
+    const [adsEnabled, setAdsEnabled] = useState(false);
+    
     // Admin Secret Trigger
     const avatarPressTimer = useRef<any>(null);
     
@@ -73,6 +77,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             e.preventDefault();
             setInstallPrompt(e);
         });
+    }, []);
+
+    // System Config Sync (Ads)
+    useEffect(() => {
+        const unsub = subscribeToSystemConfig((config) => {
+            setAdsEnabled(config.adsEnabled);
+        });
+        return () => unsub();
     }, []);
 
     // Shop Sync Logic
@@ -158,27 +170,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         }
     };
 
-    const handleShareParentLink = async () => {
-        if (!familyCode) return;
-        const url = `${window.location.origin}/?view=portal&code=${familyCode}`;
+    // --- AD HANDLER (MOCKED) ---
+    const handleWatchAd = () => {
+        if (!user.uid) return;
+        const btn = document.getElementById('watch-ad-btn');
+        if (btn) btn.innerText = "WATCHING AD...";
+        playSound('click');
         
-        const shareData = {
-            title: "Racked Parent Portal",
-            text: `Login to approve my allowance on Racked! Access Code: ${familyCode}`,
-            url: url
-        };
-        
-        if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (err) {
-                console.log("Share cancelled");
+        setTimeout(() => {
+            if (confirm("Ad Finished. Claim Reward?")) {
+                addCoins(user.uid!, 500, 'Ad Reward');
+                alert("+500 Coins added!");
+                playSound('kaching');
             }
-        } else {
-            navigator.clipboard.writeText(shareData.url);
-            playSound('coin');
-            alert("Magic Link copied! Send it to your parent.");
-        }
+            if (btn) btn.innerText = "📺 Watch Ad (+500)";
+        }, 2000);
     };
 
     // --- GUEST UPGRADE ---
@@ -265,7 +271,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
             <div className="sticky top-0 z-40 px-4 py-3 bg-[#1a0b2e]/95 backdrop-blur-md border-b border-white/5 shadow-2xl">
                 <div className="flex flex-col gap-3">
                     
-                    {/* ROW 1: AVATAR | BADGE TITLE | PRO */}
+                    {/* ROW 1: AVATAR | BADGE TITLE */}
                     <div className="flex items-center justify-between">
                         {/* Avatar & Profile */}
                         <div className="flex items-center gap-3 relative group">
@@ -327,22 +333,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
                         </div>
 
-                        {/* Right Side: PRO / Shop Button */}
-                        <div>
-                            {user.subscriptionStatus === 'pro' ? (
-                                <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-black text-xs px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
-                                    <SparklesIcon className="w-3 h-3" /> PRO
-                                </div>
-                            ) : (
-                                <button 
-                                    onClick={onOpenPremium}
-                                    className="bg-white/10 border border-white/20 text-white font-bold text-xs px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors flex items-center gap-1"
-                                >
-                                    <SparklesIcon className="w-3 h-3 text-yellow-400" />
-                                    UPGRADE
-                                </button>
-                            )}
-                        </div>
+                        {/* Right Side: NO PRO BUTTON ANYMORE (Clean Launch) */}
                     </div>
 
                     {/* ROW 2: STATS (XP, COINS, STREAK) */}
@@ -502,6 +493,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 </h2>
                             </div>
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
+                                
+                                {/* REWARDED AD BUTTON (Controlled by God Mode Switch) */}
+                                {adsEnabled && (
+                                    <div className="flex-shrink-0 w-36 snap-start bg-gradient-to-br from-yellow-600 to-yellow-800 border-2 border-yellow-400 rounded-2xl p-3 flex flex-col items-center text-center relative group animate-pulse-fast">
+                                        <div className="text-4xl mb-2 mt-2">📺</div>
+                                        <div className="font-game text-white text-sm leading-none mb-1 h-8 flex items-center justify-center">FREE COINS</div>
+                                        <button 
+                                            id="watch-ad-btn"
+                                            onClick={handleWatchAd}
+                                            className="w-full mt-2 font-bold py-1 rounded-lg text-xs transition-all flex items-center justify-center gap-1 bg-white/20 hover:bg-white/40 text-white border border-white/20"
+                                        >
+                                            Watch Ad (+500)
+                                        </button>
+                                    </div>
+                                )}
+
                                 {sortedShopItems.filter(i => i.active !== false).map(item => {
                                     const owned = user.inventory.includes(item.id);
                                     return (
@@ -580,7 +587,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             <div className="text-6xl mb-4 animate-bounce">👯‍♀️</div>
                             <h2 className="font-game text-2xl text-white mb-2">GET RICH TOGETHER</h2>
                             <p className="text-purple-200 text-sm mb-6 px-4">
-                                Invite friends. They get <span className="text-yellow-400 font-bold">20k Coins</span>. You get <span className="text-yellow-400 font-bold">50k Coins</span> + Pro!
+                                Invite friends. They get <span className="text-yellow-400 font-bold">20k Coins</span>. You get <span className="text-yellow-400 font-bold">50k Coins</span>!
                             </p>
                             
                             <div className="bg-black/40 rounded-2xl p-4 mb-6 border border-white/10">

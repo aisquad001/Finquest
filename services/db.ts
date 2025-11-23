@@ -5,7 +5,7 @@
  */
 import { db } from './firebase';
 import * as firestore from 'firebase/firestore';
-import { UserState, checkStreak, createInitialUser, LevelData, Lesson, LeaderboardEntry } from './gamification';
+import { UserState, checkStreak, createInitialUser, LevelData, Lesson, LeaderboardEntry, SystemConfig } from './gamification';
 import { generateLevelContent } from './contentGenerator';
 import { logger } from './logger';
 import { getMarketData } from './stockMarket';
@@ -82,6 +82,26 @@ export const convertDocToUser = (data: any): UserState => {
 
 // --- UTILS ---
 const timeoutPromise = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error("Database operation timed out.")), ms));
+
+// --- SYSTEM CONFIG (ADS & GLOBAL SETTINGS) ---
+export const subscribeToSystemConfig = (callback: (config: SystemConfig) => void) => {
+    const docRef = doc(db, 'system_config', 'main');
+    return onSnapshot(docRef, (snap) => {
+        if (snap.exists()) {
+            callback(snap.data() as SystemConfig);
+        } else {
+            // Default config if missing
+            const defaultConfig: SystemConfig = { adsEnabled: false };
+            setDoc(docRef, defaultConfig);
+            callback(defaultConfig);
+        }
+    });
+};
+
+export const updateSystemConfig = async (updates: Partial<SystemConfig>) => {
+    const docRef = doc(db, 'system_config', 'main');
+    await setDoc(docRef, updates, { merge: true });
+};
 
 // --- USER METHODS ---
 
