@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -24,7 +25,7 @@ import { requestNotificationPermission, scheduleDemoNotifications } from './serv
 
 // STORE & DB IMPORTS
 import { useUserStore } from './services/useUserStore';
-import { addXP, addCoins, purchaseItem, processDailyStreak } from './services/gameLogic';
+import { addXP, addCoins, purchaseItem, processDailyStreak, checkWorldCompletion } from './services/gameLogic';
 import { auth, signInWithGoogle, signInAsGuest, logout, subscribeToAuthChanges } from './services/firebase';
 import { createUserDoc, saveLevelProgress, updateUser } from './services/db';
 import { logger } from './services/logger';
@@ -188,17 +189,32 @@ const App: React.FC = () => {
 
   const handleLevelComplete = async (xp: number, coins: number) => {
       if (!user || !user.uid || !activeWorld || !activeLevel) return;
+      
       const finalXp = user.subscriptionStatus === 'pro' ? xp * 2 : xp;
-      addXP(user.uid, finalXp, user.level);
-      addCoins(user.uid, coins, 'Level Complete');
+      
+      // 1. Save Level Progress (DB)
       await saveLevelProgress(user.uid, activeWorld.id, activeLevel.id, finalXp, true);
+      
+      // 2. Add XP & Coins (Handles Level Up Logic internally now)
+      addXP(user.uid, finalXp);
+      addCoins(user.uid, coins, 'Level Complete');
+      
+      // 3. Check for World Completion Badge
+      await checkWorldCompletion(user.uid, activeWorld.id);
+      
       trackEvent('level_complete', { levelId: activeLevel?.id, xpEarned: finalXp });
-      handleCloseLesson();
+      
+      // 4. Navigation - If last level (8), go to Dashboard to show unlocked content
+      if (activeLevel.levelNumber === 8) {
+          handleCloseMap();
+      } else {
+          handleCloseLesson();
+      }
   };
 
   const handleClaimReward = (xp: number, coins: number) => {
       if (user?.uid) {
-        addXP(user.uid, xp, user.level);
+        addXP(user.uid, xp);
         addCoins(user.uid, coins, 'Reward');
       }
   };
