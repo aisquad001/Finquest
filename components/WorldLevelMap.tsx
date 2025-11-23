@@ -11,6 +11,10 @@ import { playSound } from '../services/audio';
 import { Avatar } from './Avatar';
 import { useUserStore } from '../services/useUserStore';
 
+// Fix for TypeScript errors with framer-motion types
+const MotionButton = motion.button as any;
+const MotionDiv = motion.div as any;
+
 interface WorldLevelMapProps {
     world: WorldData;
     completedLevels: string[]; // list of level IDs
@@ -138,7 +142,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                             <div key={level.id} className={`relative flex justify-center my-6 w-full z-10 ${alignClass}`}>
                                 
                                 {/* The Level Node */}
-                                <motion.button
+                                <MotionButton
                                     initial={{ scale: 0.8, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: index * 0.05 }}
@@ -169,11 +173,11 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                                     {isCurrent && (
                                         <span className="absolute inset-0 rounded-[2rem] border-2 border-white animate-ping opacity-50"></span>
                                     )}
-                                </motion.button>
+                                </MotionButton>
 
                                 {/* Avatar Positioning */}
                                 {isCurrent && user && (
-                                    <motion.div 
+                                    <MotionDiv 
                                         id="current-level-indicator"
                                         initial={{ y: -20, opacity: 0 }}
                                         animate={{ y: -85, opacity: 1 }}
@@ -183,7 +187,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                                             <Avatar level={user.level} size="sm" customConfig={user.avatar} />
                                             <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-black rotate-45"></div>
                                         </div>
-                                    </motion.div>
+                                    </MotionDiv>
                                 )}
 
                                 {/* Level Label / Card */}

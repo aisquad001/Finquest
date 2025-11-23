@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -12,6 +11,9 @@ import { subscribeToLeaderboard } from '../services/db';
 import { playSound } from '../services/audio';
 import { useUserStore } from '../services/useUserStore';
 
+// Fix for TypeScript errors with framer-motion types
+const MotionDiv = motion.div as any;
+
 interface WallStreetZooProps {
     portfolio: Portfolio;
     onUpdatePortfolio: (newPortfolio: Portfolio) => void;
@@ -19,7 +21,7 @@ interface WallStreetZooProps {
 }
 
 const StockRow: React.FC<{ stock: StockAsset; ownedQty?: number; onSelect: (stock: StockAsset) => void }> = ({ stock, ownedQty, onSelect }) => (
-    <motion.div 
+    <MotionDiv 
         onClick={() => { playSound('pop'); onSelect(stock); }}
         layoutId={`stock-${stock.symbol}`}
         className="bg-[#2a1b3d] border border-white/10 p-4 rounded-2xl flex items-center justify-between mb-3 cursor-pointer active:scale-95 transition-transform"
@@ -45,7 +47,7 @@ const StockRow: React.FC<{ stock: StockAsset; ownedQty?: number; onSelect: (stoc
                 {Math.abs(stock.changePercent).toFixed(2)}%
             </div>
         </div>
-    </motion.div>
+    </MotionDiv>
 );
 
 const LineChart = ({ data, color }: { data: number[], color: string }) => {
@@ -470,7 +472,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
             {/* TRADE MODAL */}
             <AnimatePresence>
                 {selectedStock && (
-                    <motion.div 
+                    <MotionDiv 
                         initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
                         className="fixed inset-0 z-[60] bg-[#1a0b2e] flex flex-col"
                     >
@@ -583,7 +585,7 @@ export const WallStreetZoo: React.FC<WallStreetZooProps> = ({ portfolio, onUpdat
                                  Simulation Mode • 60s Price Refresh
                              </p>
                         </div>
-                    </motion.div>
+                    </MotionDiv>
                 )}
             </AnimatePresence>
         </div>

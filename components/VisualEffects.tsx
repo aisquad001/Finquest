@@ -5,6 +5,9 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 
+// Fix for TypeScript errors with framer-motion types
+const MotionDiv = motion.div as any;
+
 interface Effect {
     id: string;
     text: string;
@@ -37,7 +40,7 @@ export const VisualEffects: React.FC = () => {
         <div className="fixed top-20 left-0 right-0 z-[200] pointer-events-none flex flex-col items-center gap-2">
             <AnimatePresence>
                 {effects.map(effect => (
-                    <motion.div
+                    <MotionDiv
                         key={effect.id}
                         initial={{ opacity: 0, y: 50, scale: 0.5, rotate: -10 }}
                         animate={{ opacity: 1, y: 0, scale: 1.5, rotate: 0 }}
@@ -51,7 +54,7 @@ export const VisualEffects: React.FC = () => {
                         `}
                     >
                         {effect.text}
-                    </motion.div>
+                    </MotionDiv>
                 ))}
             </AnimatePresence>
         </div>

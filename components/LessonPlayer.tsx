@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -9,7 +8,10 @@ import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon, ArrowLeftIcon, ArrowR
 import { Lesson, LessonDragItem } from '../services/gamification';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
-import { getRandomRoast } from '../services/contentGenerator';
+import { getRandomRoast, getRandomFunFact, getRandomDeepDive } from '../services/contentGenerator';
+
+// Fix for TypeScript errors with framer-motion types
+const MotionDiv = motion.div as any;
 
 interface LessonPlayerProps {
     level: any; 
@@ -63,6 +65,7 @@ const PollView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e
 };
 
 const FunFactView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
+    // This is for the dedicated Lesson Type 'funFact', not the interstitial pop-up
     const handleShare = async () => {
         if (navigator.share) {
             await navigator.share({
@@ -101,23 +104,17 @@ const FunFactView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => v
 const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
     const [cardIndex, setCardIndex] = useState(0);
     
-    // MODE CHECK: Does this lesson have explicit 'cards' (Sorting Mode) or just 'left/right' (Decision Mode)?
     const isSortingMode = lesson.content.cards && lesson.content.cards.length > 0;
-
-    // 1. SORTING MODE LOGIC (Buckets)
     const sortingCards = lesson.content.cards || [];
     const currentSortingCard = sortingCards[cardIndex];
 
-    // 2. DECISION MODE LOGIC (Binary Choice)
-    // If no cards, we treat the main content as ONE card to decide on.
     const decisionQuestion = lesson.content.question || lesson.title;
     const leftLabel = lesson.content.left || "Left";
     const rightLabel = lesson.content.right || "Right";
-    const correctDirection = lesson.content.correct || "right"; // 'left' or 'right'
+    const correctDirection = lesson.content.correct || "right"; 
 
     const handleSwipe = (direction: 'left' | 'right', e?: any) => {
         if (isSortingMode) {
-            // Sorting Mode: Match the card's 'isRight' property
             const isRight = direction === 'right';
             const correct = currentSortingCard.isRight === isRight;
             
@@ -133,7 +130,6 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                 triggerRoast();
             }
         } else {
-            // Decision Mode: Match the 'correct' property ('left' or 'right')
             if (direction === correctDirection) {
                 playSound('pop');
                 onNext(e);
@@ -151,7 +147,7 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
             </h3>
             
             <div className="relative w-full max-w-xs aspect-[3/4] mb-8">
-                <motion.div 
+                <MotionDiv 
                     key={isSortingMode ? cardIndex : 'decision'}
                     initial={{ scale: 0.5, opacity: 0, y: 50 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -170,10 +166,9 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                             "{lesson.content.text}"
                         </div>
                     )}
-                </motion.div>
+                </MotionDiv>
             </div>
 
-            {/* BUTTONS - Uses Neutral Colors for Binary Decision to avoid Red=Bad/Green=Good confusion */}
             <div className="flex gap-4 mt-auto w-full justify-center pb-12 px-4">
                 <button 
                     onClick={(e) => handleSwipe('left', e)} 
@@ -242,7 +237,6 @@ const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => 
 
     const handleDrop = (itemId: string, e: any) => {
         playSound('coin');
-        // Allow string items from JSON simplified format
         const remaining = items.filter((i: any) => (typeof i === 'string' ? i : i.id) !== itemId);
         setItems(remaining);
         if (remaining.length === 0) setTimeout(() => onNext(e), 500);
@@ -263,18 +257,18 @@ const DragDropView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => 
                     const id = typeof item === 'string' ? item : item.id;
                     const text = typeof item === 'string' ? item : item.text;
                     return (
-                        <motion.div
+                        <MotionDiv
                             key={id}
                             drag
                             dragConstraints={{ top: -300, left: -150, right: 150, bottom: 0 }}
                             whileDrag={{ scale: 1.2, cursor: 'grabbing' }}
-                            onDragEnd={(e, info) => {
+                            onDragEnd={(e: any, info: any) => {
                                 if (info.point.y < window.innerHeight / 2) handleDrop(id, e);
                             }}
                             className="px-6 py-3 bg-neon-blue text-black font-black rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)] cursor-grab border-2 border-black text-lg"
                         >
                             {text}
-                        </motion.div>
+                        </MotionDiv>
                     );
                 })}
             </div>
@@ -370,13 +364,19 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     const [rewards, setRewards] = useState<FloatingReward[]>([]);
     const [failureToast, setFailureToast] = useState<string | null>(null);
     
+    // Features for Engagement
+    const [showDeepDive, setShowDeepDive] = useState(false);
+    const [deepDiveContent, setDeepDiveContent] = useState("");
+    const [showFunFact, setShowFunFact] = useState(false);
+    const [funFactContent, setFunFactContent] = useState<any>(null);
+
     // Boss State
     const [showBossIntro, setShowBossIntro] = useState(false);
     const [bossCurrentQuestion, setBossCurrentQuestion] = useState(0);
     const [isBossStage, setIsBossStage] = useState(false);
     const [showBossVictory, setShowBossVictory] = useState(false);
     
-    // Why it matters Summary
+    // Summary
     const [showSummary, setShowSummary] = useState(false);
 
     useEffect(() => {
@@ -392,9 +392,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
     const currentLesson = lessons[currentIndex];
 
-    // Helper to trigger floating reward
-    const triggerReward = (e: any, xp: number, coins: number, label?: string) => {
-        // Force display in center of screen
+    const triggerReward = (e: any, xp: number, coins: number) => {
         const xpId = `xp-${Date.now()}-${Math.random()}`;
         const coinId = `coin-${Date.now()}-${Math.random()}`;
         
@@ -405,29 +403,53 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
         setRewards(prev => [...prev, ...newRewards]);
         
-        // Remove specific rewards after delay to avoid stale closure bugs
         setTimeout(() => {
             setRewards(prev => prev.filter(r => r.id !== xpId && r.id !== coinId));
         }, 1500);
     };
 
-    // Helper to trigger wrong answer roast
     const triggerRoast = () => {
         const roast = getRandomRoast();
         setFailureToast(roast);
         setTimeout(() => setFailureToast(null), 2500);
     };
 
+    // NEW: Handle correct answer -> Show Deep Dive first
     const handleLessonComplete = (xp: number, coins: number, e: any) => {
         playSound('success');
-        triggerReward(e, xp, coins, "CORRECT!");
+        triggerReward(e, xp, coins);
         (window as any).confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 }, colors: ['#4ade80', '#ffffff'] });
         
-        if (currentIndex < lessons.length - 1) {
-            setTimeout(() => setCurrentIndex(prev => prev + 1), 800);
+        // 1. Show Deep Dive (Knowledge Panel)
+        setDeepDiveContent(getRandomDeepDive());
+        setShowDeepDive(true);
+    };
+
+    // 2. Continue from Deep Dive -> Check for Fun Fact
+    const handleDeepDiveContinue = () => {
+        setShowDeepDive(false);
+        
+        // Check if we should show a Fun Fact (every 3rd lesson: indices 2, 5, 8...)
+        // currentIndex is 0-based. So index 2 is the 3rd lesson.
+        if ((currentIndex + 1) % 3 === 0) {
+            setFunFactContent(getRandomFunFact());
+            setShowFunFact(true);
         } else {
-            // End of lessons -> Summary -> Boss
-            setTimeout(() => setShowSummary(true), 500);
+            advanceLesson();
+        }
+    };
+
+    // 3. Continue from Fun Fact -> Advance
+    const handleFunFactContinue = () => {
+        setShowFunFact(false);
+        advanceLesson();
+    };
+
+    const advanceLesson = () => {
+        if (currentIndex < lessons.length - 1) {
+            setCurrentIndex(prev => prev + 1);
+        } else {
+            setShowSummary(true);
         }
     };
 
@@ -442,7 +464,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     const handleBossAnswer = (isCorrect: boolean, e: any) => {
         if (isCorrect) {
             playSound('success');
-            triggerReward(e, 50, 20, "HIT!");
+            triggerReward(e, 50, 20);
             if (bossCurrentQuestion < level.bossQuiz.length - 1) {
                 setBossCurrentQuestion(prev => prev + 1);
             } else {
@@ -467,29 +489,31 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
         }
     };
 
+    const handleShareFunFact = async () => {
+        if (navigator.share && funFactContent) {
+            await navigator.share({
+                title: "Racked Fun Fact",
+                text: `${funFactContent.text} 🤯 #RackedApp`,
+                url: "https://racked.gg"
+            });
+        } else {
+            alert("Copied to clipboard!");
+        }
+    };
+
     if (isLoading) return <div className="fixed inset-0 bg-[#1a0b2e] flex items-center justify-center text-white font-game text-2xl">Loading...</div>;
 
     return (
         <div id="lesson-container" className="fixed inset-0 z-[100] bg-[#1a0b2e] flex flex-col overflow-hidden font-body">
             
-            {/* Rewards Layer - Centered */}
+            {/* Rewards Layer */}
             <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">
                 <AnimatePresence>
-                    {rewards.map((r, i) => (
-                        <motion.div
+                    {rewards.map((r) => (
+                        <MotionDiv
                             key={r.id}
-                            initial={{ 
-                                opacity: 0, 
-                                x: "-50%", 
-                                y: r.type === 'xp' ? 0 : 50, // XP starts higher, Coin lower
-                                scale: 0.5 
-                            }} 
-                            animate={{ 
-                                opacity: 1, 
-                                x: "-50%", 
-                                y: r.type === 'xp' ? -120 : -40, // XP floats higher up, Coin floats less high
-                                scale: 1.5 // Reduced scale from previous massive size
-                            }} 
+                            initial={{ opacity: 0, x: "-50%", y: r.type === 'xp' ? 0 : 50, scale: 0.5 }} 
+                            animate={{ opacity: 1, x: "-50%", y: r.type === 'xp' ? -120 : -40, scale: 1.5 }} 
                             exit={{ opacity: 0, scale: 2 }}
                             transition={{ duration: 0.8, ease: "easeOut" }} 
                             style={{ left: '50%', top: '50%' }}
@@ -497,22 +521,112 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                                 ${r.type === 'xp' ? 'text-neon-green text-5xl md:text-7xl' : 'text-yellow-400 text-4xl md:text-6xl'}`}
                         >
                             {r.text}
-                        </motion.div>
+                        </MotionDiv>
                     ))}
                 </AnimatePresence>
             </div>
 
-            {/* FAILURE TOAST ROAST */}
+            {/* Failure Toast */}
             <AnimatePresence>
                 {failureToast && (
-                    <motion.div
+                    <MotionDiv
                         initial={{ opacity: 0, y: 50, rotate: -5 }}
                         animate={{ opacity: 1, y: 0, rotate: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         className="absolute bottom-32 left-1/2 -translate-x-1/2 z-[1000] bg-red-600 text-white px-6 py-4 rounded-2xl shadow-[0_0_30px_rgba(220,38,38,0.6)] border-4 border-black font-game text-2xl text-center max-w-[90%] transform rotate-2"
                     >
                         {failureToast}
-                    </motion.div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+
+            {/* DEEP DIVE PANEL (Correct Answer) */}
+            <AnimatePresence>
+                {showDeepDive && (
+                    <MotionDiv
+                        initial={{ y: "100%" }}
+                        animate={{ y: 0 }}
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 20, stiffness: 100 }}
+                        className="fixed bottom-0 left-0 right-0 z-[2000] bg-[#0f0518] border-t-4 border-neon-green rounded-t-3xl p-6 pb-10 shadow-[0_-10px_40px_rgba(74,222,128,0.3)]"
+                    >
+                        <div className="max-w-md mx-auto">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 bg-neon-green rounded-full flex items-center justify-center text-black font-black text-xl">
+                                    <CheckCircleIcon className="w-6 h-6" />
+                                </div>
+                                <h3 className="font-game text-2xl text-neon-green">YOU'RE RIGHT!</h3>
+                            </div>
+                            <div className="bg-white/10 p-4 rounded-xl border border-white/10 mb-6">
+                                <p className="text-white font-bold text-lg leading-snug">
+                                    {deepDiveContent}
+                                </p>
+                            </div>
+                            <button 
+                                onClick={handleDeepDiveContinue}
+                                className="w-full py-4 bg-white text-black font-game text-xl rounded-xl hover:bg-gray-200 active:scale-95 transition-all"
+                            >
+                                CONTINUE ➡
+                            </button>
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+
+            {/* FUN FACT MODAL (Every 3rd Lesson) */}
+            <AnimatePresence>
+                {showFunFact && funFactContent && (
+                    <MotionDiv 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.1 }}
+                        className="fixed inset-0 z-[3000] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center"
+                    >
+                        {/* Particles */}
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            {[...Array(20)].map((_, i) => (
+                                <div key={i} className="absolute text-2xl animate-float opacity-30" 
+                                     style={{ left: `${Math.random()*100}%`, top: `${Math.random()*100}%`, animationDelay: `${Math.random()*2}s` }}>
+                                    {['🧠','💡','⚡','🔥'][Math.floor(Math.random()*4)]}
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="relative w-full max-w-md bg-[#1a0b2e] border-4 border-neon-pink rounded-[2rem] p-8 shadow-[0_0_60px_rgba(255,0,184,0.4)]">
+                            <div className="absolute -top-10 left-1/2 -translate-x-1/2">
+                                <div className="w-20 h-20 bg-neon-pink rounded-full flex items-center justify-center text-5xl border-4 border-black shadow-lg animate-bounce">
+                                    {funFactContent.emoji}
+                                </div>
+                            </div>
+                            
+                            <h2 className="mt-8 font-game text-3xl text-white text-stroke-black mb-6">FUN FACT</h2>
+                            
+                            <div className="bg-white/10 p-6 rounded-2xl border border-white/10 mb-6">
+                                <p className="text-xl font-black text-white leading-tight mb-4">
+                                    {funFactContent.text}
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-mono bg-black/30 py-1 px-3 rounded-full w-fit mx-auto">
+                                    <span className="opacity-50">SOURCE:</span>
+                                    <span className="text-neon-blue">{funFactContent.source}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <button 
+                                    onClick={handleShareFunFact}
+                                    className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/10 flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <ShareIcon className="w-5 h-5" /> Share
+                                </button>
+                                <button 
+                                    onClick={handleFunFactContinue}
+                                    className="flex-[2] py-3 bg-neon-pink text-white font-game text-xl rounded-xl hover:scale-105 transition-transform shadow-lg"
+                                >
+                                    NEXT ➡
+                                </button>
+                            </div>
+                        </div>
+                    </MotionDiv>
                 )}
             </AnimatePresence>
 
@@ -527,7 +641,7 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         </div>
                     ) : (
                          <div className="w-full relative h-6 bg-gray-800 rounded-full border-2 border-black overflow-hidden">
-                             <motion.div 
+                             <MotionDiv 
                                 className="h-full bg-neon-green"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
@@ -543,7 +657,6 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
             {/* BODY */}
             <div className="flex-1 relative overflow-hidden">
                 
-                {/* SUMMARY SCREEN BEFORE BOSS */}
                 {showSummary && (
                     <div className="absolute inset-0 z-50 bg-gradient-to-br from-blue-900 to-black flex flex-col items-center justify-center p-8 text-center animate-pop-in">
                         <div className="text-6xl mb-6">🎓</div>
@@ -558,10 +671,9 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                     </div>
                 )}
 
-                {/* BOSS INTRO */}
                 <AnimatePresence>
                     {showBossIntro && (
-                        <motion.div 
+                        <MotionDiv 
                             initial={{ opacity: 0, scale: 0.8 }} 
                             animate={{ opacity: 1, scale: 1 }} 
                             exit={{ opacity: 0, scale: 1.5 }}
@@ -570,27 +682,25 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                             <div className="text-9xl mb-8 animate-bounce">{level.bossImage || '👹'}</div>
                             <h1 className="font-game text-6xl text-white text-stroke-black mb-4">BOSS FIGHT</h1>
                             <p className="text-4xl font-black text-red-200 uppercase tracking-widest">{level.bossName}</p>
-                        </motion.div>
+                        </MotionDiv>
                     )}
                 </AnimatePresence>
 
-                {/* BOSS VICTORY */}
                 <AnimatePresence>
                     {showBossVictory && (
-                        <motion.div 
+                        <MotionDiv 
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                             className="absolute inset-0 z-[100] bg-gradient-to-b from-yellow-600/90 to-black/95 flex flex-col items-center justify-center p-6 text-center"
                         >
                              <div className="text-9xl mb-4">🏆</div>
                              <h1 className="font-game text-6xl text-white text-stroke-black mb-2">VICTORY!</h1>
                              <p className="text-2xl font-bold text-yellow-200 mb-8">You earned a Badge!</p>
-                        </motion.div>
+                        </MotionDiv>
                     )}
                 </AnimatePresence>
 
-                {/* LESSON CONTENT */}
                 {!isBossStage && !showSummary && currentLesson && (
-                    <motion.div
+                    <MotionDiv
                         key={currentLesson.id}
                         initial={{ opacity: 0, x: 100 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -616,19 +726,16 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                                             className="w-full h-48 object-cover"
                                             onError={(e) => {
                                                 (e.target as HTMLImageElement).style.display = 'none';
-                                                e.currentTarget.parentElement!.style.display = 'none'; // Hide container too if image fails
+                                                e.currentTarget.parentElement!.style.display = 'none';
                                             }} 
                                         />
                                     </div>
                                 )}
 
                                 <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 w-full shadow-lg relative">
-                                     {/* BIGGER FONT FOR MAIN CONCEPT */}
                                     <p className="text-2xl md:text-4xl font-black text-white leading-tight drop-shadow-md">
                                         {currentLesson.content.text}
                                     </p>
-                                    
-                                    {/* Analogy Section */}
                                     {currentLesson.content.analogy && (
                                         <div className="mt-6 bg-black/40 p-4 rounded-xl border border-yellow-500/50 flex items-start gap-3 text-left">
                                             <LightBulbIcon className="w-8 h-8 text-yellow-400 flex-shrink-0" />
@@ -644,10 +751,9 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                                 <button onClick={(e) => handleLessonComplete(100, 50, e)} className="px-12 py-4 bg-white text-black font-game text-xl rounded-full btn-3d hover:scale-105 transition-transform">CONTINUE ➡</button>
                             </div>
                         )}
-                    </motion.div>
+                    </MotionDiv>
                 )}
 
-                {/* BOSS BATTLE UI */}
                 {isBossStage && !showBossIntro && !showBossVictory && level.bossQuiz && level.bossQuiz[bossCurrentQuestion] && (
                     <div className="h-full flex flex-col p-6 pt-8 bg-gradient-to-b from-red-950 to-black">
                         <div className="flex-1 flex flex-col items-center justify-center max-w-lg mx-auto w-full">
