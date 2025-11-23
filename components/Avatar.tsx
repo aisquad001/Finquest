@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -20,6 +19,7 @@ interface AvatarProps {
 
 export const Avatar: React.FC<AvatarProps> = ({ level = 1, size = 'md', customConfig }) => {
   // Default evolution logic
+  let stage = 'noob';
   let emoji = '😐';
   let outfit = '👕';
   let accessory = '';
@@ -27,37 +27,42 @@ export const Avatar: React.FC<AvatarProps> = ({ level = 1, size = 'md', customCo
 
   // Evolution Logic based on Level (Overrides defaults if no custom config)
   if (level >= 3) {
+    stage = 'hustler';
     emoji = '😎';
     outfit = '🧥';
     accessory = '🧢';
     bg = 'bg-blue-400';
   }
   if (level >= 6) {
+    stage = 'boss';
     emoji = '🤑';
     outfit = '👔';
     accessory = '📱';
     bg = 'bg-purple-400';
   }
   if (level >= 10) {
+    stage = 'god';
     emoji = '🦁';
     outfit = '👑';
     accessory = '💎';
     bg = 'bg-yellow-400';
   }
 
-  // If custom config is provided (from onboarding/profile), use that
+  // If custom config is provided (from onboarding), use that mostly, 
+  // but keep the background or aura based on level to show progression
   if (customConfig) {
     emoji = customConfig.emoji;
     outfit = customConfig.outfit;
     accessory = customConfig.accessory;
-    bg = customConfig.bg; // Use custom BG always (removes level lock)
+    // We can optionally keep the level-based background color to show power level
+    if (level < 3) bg = customConfig.bg; 
   }
 
   const sizeClasses = {
     sm: 'w-12 h-12 text-xl',
     md: 'w-20 h-20 text-3xl',
     lg: 'w-32 h-32 text-5xl',
-    xl: 'w-48 h-48 text-7xl' 
+    xl: 'w-48 h-48 text-7xl' // Added for onboarding
   };
 
   return (
@@ -74,8 +79,8 @@ export const Avatar: React.FC<AvatarProps> = ({ level = 1, size = 'md', customCo
         </div>
       )}
       
-      {/* Sparkles for higher levels or special items */}
-      {(level >= 6 || customConfig) && (
+      {/* Sparkles for higher levels */}
+      {level >= 6 && (
         <>
           <div className="absolute -top-2 right-0 text-[0.5em] animate-pulse">✨</div>
           <div className="absolute bottom-2 -left-2 text-[0.5em] animate-bounce">✨</div>

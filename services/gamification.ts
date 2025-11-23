@@ -22,20 +22,13 @@ export interface Badge {
     id: string;
     name: string;
     description: string;
-    subtitle?: string; 
-    icon: string; 
-    unlockCondition: string; 
+    icon: string; // Emoji name or string
+    unlockCondition: string; // Description of how to unlock
     color: string;
 }
 
-export interface SystemConfig {
-    adsEnabled: boolean;
-    maintenanceMode?: boolean;
-    minVersion?: string;
-}
-
 export interface UserState {
-    uid?: string; 
+    uid?: string; // Firebase UID
     nickname: string;
     email?: string;
     avatar: any;
@@ -43,49 +36,54 @@ export interface UserState {
     xp: number;
     coins: number;
     
-    // COPPA Compliance
-    ageConfirmed?: boolean;
-    birthYear?: number;
-
+    // Profile Status
     isProfileComplete?: boolean;
 
+    // Security & Auth
     isAdmin: boolean; 
     role: 'user' | 'admin' | 'mod';
     loginType: 'guest' | 'google' | 'apple' | 'email';
 
-    // Legacy fields kept for type safety but UI will ignore real money status
+    // Monetization
     subscriptionStatus: 'free' | 'pro';
-    lifetimeSpend: number; 
+    lifetimeSpend: number; // REAL REVENUE TRACKING
     
+    // Referrals
     referralCode: string;
     referredBy?: string;
     referralCount: number;
     
     proExpiresAt?: string | null;
 
+    // Streak 2.0
     streak: number;
-    streakLastDate: string; 
-    streakFreezes: number; 
+    streakLastDate: string; // ISO Date string YYYY-MM-DD
+    streakFreezes: number; // Mercy rule items
     
+    // Challenges & Rewards
     dailyChallenges: Challenge[];
     lastChallengeDate: string;
-    lastDailyChestClaim?: string; 
+    lastDailyChestClaim?: string; // ISO Date string YYYY-MM-DD
 
+    // Progression
     completedLevels: string[]; 
     masteredWorlds: string[]; 
     
-    progress: Record<string, WorldProgress>; 
+    // Progression (New System)
+    progress: Record<string, WorldProgress>; // worldId -> data
 
     inventory: string[];
-    badges: string[]; 
+    badges: string[]; // List of badge IDs owned
     
     joinedAt: string;
-    knowledgeGems: string[]; 
+    knowledgeGems: string[]; // Collected gems IDs
     
-    portfolio: Portfolio; 
-    friends: string[]; 
+    // Features
+    portfolio: Portfolio; // Wall Street Zoo Data
+    friends: string[]; // Friend IDs
     
-    parentCode?: string; 
+    // Parent Portal
+    parentCode?: string; // 6-digit code for parent access
 
     lastLoginAt?: string;
     lastLocation?: { lat: number, lng: number, country: string };
@@ -94,14 +92,14 @@ export interface UserState {
 }
 
 export interface WorldProgress {
-    level: number; 
-    lessonsCompleted: Record<string, boolean>; 
-    score: number; 
+    level: number; // Highest level unlocked/completed
+    lessonsCompleted: Record<string, boolean>; // lessonId -> true
+    score: number; // Total score for world
 }
 
 export interface Portfolio {
-    cash: number; 
-    holdings: Record<string, number>; 
+    cash: number; // Fake $100k
+    holdings: Record<string, number>; // Symbol -> Quantity
     transactions: Transaction[];
     history: { date: string; netWorth: number }[];
 }
@@ -110,12 +108,13 @@ export interface Transaction {
     id: string;
     symbol: string;
     type: 'buy' | 'sell';
-    amount: number; 
+    amount: number; // Dollar amount
     price: number;
     quantity: number;
     date: string;
 }
 
+// Re-export Stock type for compatibility
 export type Stock = StockAsset;
 export const STOCK_UNIVERSE = ASSET_LIST;
 
@@ -136,13 +135,10 @@ export interface ShopItem {
     name: string;
     emoji: string;
     cost: number;
-    category: 'pet' | 'outfit' | 'powerup' | 'aura' | 'accessory' | 'emoji' | 'background';
+    category: 'pet' | 'outfit' | 'powerup';
     description: string;
     limitedTime?: boolean;
     active?: boolean;
-    // Mapping to Avatar Config
-    avatarPart?: 'emoji' | 'outfit' | 'accessory' | 'bg';
-    avatarValue?: string; // The CSS class or String value
 }
 
 export interface LeaderboardEntry {
@@ -159,32 +155,40 @@ export interface LeaderboardEntry {
 
 export type LessonType = 'swipe' | 'drag_drop' | 'tapLie' | 'calculator' | 'meme' | 'video' | 'info' | 'funFact' | 'poll' | 'scenario' | 'badge';
 
+// CMS Types
 export interface LessonSwipeCard { text: string; isRight: boolean; label: string; }
 export interface LessonDragItem { id: string; text: string; category: string; }
 export interface LessonStatement { text: string; isLie: boolean; }
 
 export interface LessonContent {
+    // Swipe / Scenario
     cards?: LessonSwipeCard[];
+    // Drag Drop
     buckets?: string[];
-    items?: LessonDragItem[] | string[]; 
+    items?: LessonDragItem[] | string[]; // string[] for compatibility with simpler JSON
+    // Tap Lie
     statements?: LessonStatement[];
+    // Meme
     imageUrl?: string;
     topText?: string;
     bottomText?: string;
-    caption?: string; 
+    caption?: string; // From new JSON
     explanation?: string;
+    // Calculator
     label?: string;
     formula?: string;
     resultLabel?: string;
+    // Info / Video / Fun Fact
     text?: string;
     videoUrl?: string;
     factSource?: string;
+    // Poll / Scenario specific
     question?: string;
     options?: string[];
     correct?: string | number;
-    left?: string; 
+    left?: string; // For binary swipe in JSON
     right?: string;
-    answer?: number; 
+    answer?: number; // For calculator answer
 }
 
 export interface Lesson {
@@ -198,10 +202,10 @@ export interface Lesson {
     xpReward: number;
     coinReward: number;
     likes?: number;
-    popularity?: string; 
+    popularity?: string; // e.g. "12.4k"
     tags?: string[];
-    world?: string; 
-    level?: number; 
+    world?: string; // From JSON import
+    level?: number; // From JSON import
 }
 
 export interface LevelData {
@@ -211,10 +215,10 @@ export interface LevelData {
     title: string;
     description: string;
     bossName: string;
-    bossImage: string; 
-    bossIntro: string; 
+    bossImage: string; // Emoji or URL
+    bossIntro: string; // Trash talk line
     bossQuiz: BossQuestion[];
-    lessons?: Lesson[]; 
+    lessons?: Lesson[]; // Legacy/Pre-loaded support
 }
 
 export interface BossQuestion {
@@ -234,64 +238,29 @@ export interface WorldData {
     badgeId: string;
 }
 
-// --- DEFAULTS ---
-export const DEFAULT_AVATAR_ITEMS = {
-    emojis: ['😎', '🤠', '👽', '👻', '🤖', '😼', '🦁', '💀', '💩', '🤓'],
-    outfits: ['👕', '🧥', '👗', '🥋', '🦺', '👔', '👚'],
-    backgrounds: ['bg-neon-blue', 'bg-neon-green', 'bg-neon-pink', 'bg-neon-purple', 'bg-yellow-400', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500']
+export const SEASONAL_EVENTS = {
+    active: true,
+    id: 'black_friday_2025',
+    title: 'Black Friday Survivor',
+    description: 'Survive the sales! 2x XP on Budgeting lessons.',
+    themeColor: 'from-black via-red-900 to-black',
+    accentColor: 'text-red-500',
+    icon: '🛍️'
 };
 
-// --- ITEM SHOP ---
-
-export const SHOP_ITEMS: ShopItem[] = [
-    // Powerups
-    { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', description: 'Miss a day without losing your streak.', active: true },
-    { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', description: 'Double XP for 24 hours', limitedTime: true, active: true },
-
-    // CHEAP (500 - 2000)
-    { id: 'item_bg_green', name: 'Green Glow', emoji: '🟢', cost: 800, category: 'background', description: 'Radiate success.', avatarPart: 'bg', avatarValue: 'bg-gradient-to-br from-green-400 to-green-900 border-green-400' },
-    { id: 'item_acc_cap', name: 'Blue Cap', emoji: '🧢', cost: 600, category: 'accessory', description: 'Classic look.', avatarPart: 'accessory', avatarValue: '🧢' },
-    { id: 'item_acc_cat', name: 'Money Cat', emoji: '🐱', cost: 1200, category: 'accessory', description: 'Purrs in rich.', avatarPart: 'accessory', avatarValue: '🐱' },
-    { id: 'item_acc_chain', name: 'Basic Chain', emoji: '⛓️', cost: 1000, category: 'accessory', description: 'Start of the drip.', avatarPart: 'accessory', avatarValue: '⛓️' },
-    { id: 'item_outfit_hoodie', name: 'Hustle Hoodie', emoji: '🧥', cost: 500, category: 'outfit', description: 'Comfy grinder.', avatarPart: 'outfit', avatarValue: '🧥' },
-    
-    // MEDIUM (3000 - 10000)
-    { id: 'item_acc_wings', name: 'Neon Wings', emoji: '🧚', cost: 5000, category: 'accessory', description: 'Fly high.', avatarPart: 'accessory', avatarValue: '🧚' },
-    { id: 'item_acc_lambo', name: 'Lambo Pet', emoji: '🏎️', cost: 8000, category: 'pet', description: 'Vroom vroom.', avatarPart: 'accessory', avatarValue: '🏎️' },
-    { id: 'item_bg_rain', name: 'Money Rain', emoji: '💸', cost: 6000, category: 'background', description: 'Make it rain.', avatarPart: 'bg', avatarValue: 'bg-[url("https://www.transparenttextures.com/patterns/diagmonds-light.png")] bg-green-600' },
-    { id: 'item_acc_diamond', name: 'Diamond Chain', emoji: '💎', cost: 7500, category: 'accessory', description: 'Ice cold.', avatarPart: 'accessory', avatarValue: '💎' },
-    { id: 'item_acc_shades', name: 'Rich Shades', emoji: '😎', cost: 4000, category: 'accessory', description: 'Block the haters.', avatarPart: 'accessory', avatarValue: '😎' },
-    { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 4500, category: 'outfit', description: 'Strictly business.', avatarPart: 'outfit', avatarValue: '👔' },
-    { id: 'item_emoji_robot', name: 'Algo Bot', emoji: '🤖', cost: 3000, category: 'emoji', description: 'Beep boop profit.', avatarPart: 'emoji', avatarValue: '🤖' },
-
-    // EXPENSIVE (15000 - 40000)
-    { id: 'item_bg_jet', name: 'Private Jet', emoji: '✈️', cost: 20000, category: 'background', description: 'Cloud nine living.', avatarPart: 'bg', avatarValue: 'bg-slate-800 border-4 border-white' },
-    { id: 'item_acc_ceo', name: 'CEO Sign', emoji: '💼', cost: 18000, category: 'accessory', description: 'Boss level.', avatarPart: 'accessory', avatarValue: '💼' },
-    { id: 'item_acc_gun', name: 'Money Gun', emoji: '🔫', cost: 25000, category: 'accessory', description: 'Pew pew cash.', avatarPart: 'accessory', avatarValue: '🔫' },
-    { id: 'item_acc_watch', name: 'Rol-X Watch', emoji: '⌚', cost: 30000, category: 'accessory', description: 'Time is money.', avatarPart: 'accessory', avatarValue: '⌚' },
-    { id: 'item_acc_crown', name: 'King Crown', emoji: '👑', cost: 35000, category: 'accessory', description: 'Rule the empire.', avatarPart: 'accessory', avatarValue: '👑' },
-    { id: 'item_outfit_tux', name: 'Gala Tux', emoji: '🤵', cost: 20000, category: 'outfit', description: 'Fancy fancy.', avatarPart: 'outfit', avatarValue: '🤵' },
-    { id: 'item_emoji_alien', name: 'Market Alien', emoji: '👽', cost: 15000, category: 'emoji', description: 'Out of this world.', avatarPart: 'emoji', avatarValue: '👽' },
-
-    // LEGENDARY (50000+)
-    { id: 'item_bg_diamond_aura', name: 'Diamond Aura', emoji: '💠', cost: 60000, category: 'background', description: 'Pure net worth energy.', avatarPart: 'bg', avatarValue: 'bg-cyan-200 border-4 border-cyan-400 shadow-[0_0_50px_rgba(34,211,238,0.8)]' },
-    { id: 'item_acc_carpet', name: 'Magic Carpet', emoji: '🧞', cost: 80000, category: 'accessory', description: 'A whole new world.', avatarPart: 'accessory', avatarValue: '🧞' },
-    { id: 'item_outfit_god', name: 'Wealth God', emoji: '👘', cost: 100000, category: 'outfit', description: 'Ascended.', avatarPart: 'outfit', avatarValue: '👘' },
-    { id: 'item_pet_dragon', name: 'Gold Dragon', emoji: '🐲', cost: 75000, category: 'pet', description: 'Hoarding gold.', avatarPart: 'accessory', avatarValue: '🐲' },
-    { id: 'item_emoji_ghost', name: 'Ghost of Debt', emoji: '👻', cost: 50000, category: 'emoji', description: 'Scary rich.', avatarPart: 'emoji', avatarValue: '👻' },
-];
+// --- CURRICULUM DEFINITION (FINAL PACK) ---
 
 export const BADGES: Badge[] = [
-    { id: 'badge_basics', name: 'Money Baby', subtitle: 'Started from the bottom', description: 'Completed Moola Basics', icon: '🐷', unlockCondition: 'Complete World 1', color: 'bg-pink-500' },
-    { id: 'badge_budget', name: 'Budget Chad', subtitle: 'Spreadsheets obey you', description: 'Mastered Budget Beach', icon: '😎', unlockCondition: 'Complete World 2', color: 'bg-blue-500' },
-    { id: 'badge_savings', name: 'Snowball God', subtitle: 'Compound interest goes brrr', description: 'Conquered Compound Cliffs', icon: '❄️', unlockCondition: 'Complete World 3', color: 'bg-cyan-400' },
-    { id: 'badge_banking', name: 'Vault Breaker', subtitle: 'Open sesame', description: 'Opened the Bank Vault', icon: '🔓', unlockCondition: 'Complete World 4', color: 'bg-purple-600' },
-    { id: 'badge_debt', name: 'Debt Slayer', subtitle: 'Klarna fears you', description: 'Escaped Debt Dungeon', icon: '⚔️', unlockCondition: 'Complete World 5', color: 'bg-red-600' },
-    { id: 'badge_taxes', name: 'Hustle Wolf', subtitle: 'Awoooo (Tax Free)', description: 'Survived Hustle Hub', icon: '🐺', unlockCondition: 'Complete World 6', color: 'bg-yellow-500' },
-    { id: 'badge_invest', name: 'Market Bull', subtitle: 'Green candles only', description: 'Dominated Stony Stocks', icon: '🐂', unlockCondition: 'Complete World 7', color: 'bg-green-500' },
-    { id: 'badge_wealth', name: 'Empire Crown', subtitle: 'King of the castle', description: 'Ruled Empire City', icon: '👑', unlockCondition: 'Complete World 8', color: 'bg-indigo-500' },
-    { id: 'badge_streak_30', name: 'Diamond Hands', subtitle: 'Unbreakable', description: '30 Day Streak', icon: '💎', unlockCondition: 'Login 30 days in a row', color: 'bg-blue-400' },
-    { id: 'badge_zoo_win', name: 'Wolf of Wall St', subtitle: 'Alpha moves', description: 'Made profit in the Zoo', icon: '🐺', unlockCondition: 'Trade a stock for profit', color: 'bg-gray-800' },
+    { id: 'badge_basics', name: 'Basics Boss', description: 'Completed Moola Basics', icon: '💰', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
+    { id: 'badge_budget', name: 'Budget Ninja', description: 'Mastered Budget Beach', icon: '🥷', unlockCondition: 'Complete World 2', color: 'bg-neon-blue' },
+    { id: 'badge_savings', name: 'Savings Snowball', description: 'Conquered Compound Cliffs', icon: '❄️', unlockCondition: 'Complete World 3', color: 'bg-neon-purple' },
+    { id: 'badge_banking', name: 'Bank Vault Key', description: 'Opened the Bank Vault', icon: '🗝️', unlockCondition: 'Complete World 4', color: 'bg-neon-pink' },
+    { id: 'badge_debt', name: 'Debt Destroyer', description: 'Escaped Debt Dungeon', icon: '⛓️', unlockCondition: 'Complete World 5', color: 'bg-orange-500' },
+    { id: 'badge_taxes', name: 'Tax Tactical', description: 'Survived Hustle Hub', icon: '🕵️', unlockCondition: 'Complete World 6', color: 'bg-yellow-400' },
+    { id: 'badge_invest', name: 'Stock Star', description: 'Dominated Stony Stocks', icon: '🐂', unlockCondition: 'Complete World 7', color: 'bg-emerald-500' },
+    { id: 'badge_wealth', name: 'Wealth Wizard', description: 'Ruled Empire City', icon: '👑', unlockCondition: 'Complete World 8', color: 'bg-indigo-500' },
+    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎', unlockCondition: 'Login 30 days in a row', color: 'bg-blue-400' },
+    { id: 'badge_zoo_win', name: 'Wolf of Wall St', description: 'Made profit in the Zoo', icon: '🐺', unlockCondition: 'Trade a stock for profit', color: 'bg-red-500' },
 ];
 
 export const WORLDS_METADATA: WorldData[] = [
@@ -305,6 +274,14 @@ export const WORLDS_METADATA: WorldData[] = [
     { id: 'Wealth Empire', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net Worth & Freedom.", unlockLevel: 20, badgeId: 'badge_wealth' }
 ];
 
+export const SHOP_ITEMS: ShopItem[] = [
+    { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', description: 'Miss a day without losing your streak.', limitedTime: false, active: true },
+    { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', description: 'Double XP for 24 hours', limitedTime: true, active: true },
+    { id: 'item_pet_lambo', name: 'Golden Lambo', emoji: '🏎️', cost: 5000, category: 'pet', description: 'Flex on them haters', limitedTime: true, active: true },
+    { id: 'item_pet_doge', name: 'Doge', emoji: '🐕', cost: 800, category: 'pet', description: 'Much wow. Such finance.', active: true },
+    { id: 'item_outfit_suit', name: 'CEO Suit', emoji: '👔', cost: 1500, category: 'outfit', description: 'Dress for the job you want.', active: true },
+];
+
 // --- Logic Helpers ---
 
 export const getXpForNextLevel = (level: number) => {
@@ -312,9 +289,39 @@ export const getXpForNextLevel = (level: number) => {
 };
 
 export const generateDailyChallenges = (): Challenge[] => [
-    { id: `daily_easy_${Date.now()}`, title: 'Show Up', description: 'Log in to the app (Easy W)', difficulty: 'easy', rewardXp: 50, rewardCoins: 100, progress: 1, total: 1, completed: true },
-    { id: `daily_med_${Date.now()}`, title: 'Brain Gainz', description: 'Complete 1 lesson or quiz', difficulty: 'medium', rewardXp: 300, rewardCoins: 500, progress: 0, total: 1, completed: false },
-    { id: `daily_hard_${Date.now()}`, title: 'Wolf of Wall St', description: 'Execute a trade in the Zoo', difficulty: 'hard', rewardXp: 1000, rewardCoins: 2000, progress: 0, total: 1, completed: false },
+    { 
+        id: `daily_easy_${Date.now()}`, 
+        title: 'Show Up', 
+        description: 'Log in to the app (Easy W)', 
+        difficulty: 'easy',
+        rewardXp: 50, 
+        rewardCoins: 100, 
+        progress: 1, 
+        total: 1, 
+        completed: true 
+    },
+    { 
+        id: `daily_med_${Date.now()}`, 
+        title: 'Brain Gainz', 
+        description: 'Complete 1 lesson or quiz', 
+        difficulty: 'medium',
+        rewardXp: 300, 
+        rewardCoins: 500, 
+        progress: 0, 
+        total: 1, 
+        completed: false 
+    },
+    { 
+        id: `daily_hard_${Date.now()}`, 
+        title: 'Wolf of Wall St', 
+        description: 'Execute a trade in the Zoo', 
+        difficulty: 'hard',
+        rewardXp: 1000, 
+        rewardCoins: 2000, 
+        progress: 0, 
+        total: 1, 
+        completed: false 
+    },
 ];
 
 export const getMockLeaderboard = (): LeaderboardEntry[] => [];
@@ -323,28 +330,36 @@ export const calculateRiskScore = (portfolio: Portfolio): number => {
     const memeStocks = ['GME', 'AMC', 'DOGE', 'RBLX', 'TSLA', 'BTC'];
     let riskPoints = 0;
     let totalInvested = 0;
+
     Object.entries(portfolio.holdings).forEach(([sym, qty]) => {
         if (qty > 0) {
-            totalInvested += 100; 
+            totalInvested += 100; // Weight
             if (memeStocks.includes(sym)) riskPoints += 100;
         }
     });
+
     if (totalInvested === 0) return 1;
     const score = Math.ceil((riskPoints / totalInvested) * 10);
     return Math.max(1, Math.min(10, score));
 };
 
 export const generateRandomProfile = () => {
-    const nicknames = ["MoneyNinja", "CashKing", "ProfitPro", "StonksMaster", "WealthWiz", "CryptoKid", "BudgetBoss", "SavingsSquad"];
+    const nicknames = [
+        "MoneyNinja", "CashKing", "ProfitPro", "StonksMaster", 
+        "WealthWiz", "CryptoKid", "BudgetBoss", "SavingsSquad"
+    ];
     const randomName = `${nicknames[Math.floor(Math.random() * nicknames.length)]}${Math.floor(Math.random() * 999)}`;
+    
+    const emojis = ['😎', '🤠', '👽', '👻', '🤖', '😼'];
+    const outfits = ['👕', '🧥', '👗', '🥋', '🦺'];
     
     return {
         nickname: randomName,
         avatar: {
-            emoji: DEFAULT_AVATAR_ITEMS.emojis[Math.floor(Math.random() * DEFAULT_AVATAR_ITEMS.emojis.length)],
-            outfit: DEFAULT_AVATAR_ITEMS.outfits[Math.floor(Math.random() * DEFAULT_AVATAR_ITEMS.outfits.length)],
-            accessory: '',
-            bg: DEFAULT_AVATAR_ITEMS.backgrounds[Math.floor(Math.random() * DEFAULT_AVATAR_ITEMS.backgrounds.length)]
+            emoji: emojis[Math.floor(Math.random() * emojis.length)],
+            outfit: outfits[Math.floor(Math.random() * outfits.length)],
+            accessory: '🧢',
+            bg: 'bg-neon-blue'
         }
     };
 };
@@ -364,21 +379,21 @@ export const createInitialUser = (onboardingData: any): UserState => {
         lifetimeSpend: 0,
         isProfileComplete: false, 
         
-        // COPPA
-        ageConfirmed: onboardingData.ageConfirmed || false,
-        birthYear: onboardingData.birthYear,
-
         isAdmin: false,
         role: 'user',
         loginType: onboardingData.authMethod || 'guest',
+
         referralCode: code,
         referralCount: 0,
+        
         streak: 1,
         streakLastDate: today,
         streakFreezes: 1, 
+
         dailyChallenges: generateDailyChallenges(),
         lastChallengeDate: today,
         lastDailyChestClaim: '',
+
         completedLevels: [],
         masteredWorlds: [],
         progress: {}, 
@@ -401,7 +416,9 @@ export const checkStreak = (user: UserState): { updatedUser: UserState; savedByF
     const today = new Date().toLocaleDateString('en-CA');
     const lastActive = user.streakLastDate;
     
-    if (lastActive === today) return { updatedUser: user, savedByFreeze: false, broken: false };
+    if (lastActive === today) {
+        return { updatedUser: user, savedByFreeze: false, broken: false };
+    }
 
     const d = new Date();
     d.setDate(d.getDate() - 1);
@@ -425,5 +442,6 @@ export const checkStreak = (user: UserState): { updatedUser: UserState; savedByF
             broken = true;
         }
     }
+
     return { updatedUser, savedByFreeze, broken };
 };

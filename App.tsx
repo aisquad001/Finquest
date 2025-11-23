@@ -11,7 +11,7 @@ import { Onboarding } from './components/Onboarding';
 import { WallStreetZoo } from './components/WallStreetZoo';
 import { PortalDashboard } from './components/PortalDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
-// REMOVED PremiumModal
+import { PremiumModal } from './components/PremiumModal';
 import { VisualEffects } from './components/VisualEffects';
 import { ProfileSetup } from './components/ProfileSetup';
 import { playSound } from './services/audio';
@@ -35,8 +35,8 @@ const App: React.FC = () => {
   const { user, loading: storeLoading, error: storeError, syncUser, clearUser, setError, setUser, setLoading } = useUserStore();
   
   // UI State
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  // const [showPremiumModal, setShowPremiumModal] = useState(false); // DEPRECATED
+  const [showOnboarding, setShowOnboarding] = useState(true); // Default to true until auth check
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [domainStatus, setDomainStatus] = useState<'correct' | 'old' | 'localhost'>('correct');
   const [isTargetReady, setIsTargetReady] = useState(false);
@@ -111,6 +111,8 @@ const App: React.FC = () => {
                      authMethod: firebaseUser.isAnonymous ? 'guest' : 'google'
                  });
 
+                 // CRITICAL FIX: Manually force state update to prevent race condition
+                 // if the snapshot listener is slow or blocked.
                  if (newUserData) {
                      setUser(newUserData);
                  }
@@ -230,6 +232,7 @@ const App: React.FC = () => {
   const handleProfileSave = async (data: Partial<UserState>) => {
       if (user?.uid) {
           await updateUser(user.uid, data);
+          // Optimistic update for immediate UI feedback
           setUser({ ...user, ...data });
           setIsEditingProfile(false);
       }
@@ -246,6 +249,7 @@ const App: React.FC = () => {
           // Auth listener (useEffect) handles the rest
       } catch (error: any) {
           logger.error("Signup Flow Failed", error);
+          // UI error display handled by the store error state or alert in signIn function
       }
   };
 
@@ -298,9 +302,10 @@ const App: React.FC = () => {
       );
   }
 
-  // LOGIN SCREEN (INCLUDES AGE GATE)
+  // LOGIN SCREEN
   if (showOnboarding || !user) {
       return <Onboarding onComplete={handleOnboardingAuth} onOpenPortal={() => {
+          // Update URL to query param style so refresh keeps user on portal without 404
           const newUrl = new URL(window.location.href);
           newUrl.searchParams.set('view', 'portal');
           window.history.pushState({}, '', newUrl.toString());
@@ -343,7 +348,7 @@ const App: React.FC = () => {
                 onClaimReward={handleClaimReward}
                 onBuyItem={handleBuyItem}
                 onOpenZoo={() => setView('zoo')}
-                onOpenPremium={() => { /* No Op - monetization disabled */ }}
+                onOpenPremium={() => setShowPremiumModal(true)}
                 onOpenAdmin={() => { window.history.pushState({}, '', '/admin'); setView('admin'); }}
                 onEditProfile={() => setIsEditingProfile(true)}
             />
@@ -362,7 +367,9 @@ const App: React.FC = () => {
           )}
       </div>
       
-      {/* PREMIUM MODAL REMOVED */}
+      {showPremiumModal && (
+          <PremiumModal onClose={() => setShowPremiumModal(false)} onUpgrade={() => {}} />
+      )}
 
     </div>
   );
