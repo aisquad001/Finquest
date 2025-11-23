@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
+import { CreationHistory } from './CreationHistory'; // NEW: Badges View
 import { 
     SparklesIcon, 
     LockClosedIcon, 
@@ -19,7 +20,8 @@ import {
     BoltIcon,
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
-    LinkIcon
+    LinkIcon,
+    CheckBadgeIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -49,7 +51,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaimReward, onBuyItem, onOpenZoo, onOpenPremium, onOpenAdmin, onEditProfile }) => {
-    const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social'>('map');
+    const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'social' | 'badges'>('map');
     const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]); 
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(user.parentCode || null);
@@ -158,7 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
     const handleShareParentLink = async () => {
         if (!familyCode) return;
-        // Changed to use query params to avoid 404s on static hosting without rewrite rules
+        // Changed to use query params to avoid 404s on static hosts
         const url = `${window.location.origin}/?view=portal&code=${familyCode}`;
         
         const shareData = {
@@ -373,11 +375,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 
                 {/* TABS */}
                 <div className="flex justify-center gap-2 mb-6 p-1 bg-white/5 rounded-full border border-white/5">
-                    {['map', 'leaderboard', 'social'].map((t) => (
+                    {['map', 'badges', 'leaderboard', 'social'].map((t) => (
                         <button 
                             key={t}
                             onClick={() => { playSound('click'); setActiveTab(t as any) }}
-                            className={`flex-1 py-2 rounded-full font-game text-sm uppercase tracking-wide transition-all ${activeTab === t ? 'bg-white text-black shadow-lg scale-105' : 'text-gray-500 hover:text-white'}`}
+                            className={`flex-1 py-2 rounded-full font-game text-xs md:text-sm uppercase tracking-wide transition-all ${activeTab === t ? 'bg-white text-black shadow-lg scale-105' : 'text-gray-500 hover:text-white'}`}
                         >
                             {t}
                         </button>
@@ -426,7 +428,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 const isUnlocked = user.level >= world.unlockLevel;
                                 const worldLevels = GET_WORLD_LEVELS(world.id);
                                 const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
-                                const isCompleted = completedInWorld === worldLevels.length;
+                                const isCompleted = completedInWorld >= worldLevels.length; // Basic check, ideally check exact completion
                                 const Icon = world.icon;
 
                                 return (
@@ -453,7 +455,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                                 <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/{worldLevels.length} Levels</div>
                                             )}
                                         </div>
-                                        {isCompleted && <StarIcon className="w-8 h-8 text-yellow-400 drop-shadow-md" />}
+                                        {isCompleted && <CheckBadgeIcon className="w-8 h-8 text-white drop-shadow-md" />}
                                     </button>
                                 );
                             })}
@@ -489,6 +491,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 })}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* BADGES TAB */}
+                {activeTab === 'badges' && (
+                    <div className="animate-pop-in">
+                        <CreationHistory user={user} />
                     </div>
                 )}
 
