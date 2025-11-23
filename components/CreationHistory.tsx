@@ -7,11 +7,11 @@ import React from 'react';
 import { LockClosedIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { BADGES, UserState } from '../services/gamification';
 
-interface AchievementsProps {
+interface BadgeCollectionProps {
   user: UserState;
 }
 
-export const CreationHistory: React.FC<AchievementsProps> = ({ user }) => {
+export const CreationHistory: React.FC<BadgeCollectionProps> = ({ user }) => {
   const ownedBadges = user.badges || [];
 
   return (
@@ -38,7 +38,7 @@ export const CreationHistory: React.FC<AchievementsProps> = ({ user }) => {
                     relative overflow-hidden p-4 rounded-2xl border-2 transition-all duration-500 group
                     ${isUnlocked 
                         ? `${badge.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.2)]` 
-                        : 'bg-zinc-900/50 border-zinc-800 opacity-80'
+                        : 'bg-zinc-900/50 border-zinc-800 opacity-80 grayscale'
                     }
                 `}
               >
@@ -49,7 +49,7 @@ export const CreationHistory: React.FC<AchievementsProps> = ({ user }) => {
                  )}
                  
                  <div className="flex flex-col items-center text-center pt-2">
-                    <div className={`text-5xl mb-3 transition-transform duration-300 ${isUnlocked ? 'group-hover:scale-110 drop-shadow-md' : 'grayscale opacity-30'}`}>
+                    <div className={`text-5xl mb-3 transition-transform duration-300 ${isUnlocked ? 'group-hover:scale-110 drop-shadow-md' : 'opacity-30'}`}>
                         {badge.icon}
                     </div>
                     
@@ -58,7 +58,7 @@ export const CreationHistory: React.FC<AchievementsProps> = ({ user }) => {
                     </h4>
                     
                     <p className="text-[10px] font-bold leading-tight opacity-80">
-                        {isUnlocked ? badge.description : badge.condition}
+                        {isUnlocked ? badge.description : badge.unlockCondition}
                     </p>
                  </div>
 

@@ -22,8 +22,8 @@ export interface Badge {
     id: string;
     name: string;
     description: string;
-    icon: string; // Emoji
-    condition: string; // Description of how to unlock
+    icon: string; // Emoji name or string
+    unlockCondition: string; // Description of how to unlock
     color: string;
 }
 
@@ -65,7 +65,7 @@ export interface UserState {
     lastChallengeDate: string;
     lastDailyChestClaim?: string; // ISO Date string YYYY-MM-DD
 
-    // Progression (Legacy)
+    // Progression
     completedLevels: string[]; 
     masteredWorlds: string[]; 
     
@@ -86,10 +86,9 @@ export interface UserState {
     parentCode?: string; // 6-digit code for parent access
 
     lastLoginAt?: string;
-    lastLocation?: { lat: number, lng: number, country: string }; // For Admin Map
+    lastLocation?: { lat: number, lng: number, country: string };
     createdAt?: string;
-    lastSyncedAt?: any; // Timestamp
-    lastActive?: any; // Timestamp
+    lastSyncedAt?: any;
 }
 
 export interface WorldProgress {
@@ -142,12 +141,6 @@ export interface ShopItem {
     active?: boolean;
 }
 
-export interface EconomyConfig {
-    xpMultiplier: number;
-    coinMultiplier: number;
-    marketStatus: 'open' | 'closed' | 'crashed' | 'moon';
-}
-
 export interface LeaderboardEntry {
     rank: number;
     name: string;
@@ -179,6 +172,7 @@ export interface LessonContent {
     imageUrl?: string;
     topText?: string;
     bottomText?: string;
+    caption?: string; // From new JSON
     explanation?: string;
     // Calculator
     label?: string;
@@ -188,6 +182,13 @@ export interface LessonContent {
     text?: string;
     videoUrl?: string;
     factSource?: string;
+    // Poll / Scenario specific
+    question?: string;
+    options?: string[];
+    correct?: string | number;
+    left?: string; // For binary swipe in JSON
+    right?: string;
+    answer?: number; // For calculator answer
 }
 
 export interface Lesson {
@@ -231,7 +232,7 @@ export interface WorldData {
     icon: any;
     color: string;
     description: string;
-    unlockLevel: number; // Legacy unlock check
+    unlockLevel: number; 
     badgeId: string;
 }
 
@@ -245,30 +246,30 @@ export const SEASONAL_EVENTS = {
     icon: '🛍️'
 };
 
-// --- CURRICULUM DEFINITION ---
+// --- CURRICULUM DEFINITION (FINAL PACK) ---
 
 export const BADGES: Badge[] = [
-    { id: 'badge_basics', name: 'Money Rookie', description: 'Understood that money is fake.', icon: '👶', condition: 'Complete World 1', color: 'bg-neon-green' },
-    { id: 'badge_budget', name: 'Budget Boss', description: 'Mastered the 50/30/20 Rule.', icon: '📊', condition: 'Complete World 2', color: 'bg-neon-blue' },
-    { id: 'badge_compound', name: 'Compound God', description: 'Unlocked the 8th Wonder of the World.', icon: '📈', condition: 'Complete World 3', color: 'bg-neon-purple' },
-    { id: 'badge_banking', name: 'Banker', description: 'Opened the Vault.', icon: '🏦', condition: 'Complete World 4', color: 'bg-neon-pink' },
-    { id: 'badge_debt', name: 'Debt Destroyer', description: 'Escaped the trap.', icon: '⚔️', condition: 'Complete World 5', color: 'bg-orange-500' },
-    { id: 'badge_taxes', name: 'Tax Avoider', description: 'Legally kept your money.', icon: '🕵️', condition: 'Complete World 6', color: 'bg-yellow-400' },
-    { id: 'badge_investing', name: 'Index Fund Chad', description: 'Bought the haystack.', icon: '🐮', condition: 'Complete World 7', color: 'bg-emerald-500' },
-    { id: 'badge_freedom', name: 'Freedom Fighter', description: 'Achieved Financial Nirvana.', icon: '🧘', condition: 'Complete World 8', color: 'bg-indigo-500' },
-    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎', condition: 'Login 30 days in a row', color: 'bg-blue-400' },
-    { id: 'badge_zoo_win', name: 'Wolf of Wall St', description: 'Made profit in the Zoo.', icon: '🐺', condition: 'Trade a stock for profit', color: 'bg-red-500' },
+    { id: 'badge_basics', name: 'Basics Boss', description: 'Completed Moola Basics', icon: '💰', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
+    { id: 'badge_budget', name: 'Budget Ninja', description: 'Mastered Budget Beach', icon: '🥷', unlockCondition: 'Complete World 2', color: 'bg-neon-blue' },
+    { id: 'badge_savings', name: 'Savings Snowball', description: 'Conquered Compound Cliffs', icon: '❄️', unlockCondition: 'Complete World 3', color: 'bg-neon-purple' },
+    { id: 'badge_banking', name: 'Bank Vault Key', description: 'Opened the Bank Vault', icon: '🗝️', unlockCondition: 'Complete World 4', color: 'bg-neon-pink' },
+    { id: 'badge_debt', name: 'Debt Destroyer', description: 'Escaped Debt Dungeon', icon: '⛓️', unlockCondition: 'Complete World 5', color: 'bg-orange-500' },
+    { id: 'badge_taxes', name: 'Tax Tactical', description: 'Survived Hustle Hub', icon: '🕵️', unlockCondition: 'Complete World 6', color: 'bg-yellow-400' },
+    { id: 'badge_invest', name: 'Stock Star', description: 'Dominated Stony Stocks', icon: '🐂', unlockCondition: 'Complete World 7', color: 'bg-emerald-500' },
+    { id: 'badge_wealth', name: 'Wealth Wizard', description: 'Ruled Empire City', icon: '👑', unlockCondition: 'Complete World 8', color: 'bg-indigo-500' },
+    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎', unlockCondition: 'Login 30 days in a row', color: 'bg-blue-400' },
+    { id: 'badge_zoo_win', name: 'Wolf of Wall St', description: 'Made profit in the Zoo', icon: '🐺', unlockCondition: 'Trade a stock for profit', color: 'bg-red-500' },
 ];
 
 export const WORLDS_METADATA: WorldData[] = [
-    { id: 'world1', title: "MONEY BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
-    { id: 'world2', title: "BUDGETING", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule (Shein/Food).", unlockLevel: 2, badgeId: 'badge_budget' },
-    { id: 'world3', title: "COMPOUNDING", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_compound' },
-    { id: 'world4', title: "BANKING 101", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },
-    { id: 'world5', title: "DEBT TRAPS", icon: CreditCardIcon, color: "bg-orange-500", description: "Klarna, Credit Cards & Loans.", unlockLevel: 8, badgeId: 'badge_debt' },
-    { id: 'world6', title: "INCOME & TAX", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Side Hustles & The IRS.", unlockLevel: 12, badgeId: 'badge_taxes' },
-    { id: 'world7', title: "INVESTING", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Stocks, ETFs & Roth IRA.", unlockLevel: 15, badgeId: 'badge_investing' },
-    { id: 'world8', title: "FREEDOM", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Credit Score & Net Worth.", unlockLevel: 20, badgeId: 'badge_freedom' }
+    { id: 'world1', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
+    { id: 'world2', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule.", unlockLevel: 2, badgeId: 'badge_budget' },
+    { id: 'world3', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_savings' },
+    { id: 'world4', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },
+    { id: 'world5', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Credit Cards & Loans.", unlockLevel: 8, badgeId: 'badge_debt' },
+    { id: 'world6', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxes & Side Hustles.", unlockLevel: 12, badgeId: 'badge_taxes' },
+    { id: 'world7', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Investing & Risk.", unlockLevel: 15, badgeId: 'badge_invest' },
+    { id: 'world8', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net Worth & Freedom.", unlockLevel: 20, badgeId: 'badge_wealth' }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -395,7 +396,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
         masteredWorlds: [],
         progress: {}, 
         inventory: [],
-        badges: [], // NEW
+        badges: [], 
         knowledgeGems: [],
         joinedAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),

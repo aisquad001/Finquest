@@ -3,9 +3,9 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, HeartIcon, StarIcon, PlayIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/solid';
 import { Lesson } from '../services/gamification';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
@@ -26,6 +26,40 @@ interface FloatingReward {
 }
 
 // --- SUB-COMPONENTS ---
+
+const PollView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
+    const options = lesson.content.options || ["Yes", "No"];
+    const correctIndex = typeof lesson.content.correct === 'number' ? lesson.content.correct : 0;
+
+    const handleVote = (index: number, e: any) => {
+        if (index === correctIndex) {
+            onNext(e);
+        } else {
+            playSound('error');
+            triggerRoast();
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full p-6 justify-center items-center text-center">
+            <h3 className="font-game text-3xl text-white mb-8 drop-shadow-md leading-tight">{lesson.title}</h3>
+            <div className="bg-white/10 p-4 rounded-2xl mb-8 border border-white/20 text-xl font-bold text-white w-full">
+                {lesson.content.text || lesson.content.question}
+            </div>
+            <div className="grid gap-4 w-full">
+                {options.map((opt, i) => (
+                    <button 
+                        key={i}
+                        onClick={(e) => handleVote(i, e)}
+                        className="w-full py-4 bg-white text-black font-bold rounded-xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all"
+                    >
+                        {opt}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
 
 const FunFactView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void }) => {
     const handleShare = async () => {
@@ -66,15 +100,21 @@ const FunFactView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => v
 const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
     const [cardIndex, setCardIndex] = useState(0);
     const cards = lesson.content.cards || [];
-    const currentCard = cards[cardIndex];
+    // Fallback for scenario/swipe mapping
+    const effectiveCards = cards.length > 0 ? cards : [
+        { text: lesson.content.left || "Left", isRight: false },
+        { text: lesson.content.right || "Right", isRight: true }
+    ];
+    const currentCard = effectiveCards[cardIndex];
 
     const handleSwipe = (direction: 'left' | 'right', e?: any) => {
         const isRight = direction === 'right';
+        // Correct if user swiped RIGHT and card isRight=true, OR user swiped LEFT and card isRight=false
         const correct = currentCard.isRight === isRight;
         
         if (correct) {
             playSound('pop');
-            if (cardIndex < cards.length - 1) {
+            if (cardIndex < effectiveCards.length - 1) {
                 setCardIndex(prev => prev + 1);
             } else {
                 onNext(e);
@@ -84,8 +124,6 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
             triggerRoast();
         }
     };
-
-    if (!currentCard) return <div>Done</div>;
 
     return (
         <div className="flex flex-col items-center justify-center h-full p-4 relative">
@@ -104,7 +142,7 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                         {currentCard.text}
                     </div>
                     <div className="mt-6 text-xs font-bold text-gray-400 uppercase tracking-widest">
-                        {cardIndex + 1} / {cards.length}
+                        {cardIndex + 1} / {effectiveCards.length}
                     </div>
                 </motion.div>
             </div>
@@ -112,11 +150,11 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
             <div className="flex gap-8 mt-12 w-full justify-center">
                 <button onClick={(e) => handleSwipe('left', e)} className="flex-1 max-w-[100px] aspect-square bg-red-500 rounded-2xl border-b-[6px] border-red-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center shadow-lg group">
                     <XMarkIcon className="w-8 h-8 text-white mb-1"/>
-                    <span className="text-xs font-black text-white uppercase">{currentCard.isRight ? 'NOPE' : 'FACT'}</span>
+                    <span className="text-xs font-black text-white uppercase">NOPE</span>
                 </button>
                 <button onClick={(e) => handleSwipe('right', e)} className="flex-1 max-w-[100px] aspect-square bg-green-500 rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center shadow-lg group">
                     <CheckCircleIcon className="w-8 h-8 text-white mb-1"/>
-                    <span className="text-xs font-black text-white uppercase">{currentCard.isRight ? 'FACT' : 'NOPE'}</span>
+                    <span className="text-xs font-black text-white uppercase">YEAH</span>
                 </button>
             </div>
         </div>
@@ -124,6 +162,12 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
 };
 
 const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
+    const statements = lesson.content.statements || [];
+    // Fallback if using options array from JSON
+    const displayOptions = statements.length > 0 ? statements : (lesson.content.options || []).map((opt, i) => ({
+        text: opt, isLie: i === lesson.content.correct
+    }));
+
     const handleTap = (isLie: boolean, e: any) => {
         if (isLie) {
             onNext(e);
@@ -135,9 +179,10 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
 
     return (
         <div className="flex flex-col h-full p-6 justify-center">
-            <h3 className="text-center font-game text-4xl text-white mb-8 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
+            <h3 className="text-center font-game text-4xl text-white mb-2 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
+             <p className="text-center text-white/80 mb-8 text-sm font-bold">{lesson.content.text}</p>
             <div className="grid grid-cols-1 gap-4">
-                {(lesson.content.statements || []).map((s: any, i: number) => (
+                {displayOptions.map((s: any, i: number) => (
                     <button 
                         key={i}
                         onClick={(e) => handleTap(s.isLie, e)}
@@ -197,9 +242,10 @@ const MemeView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => void
     return (
         <div className="flex flex-col h-full p-6 justify-center items-center">
             <div onClick={() => { if (!revealed) { playSound('pop'); setRevealed(true); } }} className="relative w-full max-w-md aspect-square bg-black border-[6px] border-white rounded-3xl overflow-hidden mb-6 cursor-pointer shadow-2xl transform hover:scale-105 transition-transform duration-300">
-                <img src={lesson.content.imageUrl} className="w-full h-full object-cover opacity-90" />
-                <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.topText}</div>
-                <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.bottomText}</div>
+                <img src={lesson.content.imageUrl || "https://i.imgflip.com/30b1gx.jpg"} className="w-full h-full object-cover opacity-90" />
+                {lesson.content.topText && <div className="absolute top-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.topText}</div>}
+                {lesson.content.bottomText && <div className="absolute bottom-4 w-full text-center font-game text-3xl text-white text-stroke-black leading-tight p-2 drop-shadow-lg">{lesson.content.bottomText}</div>}
+                {lesson.content.caption && <div className="absolute bottom-0 bg-black/80 text-white w-full p-2 text-center font-bold">{lesson.content.caption}</div>}
                 {!revealed && (
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-sm transition-opacity">
                         <div className="bg-neon-pink text-white border-4 border-white px-8 py-4 rounded-full font-black animate-bounce text-2xl shadow-lg rotate-3">
@@ -221,7 +267,9 @@ const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) =
     const [revealed, setRevealed] = useState(false);
     const [displayValue, setDisplayValue] = useState(0);
 
-    const targetValue = parseInt((lesson.content.resultLabel?.match(/[\d,]+/) || ['1000000'])[0].replace(/,/g, ''));
+    const targetValue = typeof lesson.content.answer === 'number' 
+        ? lesson.content.answer 
+        : parseInt((lesson.content.resultLabel?.match(/[\d,]+/) || ['1000000'])[0].replace(/,/g, ''));
 
     const handleCalculate = () => {
         playSound('click');
@@ -245,13 +293,14 @@ const CalculatorView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) =
                 {lesson.title}
             </h3>
             <div className="bg-white text-black p-6 rounded-3xl border-[6px] border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] w-full max-w-md mb-8 relative">
-                <div className="text-sm font-black text-gray-400 uppercase tracking-widest mb-2">SCENARIO</div>
-                <p className="text-xl font-black mb-6">{lesson.content.label}</p>
+                <div className="text-sm font-black text-gray-400 uppercase tracking-widest mb-2">{lesson.content.label || "SCENARIO"}</div>
+                <p className="text-xl font-black mb-6">{lesson.content.question || lesson.content.label}</p>
                 <div className="h-24 flex items-center justify-center bg-gray-100 rounded-2xl border-4 border-gray-300">
                     <span className={`text-4xl font-black font-mono ${revealed ? 'text-green-600' : 'text-gray-400'}`}>
                         {revealed ? `$${displayValue.toLocaleString()}` : '???'}
                     </span>
                 </div>
+                {revealed && <p className="mt-4 font-bold text-sm">{lesson.content.text}</p>}
             </div>
             {!revealed ? (
                 <button onClick={handleCalculate} className="w-full py-4 bg-orange-500 text-white font-game text-2xl rounded-xl border-b-[6px] border-orange-800 active:border-b-0 active:translate-y-1.5 transition-all">
@@ -482,13 +531,14 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                         exit={{ opacity: 0, x: -100 }}
                         className="h-full"
                     >
-                        {currentLesson.type === 'swipe' && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
+                        {(currentLesson.type === 'swipe' || currentLesson.type === 'scenario') && <SwipeView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
+                        {currentLesson.type === 'poll' && <PollView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'drag_drop' && <DragDropView lesson={currentLesson} onNext={(e) => handleLessonComplete(150, 50, e)} />}
                         {currentLesson.type === 'tap_lie' && <TapLieView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} triggerRoast={triggerRoast} />}
                         {currentLesson.type === 'calculator' && <CalculatorView lesson={currentLesson} onNext={(e) => handleLessonComplete(100, 50, e)} />}
                         {currentLesson.type === 'meme' && <MemeView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 20, e)} />}
                         {currentLesson.type === 'fun_fact' && <FunFactView lesson={currentLesson} onNext={(e) => handleLessonComplete(50, 10, e)} />}
-                        {currentLesson.type === 'info' && (
+                        {(currentLesson.type === 'info' || currentLesson.type === 'video') && (
                             <div className="flex flex-col h-full p-6 pt-12 items-center text-center">
                                 <h2 className="font-game text-3xl text-white mb-8">{currentLesson.title}</h2>
                                 <div className="bg-white/10 p-6 rounded-3xl border border-white/20 mb-8 text-xl text-white leading-relaxed">

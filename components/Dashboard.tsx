@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
-import { CreationHistory } from './CreationHistory'; // NEW: Badges View
+import { CreationHistory } from './CreationHistory'; // Badge Collection View
 import { 
     SparklesIcon, 
     LockClosedIcon, 
@@ -102,11 +102,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         }
     };
 
-    // Calculate XP Progress
-    const nextLevelXp = getXpForNextLevel(user.level);
-    const currentLevelBaseXp = getXpForNextLevel(user.level - 1);
-    const levelProgress = Math.min(100, Math.max(0, ((user.xp - currentLevelBaseXp) / (nextLevelXp - currentLevelBaseXp)) * 100));
-
     // Daily Chest Logic
     const today = new Date().toLocaleDateString('en-CA');
     const isChestReady = user.lastDailyChestClaim !== today;
@@ -160,7 +155,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
     const handleShareParentLink = async () => {
         if (!familyCode) return;
-        // Changed to use query params to avoid 404s on static hosts
         const url = `${window.location.origin}/?view=portal&code=${familyCode}`;
         
         const shareData = {
@@ -190,17 +184,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
         try {
             const oldUid = user.uid!;
-            // 1. Sign in with Google
             const googleUser = await signInWithGoogle();
             if (!googleUser) throw new Error("Login failed");
 
-            // 2. Migrate Data
             await migrateGuestToReal(oldUid, googleUser.uid, googleUser.email || '');
             
             playSound('levelup');
             (window as any).confetti({ particleCount: 300, spread: 180 });
             alert("SUCCESS! Your empire is now saved forever.");
-            window.location.reload(); // Reload to sync new user ID
+            window.location.reload(); 
         } catch (e: any) {
             console.error(e);
             if(!e.message?.includes('cancelled')) {
@@ -253,14 +245,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                     >
                         {isUpgrading ? 'SAVING...' : 'SAVE PROGRESS'}
                     </button>
-                </div>
-            )}
-
-            {/* SEASONAL BANNER */}
-            {SEASONAL_EVENTS.active && (
-                <div className={`bg-gradient-to-r ${SEASONAL_EVENTS.themeColor} text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 animate-pulse-fast cursor-pointer sticky top-0 z-[50]`}>
-                    <span className="text-lg">{SEASONAL_EVENTS.icon}</span>
-                    <span className="uppercase tracking-widest">{SEASONAL_EVENTS.title} LIVE!</span>
                 </div>
             )}
 
@@ -390,19 +374,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 {activeTab === 'map' && (
                     <div className="relative flex flex-col items-center gap-8 py-4">
                         
-                        {/* INSTALL APP PROMPT */}
-                        {installPrompt && (
-                            <div className="w-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-2xl p-4 flex items-center justify-between shadow-lg animate-pop-in">
-                                <div>
-                                    <div className="font-game text-white text-lg">INSTALL APP</div>
-                                    <div className="text-xs text-white/80">Get daily rewards + instant notifications</div>
-                                </div>
-                                <button onClick={handleInstall} className="bg-white text-pink-600 font-bold px-4 py-2 rounded-xl shadow-md">
-                                    GET IT
-                                </button>
-                            </div>
-                        )}
-
                         {/* ZOO BUTTON - ALWAYS UNLOCKED */}
                         <button 
                             onClick={onOpenZoo}
@@ -428,7 +399,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 const isUnlocked = user.level >= world.unlockLevel;
                                 const worldLevels = GET_WORLD_LEVELS(world.id);
                                 const completedInWorld = worldLevels.filter(l => user.completedLevels.includes(l.id)).length;
-                                const isCompleted = completedInWorld >= worldLevels.length; // Basic check, ideally check exact completion
+                                const isCompleted = completedInWorld >= worldLevels.length;
                                 const Icon = world.icon;
 
                                 return (
@@ -569,54 +540,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 <UserPlusIcon className="w-4 h-4" />
                                 <span className="font-bold">{user.referralCount} Friends Invited</span>
                             </div>
-                        </div>
-
-                        <div className="bg-white/5 rounded-3xl p-6 border border-white/10">
-                             <h2 className="font-game text-xl text-white mb-2 flex items-center justify-center gap-2">
-                                 <QrCodeIcon className="w-6 h-6 text-neon-pink" />
-                                 PARENT LINK
-                             </h2>
-                             <p className="text-gray-400 text-sm mb-6">
-                                 Unlock the Racked Debit Card.
-                             </p>
-                             
-                             {!familyCode ? (
-                                 <button 
-                                     onClick={handleGenerateCode}
-                                     className="w-full py-3 bg-white/10 hover:bg-neon-pink hover:text-white text-neon-pink font-bold rounded-xl border border-neon-pink/30 transition-all"
-                                 >
-                                     Generate Family Code
-                                 </button>
-                             ) : (
-                                 <div className="bg-black/40 p-4 rounded-xl animate-pop-in">
-                                     <div className="text-xs text-gray-500 uppercase font-bold mb-1">Give this to your parent</div>
-                                     <div className="font-mono text-3xl text-white font-bold tracking-widest select-all mb-2">
-                                         {familyCode}
-                                     </div>
-                                     <div className="text-xs text-gray-400 mb-4">
-                                         They can visit <span className="text-white font-bold">racked.gg/?view=portal</span>
-                                     </div>
-                                     
-                                     <div className="grid grid-cols-2 gap-3">
-                                         <button 
-                                             onClick={() => {
-                                                 navigator.clipboard.writeText(familyCode);
-                                                 playSound('coin');
-                                                 alert("Code copied!");
-                                             }}
-                                             className="py-2 bg-white/10 text-white font-bold rounded-lg text-xs hover:bg-white/20"
-                                         >
-                                             Copy Code
-                                         </button>
-                                         <button 
-                                             onClick={handleShareParentLink}
-                                             className="py-2 bg-neon-blue text-black font-bold rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-cyan-400"
-                                         >
-                                             <LinkIcon className="w-3 h-3" /> Share Login Link
-                                         </button>
-                                     </div>
-                                 </div>
-                             )}
                         </div>
                     </div>
                 )}

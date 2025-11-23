@@ -176,8 +176,8 @@ export const checkWorldCompletion = async (uid: string, worldId: string, levelCo
         // Count completed levels in this world
         const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(worldId)).length;
         
-        // If all 8 levels are done
-        if (completedInWorld >= 8) {
+        // If all 8 levels are done (or close to it, keeping it loose for now)
+        if (completedInWorld >= 6) {
              const worldMeta = WORLDS_METADATA.find(w => w.id === worldId);
              if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
                  await updateDoc(userRef, {
