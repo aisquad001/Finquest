@@ -53,6 +53,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(user.parentCode || null);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
+    // Initialize with hardcoded SHOP_ITEMS to ensure instant render
     const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS);
     const [shopTier, setShopTier] = useState<1 | 2 | 3 | 4>(1);
     
@@ -106,6 +107,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         const unsub = subscribeToCollection('shop_items', (items) => {
             if (items.length > 0) {
                 setShopItems(items as ShopItem[]);
+            } else {
+                // Fallback to hardcoded items if Firestore empty
+                setShopItems(SHOP_ITEMS);
             }
         });
         return () => unsub();
@@ -154,6 +158,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         if (user.inventory.includes(item.id)) {
             playSound('error');
             alert("You already own this!");
+            return;
+        }
+        if (user.coins < item.cost) {
+            playSound('error');
+            alert("Not enough coins! Trade stocks or do lessons.");
             return;
         }
         onBuyItem(item);
@@ -590,39 +599,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
 
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x px-2">
-                                {shopItems.filter(i => i.active !== false && i.tier === shopTier).map(item => {
-                                    const owned = user.inventory.includes(item.id);
-                                    // Determine styling based on tier
-                                    const borderColor = shopTier === 1 ? 'border-green-500/30' : shopTier === 2 ? 'border-blue-500/50' : shopTier === 3 ? 'border-yellow-500' : 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]';
-                                    const glow = shopTier >= 3 ? 'shadow-[0_0_15px_rgba(255,255,255,0.2)]' : '';
+                                {shopItems.filter(i => i.active !== false && i.tier === shopTier).length === 0 ? (
+                                    <div className="w-full text-center text-gray-500 text-xs italic py-4">
+                                        Restocking soon... check back later!
+                                    </div>
+                                ) : (
+                                    shopItems.filter(i => i.active !== false && i.tier === shopTier).map(item => {
+                                        const owned = user.inventory.includes(item.id);
+                                        const affordable = user.coins >= item.cost;
+                                        // Determine styling based on tier
+                                        const borderColor = shopTier === 1 ? 'border-green-500/30' : shopTier === 2 ? 'border-blue-500/50' : shopTier === 3 ? 'border-yellow-500' : 'border-purple-500 shadow-[0_0_20px_rgba(168,85,247,0.5)]';
+                                        const glow = shopTier >= 3 ? 'shadow-[0_0_15px_rgba(255,255,255,0.2)]' : '';
 
-                                    return (
-                                        <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : borderColor} ${glow}`}>
-                                            {owned && <div className="absolute top-2 right-2 bg-green-500 text-black text-[9px] font-bold px-1 rounded">OWNED</div>}
-                                            {item.category === 'cosmetic' && <div className="absolute top-2 left-2 text-[8px] bg-white/10 px-1 rounded text-white/70 uppercase tracking-wider">{item.cosmeticType || 'STYLE'}</div>}
-                                            
-                                            <div className="text-4xl mb-2 mt-4 transition-transform group-hover:scale-110">{item.emoji}</div>
-                                            <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
-                                            
-                                            {/* Explicit Price Display */}
-                                            {!owned && (
-                                                <div className="text-yellow-400 text-xs font-black mb-2 flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded">
-                                                    🪙 {item.cost.toLocaleString()}
-                                                </div>
-                                            )}
+                                        return (
+                                            <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-80' : borderColor} ${glow}`}>
+                                                {/* Owned Badge - Green Check */}
+                                                {owned && <div className="absolute top-2 right-2 bg-green-500 text-black rounded-full p-0.5"><CheckBadgeIcon className="w-3 h-3"/></div>}
+                                                
+                                                {item.category === 'cosmetic' && <div className="absolute top-2 left-2 text-[8px] bg-white/10 px-1 rounded text-white/70 uppercase tracking-wider">{item.cosmeticType || 'STYLE'}</div>}
+                                                
+                                                <div className="text-4xl mb-2 mt-4 transition-transform group-hover:scale-110">{item.emoji}</div>
+                                                <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
+                                                
+                                                {/* Explicit Price Display */}
+                                                {!owned && (
+                                                    <div className="text-yellow-400 text-xs font-black mb-2 flex items-center gap-1 bg-black/40 px-2 py-0.5 rounded">
+                                                        🪙 {item.cost.toLocaleString()}
+                                                    </div>
+                                                )}
 
-                                            <button 
-                                                onClick={() => !owned && handleBuy(item)}
-                                                disabled={owned}
-                                                className={`w-full font-bold py-1.5 rounded-lg text-xs transition-all flex items-center justify-center gap-1 
-                                                    ${owned ? 'bg-transparent text-gray-500 border border-gray-700' : 'bg-white text-black hover:bg-neon-green hover:scale-105 shadow-lg'}
-                                                `}
-                                            >
-                                                {owned ? 'Equip in Profile' : 'BUY NOW'}
-                                            </button>
-                                        </div>
-                                    );
-                                })}
+                                                <button 
+                                                    onClick={() => !owned && handleBuy(item)}
+                                                    disabled={owned || (!affordable && !owned)}
+                                                    className={`w-full font-bold py-1.5 rounded-lg text-xs transition-all flex items-center justify-center gap-1 
+                                                        ${owned 
+                                                            ? 'bg-green-900/50 text-green-400 border border-green-500/30 cursor-default' 
+                                                            : !affordable 
+                                                                ? 'bg-gray-700 text-gray-400 cursor-not-allowed opacity-50'
+                                                                : 'bg-white text-black hover:bg-neon-green hover:scale-105 shadow-lg cursor-pointer'}
+                                                    `}
+                                                >
+                                                    {owned ? 'OWNED' : !affordable ? 'BROKE' : 'BUY'}
+                                                </button>
+                                            </div>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
                     </div>
