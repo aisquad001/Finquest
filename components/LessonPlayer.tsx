@@ -39,8 +39,8 @@ const PollView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e
 
     return (
         <div className="flex flex-col h-full p-6 justify-center items-center text-center">
-            <h3 className="font-game text-3xl text-white mb-8 drop-shadow-md leading-tight">{lesson.title}</h3>
-            <div className="bg-white/10 p-4 rounded-2xl mb-8 border border-white/20 text-xl font-bold text-white w-full">
+            <h3 className="font-game text-3xl text-white mb-6 drop-shadow-md leading-tight">{lesson.title}</h3>
+            <div className="bg-white/10 p-6 rounded-3xl mb-8 border-2 border-white/20 text-2xl md:text-3xl font-black text-white w-full shadow-lg leading-tight">
                 {lesson.content.text || lesson.content.question}
             </div>
             <div className="grid gap-4 w-full">
@@ -48,7 +48,7 @@ const PollView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e
                     <button 
                         key={i}
                         onClick={(e) => handleVote(i, e)}
-                        className="w-full py-4 bg-white text-black font-bold rounded-xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all"
+                        className="w-full py-4 bg-white text-black font-bold rounded-xl border-b-[6px] border-gray-300 active:border-b-0 active:translate-y-1.5 transition-all text-xl"
                     >
                         {opt}
                     </button>
@@ -214,7 +214,9 @@ const TapLieView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: 
     return (
         <div className="flex flex-col h-full p-6 justify-center">
             <h3 className="text-center font-game text-4xl text-white mb-2 drop-shadow-[0_4px_0_#000] text-stroke-black">TAP THE LIE! 🤥</h3>
-             <p className="text-center text-white/80 mb-8 text-sm font-bold">{lesson.content.text}</p>
+            <div className="text-center text-yellow-300 mb-8 text-2xl md:text-3xl font-black uppercase tracking-wider drop-shadow-sm border-b-4 border-white/10 pb-4 mx-4">
+                {lesson.content.text}
+            </div>
             <div className="grid grid-cols-1 gap-4">
                 {statements.map((s: any, i: number) => (
                     <button 
