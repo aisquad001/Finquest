@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -9,17 +10,14 @@ import { CreationHistory } from './CreationHistory'; // Badge Collection View
 import { 
     SparklesIcon, 
     LockClosedIcon, 
-    StarIcon,
     ShoppingBagIcon,
     TrophyIcon,
-    QrCodeIcon,
     UserPlusIcon,
     ShareIcon,
     ExclamationTriangleIcon,
     BoltIcon,
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
-    LinkIcon,
     CheckBadgeIcon,
     FireIcon
 } from '@heroicons/react/24/solid';
@@ -28,14 +26,12 @@ import {
     ShopItem, 
     LeaderboardEntry, 
     UserState, 
-    getXpForNextLevel, 
     SHOP_ITEMS,
     BADGES
 } from '../services/gamification';
 import { claimDailyChest } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
-import { GET_WORLD_LEVELS } from '../services/content';
 import { signInWithGoogle, logout } from '../services/firebase';
 import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard } from '../services/db';
 

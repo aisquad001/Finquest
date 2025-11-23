@@ -20,7 +20,6 @@ interface AvatarProps {
 
 export const Avatar: React.FC<AvatarProps> = ({ level = 1, size = 'md', customConfig }) => {
   // Default evolution logic
-  let stage = 'noob';
   let emoji = '😐';
   let outfit = '👕';
   let accessory = '';
@@ -28,21 +27,18 @@ export const Avatar: React.FC<AvatarProps> = ({ level = 1, size = 'md', customCo
 
   // Evolution Logic based on Level (Overrides defaults if no custom config)
   if (level >= 3) {
-    stage = 'hustler';
     emoji = '😎';
     outfit = '🧥';
     accessory = '🧢';
     bg = 'bg-blue-400';
   }
   if (level >= 6) {
-    stage = 'boss';
     emoji = '🤑';
     outfit = '👔';
     accessory = '📱';
     bg = 'bg-purple-400';
   }
   if (level >= 10) {
-    stage = 'god';
     emoji = '🦁';
     outfit = '👑';
     accessory = '💎';
