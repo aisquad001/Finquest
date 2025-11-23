@@ -25,21 +25,54 @@ export class SeededRNG {
     pick<T>(array: T[]): T {
         return array[Math.floor(this.next() * array.length)];
     }
-
-    pickSubset<T>(array: T[], count: number): T[] {
-        const shuffled = [...array];
-        for (let i = shuffled.length - 1; i > 0; i--) {
-            const j = Math.floor(this.next() * (i + 1));
-            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-        }
-        return shuffled.slice(0, count);
-    }
 }
 
-// --- FULL CONTENT DATABASE (384 Lessons Target) ---
-// Structure: World -> Lesson Type -> Array of Content
-// Logic: We use (levelNumber - 1) % length to deterministically pick content
-// This ensures if we have 8 levels and 8+ items, no repeats occur.
+// --- UNIQUE BOSS BATTLES PER WORLD ---
+const BOSS_BATTLES: Record<string, BossQuestion[]> = {
+    "Moola Basics": [
+        { question: "Which puts money IN your pocket?", options: ["Liabilities", "Assets", "Expenses"], correctIndex: 1, explanation: "Assets pay you (stocks, business). Liabilities cost you." },
+        { question: "Inflation causes prices to...", options: ["Stay same", "Decrease", "Increase"], correctIndex: 2, explanation: "Inflation makes your cash worth less over time." },
+        { question: "The best time to start saving?", options: ["Tomorrow", "Next Year", "Now"], correctIndex: 2, explanation: "Time is your biggest asset. Start today." }
+    ],
+    "Budget Beach": [
+        { question: "In 50/30/20, what is the 50%?", options: ["Wants", "Needs", "Savings"], correctIndex: 1, explanation: "50% for Needs (Rent, Food), 30% Wants, 20% Savings." },
+        { question: "An Emergency Fund is for...", options: ["PS5", "Unexpected Bills", "Vacation"], correctIndex: 1, explanation: "It's for true emergencies like car repairs or medical bills." },
+        { question: "Net Income is...", options: ["Before Tax", "After Tax", "Imaginary"], correctIndex: 1, explanation: "Net is what actually hits your bank account." }
+    ],
+    "Compound Cliffs": [
+        { question: "Compound Interest is...", options: ["Linear growth", "Interest on Interest", "A bank fee"], correctIndex: 1, explanation: "Your money earns money, then that money earns more money." },
+        { question: "Rule of 72 calculates...", options: ["Taxes", "Doubling Time", "Retirement Age"], correctIndex: 1, explanation: "Divide 72 by interest rate to see years to double." },
+        { question: "If market crashes, you should...", options: ["Panic Sell", "Hold/Buy", "Cry"], correctIndex: 1, explanation: "You only lose money if you sell low. Ride it out." }
+    ],
+    "Bank Vault": [
+        { question: "FDIC insures deposits up to...", options: ["$1 Million", "$250,000", "$50,000"], correctIndex: 1, explanation: "The government protects up to $250k per bank." },
+        { question: "Which account pays more interest?", options: ["Checking", "HYSA", "Under mattress"], correctIndex: 1, explanation: "High Yield Savings Accounts (HYSA) pay 4-5%." },
+        { question: "Overdraft fees happen when...", options: ["You have too much money", "Balance goes negative", "You use an ATM"], correctIndex: 1, explanation: "Spending more than you have triggers fees." }
+    ],
+    "Debt Dungeon": [
+        { question: "High APR means...", options: ["High Cost", "Low Cost", "Free Money"], correctIndex: 0, explanation: "Annual Percentage Rate. Higher = More expensive debt." },
+        { question: "Paying only the minimum...", options: ["Is smart", "Keeps you in debt", "Builds wealth"], correctIndex: 1, explanation: "Minimum payments mostly cover interest, not the loan." },
+        { question: "A good credit score is...", options: ["300", "500", "750+"], correctIndex: 2, explanation: "750+ gets you the best rates on loans." }
+    ],
+    "Hustle Hub": [
+        { question: "Gross Income is...", options: ["Total Earned", "Take Home", "Tax Refund"], correctIndex: 0, explanation: "Gross is the big number before taxes steal it." },
+        { question: "A 'W2' employee...", options: ["Pays own tax later", "Has tax withheld", "Is a freelancer"], correctIndex: 1, explanation: "Employers take taxes out automatically for W2s." },
+        { question: "Profit equals...", options: ["Revenue", "Revenue - Expenses", "Cash in bank"], correctIndex: 1, explanation: "It's not what you make, it's what you keep." }
+    ],
+    "Stony Stocks": [
+        { question: "Buying a share means...", options: ["Owning part of company", "Loaning money", "Gambling"], correctIndex: 0, explanation: "Stocks represent fractional ownership." },
+        { question: "Diversification helps...", options: ["Increase Risk", "Lower Risk", "Avoid Taxes"], correctIndex: 1, explanation: "Don't put all eggs in one basket." },
+        { question: "A 'Bear Market' means...", options: ["Prices Rising", "Prices Falling", "Zoo is open"], correctIndex: 1, explanation: "Bears swipe down. Prices drop." }
+    ],
+    "Wealth Empire": [
+        { question: "Net Worth formula?", options: ["Income + Expenses", "Assets - Liabilities", "Cash + Stocks"], correctIndex: 1, explanation: "What you OWN minus what you OWE." },
+        { question: "Cash flow is...", options: ["Money moving in/out", "Water", "Savings"], correctIndex: 0, explanation: "Positive cash flow means more coming in than going out." },
+        { question: "Financial Independence is...", options: ["Being rich", "Assets pay living costs", "Winning lottery"], correctIndex: 1, explanation: "When you don't HAVE to work to survive." }
+    ]
+};
+
+// --- FULL CONTENT DATABASE ---
+// Guaranteed 8 unique items per category per world.
 
 const CONTENT_DB: Record<string, any> = {
     "Moola Basics": {
@@ -97,7 +130,7 @@ const CONTENT_DB: Record<string, any> = {
         ],
         lies: [
             { text: "Budgeting Lies", options: ["Budgets restrict freedom", "Budgets give control", "Rich people budget", "Corporations budget"], correct: 0, exp: "A budget tells your money where to go instead of wondering where it went." },
-            { text: "Needs vs Wants", options: ["Netflix is a need", "Water is a need", "Shelter is a need", "Medicine is a need"], correct: 0, exp: "Netflix is fun, but you won't die without it." },
+            { text: "Necessities", options: ["Netflix is a need", "Water is a need", "Shelter is a need", "Medicine is a need"], correct: 0, exp: "Netflix is fun, but you won't die without it." },
             { text: "Cutting Costs", options: ["Stop eating entirely", "Cook at home", "Use coupons", "Buy bulk"], correct: 0, exp: "Starving isn't a strategy. Cooking is." },
             { text: "Fixed Expenses", options: ["Dining out", "Rent", "Insurance", "Car Payment"], correct: 0, exp: "Dining out fluctuates. Rent is fixed." },
             { text: "Variable Expenses", options: ["Mortgage", "Groceries", "Electricity", "Entertainment"], correct: 0, exp: "Mortgage stays same. The rest vary." },
@@ -133,14 +166,14 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Market Crash", left: "Sell All", right: "Hold Tight", correct: "right", text: "You only lose if you sell at the bottom." },
             { q: "High Risk", left: "Short Term", right: "Long Term", correct: "right", text: "Risk usually smooths out over 20 years." },
             { q: "Interest Rate", left: "0.01% Bank", right: "8% Index", correct: "right", text: "0.01% doesn't even beat inflation." },
-            { q: "Rule of 72", left: "Estimate Doubling", right: "Calculate Tax", correct: "left", text: "72 / Rate = Years to double." },
+            { q: "Doubling Money", left: "Rule of 72", right: "Guess", correct: "left", text: "72 / Rate = Years to double." },
             { q: "Consistency", left: "Lump Sum Once", right: "Monthly DCA", correct: "right", text: "Dollar Cost Averaging wins psychologically." },
             { q: "Withdrawal", left: "Interrupt Compounding", right: "Let it Ride", correct: "right", text: "Don't kill the snowball while it's rolling." }
         ],
         lies: [
             { text: "Investing Myths", options: ["You need to be rich", "You can start with $5", "Time > Timing", "Index funds work"], correct: 0, exp: "You can start with spare change apps!" },
             { text: "Stock Market", options: ["It's a casino", "It reflects economy", "Ownership in companies", "Long term growth"], correct: 0, exp: "It's not gambling if you diversify and hold." },
-            { text: "Compound Interest", options: ["Only for math nerds", "8th wonder of world", "Money makes money", "Exponential growth"], correct: 0, exp: "Einstein called it the 8th wonder. It's for everyone." },
+            { text: "Compound Growth", options: ["Only for math nerds", "8th wonder of world", "Money makes money", "Exponential growth"], correct: 0, exp: "Einstein called it the 8th wonder. It's for everyone." },
             { text: "Risk", options: ["Savings accounts have risk", "Stocks have risk", "Cash has no risk", "Inflation is a risk"], correct: 2, exp: "Cash has 'Purchasing Power Risk' due to inflation." },
             { text: "Day Trading", options: ["Easy money", "High risk", "Most lose money", "Stressful"], correct: 0, exp: "90% of day traders lose money." },
             { text: "Capital Gains", options: ["Tax on profit", "Tax on revenue", "Short term rates", "Long term rates"], correct: 1, exp: "You only pay tax on the PROFIT (Gain), not the total amount." },
@@ -159,7 +192,7 @@ const CONTENT_DB: Record<string, any> = {
         ],
         math: [
             { q: "Start at 20 vs 30. Value at 60?", a: 2, t: "Starting 10 years earlier can DOUBLE your result." },
-            { q: "Rule of 72. 10% return. Years?", a: 7.2, t: "Doubles every 7.2 years." },
+            { q: "Rate 10%. Years to double?", a: 7.2, t: "Doubles every 7.2 years." },
             { q: "$1000 at 10% after 2 years?", a: 1210, t: "You gain interest on your interest ($10)." },
             { q: "Lose 50%. Gain needed to break even?", a: 100, t: "If $100 drops to $50, you need +$50 (100%) to get back!" },
             { q: "S&P 500 Avg Return?", a: 10, t: "Historically about 10% per year." },
@@ -261,7 +294,7 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Skill Up", left: "Learn Code", right: "Watch Netflix", correct: "left", text: "Skills pay bills." },
             { q: "Networking", left: "Cold DM", right: "Warm Intro", correct: "right", text: "A warm intro is 10x more effective." },
             { q: "Business Idea", left: "Sell Product", right: "Sell Service", correct: "right", text: "Service (time) is easier to start with $0." },
-            { q: "Profit", left: "Revenue", right: "Rev - Expenses", correct: "right", text: "Revenue is vanity, profit is sanity." }
+            { q: "Profit Calculation", left: "Revenue", right: "Rev - Expenses", correct: "right", text: "Revenue is vanity, profit is sanity." }
         ],
         lies: [
             { text: "Success Myths", options: ["Luck only", "Hard work + Strategy", "Inheritance required", "College required"], correct: 1, exp: "Strategy beats luck every time." },
@@ -391,9 +424,12 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     const rng = new SeededRNG(levelId);
     const worldDB = CONTENT_DB[worldName] || CONTENT_DB["Moola Basics"]; // Fallback
 
-    // 1. BOSS GENERATION
+    // 1. BOSS GENERATION (UNIQUE PER WORLD)
     const bossNames = ["Goblin", "Troll", "Dragon", "Vampire", "Reaper", "Titan", "Golem", "Wizard"];
     const bossName = `${worldName.split(' ')[1] || "Money"} ${bossNames[(levelNum - 1) % bossNames.length]}`;
+    
+    // Pick unique boss questions for this world
+    const bossQuestions = BOSS_BATTLES[worldName] || BOSS_BATTLES["Moola Basics"];
     
     const level: LevelData = {
         id: levelId,
@@ -404,11 +440,7 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
         bossName: bossName,
         bossImage: ["👺", "👹", "👻", "👽", "🤖", "👾", "💀", "🤡"][(levelNum - 1) % 8],
         bossIntro: rng.pick(["I'm here to take your coins!", "You can't budget this!", "Your credit score is mine!", "Interest rates are rising!"]),
-        bossQuiz: [
-            { question: "What creates wealth?", options: ["Spending", "Assets", "Liabilities"], correctIndex: 1, explanation: "Assets put money in your pocket." },
-            { question: "Inflation means?", options: ["Prices up", "Prices down", "More money"], correctIndex: 0, explanation: "Things cost more over time." },
-            { question: "Best time to start?", options: ["Tomorrow", "Never", "Now"], correctIndex: 2, explanation: "Yesterday was better, but today is good." }
-        ]
+        bossQuiz: bossQuestions // No longer hardcoded!
     };
 
     // 2. LESSON GENERATION (6 Unique Lessons)
