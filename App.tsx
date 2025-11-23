@@ -199,8 +199,8 @@ const App: React.FC = () => {
       addXP(user.uid, finalXp);
       addCoins(user.uid, coins, 'Level Complete');
       
-      // 3. Check for World Completion Badge
-      await checkWorldCompletion(user.uid, activeWorld.id);
+      // 3. Check for World Completion Badge (Pass current level to handle race conditions)
+      await checkWorldCompletion(user.uid, activeWorld.id, activeLevel.id);
       
       trackEvent('level_complete', { levelId: activeLevel?.id, xpEarned: finalXp });
       

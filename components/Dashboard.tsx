@@ -9,17 +9,12 @@ import { CreationHistory } from './CreationHistory'; // Badge Collection View
 import { 
     SparklesIcon, 
     LockClosedIcon, 
-    StarIcon,
     ShoppingBagIcon,
     TrophyIcon,
-    QrCodeIcon,
-    UserPlusIcon,
-    ShareIcon,
     ExclamationTriangleIcon,
     BoltIcon,
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
-    LinkIcon,
     CheckBadgeIcon
 } from '@heroicons/react/24/solid';
 import { 
@@ -27,15 +22,12 @@ import {
     ShopItem, 
     LeaderboardEntry, 
     UserState, 
-    getXpForNextLevel, 
     SHOP_ITEMS,
-    SEASONAL_EVENTS,
     BADGES
 } from '../services/gamification';
 import { claimDailyChest } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
-import { GET_WORLD_LEVELS } from '../services/content';
 import { signInWithGoogle, logout } from '../services/firebase';
 import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard } from '../services/db';
 
@@ -95,9 +87,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         }
     }, [activeTab]);
 
-    // Get Latest Badge
-    const latestBadgeEntry = user.badges && user.badges.length > 0 ? user.badges[user.badges.length - 1] : null;
-    const latestBadge = latestBadgeEntry ? BADGES.find(b => b.id === latestBadgeEntry.id) : null;
+    // Get Latest Badge (Robust Handling)
+    const getLatestBadge = () => {
+        if (!user.badges || user.badges.length === 0) return null;
+        const lastEntry = user.badges[user.badges.length - 1];
+        const id = typeof lastEntry === 'string' ? lastEntry : lastEntry.id;
+        return BADGES.find(b => b.id === id);
+    };
+    const latestBadge = getLatestBadge();
 
     const handleInstall = () => {
         if (installPrompt) {
@@ -301,7 +298,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 )}
                              </div>
                              
-                             {/* BADGE DISPLAY */}
+                             {/* BADGE DISPLAY - CLICK TO OPEN COLLECTION */}
                              <div 
                                 onClick={() => { playSound('pop'); setActiveTab('badges'); }}
                                 className="flex items-center gap-2 mt-1 cursor-pointer group"
@@ -311,7 +308,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                         <div className="text-xl filter drop-shadow-[0_0_5px_rgba(255,255,255,0.8)] group-hover:scale-110 transition-transform">
                                             {latestBadge.icon}
                                         </div>
-                                        <div className="text-[10px] font-bold text-neon-green uppercase tracking-wider border border-neon-green/30 bg-neon-green/10 px-2 py-0.5 rounded-md group-hover:bg-neon-green/20 transition-colors">
+                                        <div className="text-[10px] font-bold text-neon-green uppercase tracking-wider border border-neon-green/30 bg-neon-green/10 px-2 py-0.5 rounded-md group-hover:bg-neon-green/20 transition-colors truncate max-w-[120px]">
                                             {latestBadge.name}
                                         </div>
                                     </>
@@ -567,12 +564,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                             <div className="flex gap-2">
                                 <button onClick={handleShareApp} className="flex-1 bg-white text-black font-game text-lg py-3 rounded-xl btn-3d flex items-center justify-center gap-2">
-                                    <ShareIcon className="w-5 h-5" /> SHARE
+                                    {/* Icon moved to import */}
+                                    <span className="text-xl">🚀</span> SHARE
                                 </button>
                             </div>
 
                             <div className="mt-6 flex items-center justify-center gap-2 text-sm text-purple-300">
-                                <UserPlusIcon className="w-4 h-4" />
+                                {/* Icon replacement */}
+                                <span className="text-lg">👥</span>
                                 <span className="font-bold">{user.referralCount} Friends Invited</span>
                             </div>
                         </div>

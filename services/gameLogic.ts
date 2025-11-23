@@ -194,7 +194,9 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
             rewards = { coins: 50000, xp: 10000 }; 
             message += " (GODLIKE!)"; 
             // Check if badge already owned by ID
-            if (!user.badges?.some(b => b.id === 'badge_streak_30')) badgeToUnlock = 'badge_streak_30';
+            // Handle legacy string badges
+            const hasBadge = user.badges?.some(b => (typeof b === 'string' ? b : b.id) === 'badge_streak_30');
+            if (!hasBadge) badgeToUnlock = 'badge_streak_30';
         }
         else { rewards = { coins: 100, xp: 50 }; }
     } else if (savedByFreeze) {
@@ -205,6 +207,12 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
     }
 
     try {
+        // Sanitize existing badges first
+        const existingBadges = (user.badges || []).map((b: any) => {
+             if (typeof b === 'string') return { id: b, earned: new Date().toISOString() };
+             return b;
+        }) as EarnedBadge[];
+
         const updatePayload: any = {
             streak: updatedUser.streak,
             streakLastDate: updatedUser.streakLastDate,
@@ -214,7 +222,13 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
         
         if (badgeToUnlock) {
             const newBadge: EarnedBadge = { id: badgeToUnlock, earned: new Date().toISOString() };
-            updatePayload.badges = [...(user.badges || []), newBadge];
+            updatePayload.badges = [...existingBadges, newBadge];
+        } else {
+            // If we sanitized but didn't add, we should still save the sanitized list to clean up DB
+            // But maybe too many writes? Let's only write if we are updating streak anyway.
+            if (user.badges?.some(b => typeof b === 'string')) {
+                updatePayload.badges = existingBadges;
+            }
         }
 
         await updateUser(uid, updatePayload);
@@ -237,21 +251,35 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
 };
 
 // Check and Award Badges for World Completion
-export const checkWorldCompletion = async (uid: string, worldId: string) => {
+export const checkWorldCompletion = async (uid: string, worldId: string, justCompletedLevelId?: string) => {
     try {
         const user = await getUser(uid);
         if (!user) return;
 
+        // RACE CONDITION FIX: 
+        // If we just completed a level, ensure it's in our calculation list
+        // even if the DB read returned slightly stale data.
+        let currentCompletedLevels = user.completedLevels || [];
+        if (justCompletedLevelId && !currentCompletedLevels.includes(justCompletedLevelId)) {
+            currentCompletedLevels = [...currentCompletedLevels, justCompletedLevelId];
+        }
+
         // Normalize ID to match level IDs (e.g., "Moola Basics" -> "MoolaBasics")
         const normalizedWorldId = worldId.replace(/\s+/g, '');
-        const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(normalizedWorldId)).length;
+        const completedInWorld = currentCompletedLevels.filter(lvl => lvl.startsWith(normalizedWorldId)).length;
         
         // World is complete if 8 levels are done
         if (completedInWorld >= 8) {
              const worldMeta = WORLDS_METADATA.find(w => w.id === worldId || w.title === worldId);
              
              if (worldMeta) {
-                 const newBadges = [...(user.badges || [])];
+                 // BADGE OBJECT FIX: Handle legacy string badges to prevent crashes
+                 const existingBadges = (user.badges || []).map((b: any) => {
+                     if (typeof b === 'string') return { id: b, earned: new Date().toISOString() };
+                     return b;
+                 }) as EarnedBadge[];
+
+                 const newBadges = [...existingBadges];
                  let badgeAdded = false;
                  
                  // Check if badge is already earned by looking up ID in the array of objects
