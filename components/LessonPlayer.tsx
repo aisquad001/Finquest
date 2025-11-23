@@ -98,76 +98,93 @@ const FunFactView = ({ lesson, onNext }: { lesson: Lesson, onNext: (e: any) => v
 
 const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (e: any) => void, triggerRoast: () => void }) => {
     const [cardIndex, setCardIndex] = useState(0);
-    const cards = lesson.content.cards || [];
-    // Fallback for scenario/swipe mapping
-    const effectiveCards = cards.length > 0 ? cards : [
-        { text: lesson.content.left || "Left", isRight: false, label: "Option A" },
-        { text: lesson.content.right || "Right", isRight: true, label: "Option B" }
-    ];
-    const currentCard = effectiveCards[cardIndex];
+    
+    // MODE CHECK: Does this lesson have explicit 'cards' (Sorting Mode) or just 'left/right' (Decision Mode)?
+    const isSortingMode = lesson.content.cards && lesson.content.cards.length > 0;
 
-    // Handle Scenario JSON format where it's just one question
-    if (!currentCard && lesson.type === 'scenario') {
-        return (
-             <div className="flex flex-col h-full p-6 justify-center items-center text-center">
-                <h3 className="font-game text-3xl text-white mb-8">{lesson.title}</h3>
-                <p className="text-xl font-bold text-white mb-8">{lesson.content.question}</p>
-                <p className="text-sm text-gray-400 mb-8 italic">{lesson.content.text}</p>
-                <button onClick={(e) => onNext(e)} className="w-full py-4 bg-neon-blue text-black font-game text-2xl rounded-xl btn-3d">
-                    MAKE THE CALL 🤙
-                </button>
-            </div>
-        );
-    }
+    // 1. SORTING MODE LOGIC (Buckets)
+    const sortingCards = lesson.content.cards || [];
+    const currentSortingCard = sortingCards[cardIndex];
+
+    // 2. DECISION MODE LOGIC (Binary Choice)
+    // If no cards, we treat the main content as ONE card to decide on.
+    const decisionQuestion = lesson.content.question || lesson.title;
+    const leftLabel = lesson.content.left || "Left";
+    const rightLabel = lesson.content.right || "Right";
+    const correctDirection = lesson.content.correct || "right"; // 'left' or 'right'
 
     const handleSwipe = (direction: 'left' | 'right', e?: any) => {
-        const isRight = direction === 'right';
-        // Correct if user swiped RIGHT and card isRight=true, OR user swiped LEFT and card isRight=false
-        const correct = currentCard.isRight === isRight;
-        
-        if (correct) {
-            playSound('pop');
-            if (cardIndex < effectiveCards.length - 1) {
-                setCardIndex(prev => prev + 1);
+        if (isSortingMode) {
+            // Sorting Mode: Match the card's 'isRight' property
+            const isRight = direction === 'right';
+            const correct = currentSortingCard.isRight === isRight;
+            
+            if (correct) {
+                playSound('pop');
+                if (cardIndex < sortingCards.length - 1) {
+                    setCardIndex(prev => prev + 1);
+                } else {
+                    onNext(e);
+                }
             } else {
-                onNext(e);
+                playSound('error');
+                triggerRoast();
             }
         } else {
-            playSound('error');
-            triggerRoast();
+            // Decision Mode: Match the 'correct' property ('left' or 'right')
+            if (direction === correctDirection) {
+                playSound('pop');
+                onNext(e);
+            } else {
+                playSound('error');
+                triggerRoast();
+            }
         }
     };
 
     return (
         <div className="flex flex-col items-center justify-center h-full p-4 relative">
-            <h3 className="font-game text-3xl mb-12 text-white drop-shadow-md text-center leading-tight">
-                {lesson.title || "What's the move?"}
+            <h3 className="font-game text-3xl mb-8 text-white drop-shadow-md text-center leading-tight">
+                {isSortingMode ? (lesson.title || "Sort It!") : "What's the move?"}
             </h3>
             
-            <div className="relative w-full max-w-xs aspect-[3/4]">
+            <div className="relative w-full max-w-xs aspect-[3/4] mb-8">
                 <motion.div 
-                    key={cardIndex}
+                    key={isSortingMode ? cardIndex : 'decision'}
                     initial={{ scale: 0.5, opacity: 0, y: 50 }}
                     animate={{ scale: 1, opacity: 1, y: 0 }}
                     className="absolute inset-0 bg-white rounded-3xl shadow-[10px_10px_0px_rgba(0,0,0,0.5)] flex flex-col items-center justify-center p-8 text-center border-4 border-black transform rotate-1"
                 >
                     <div className="text-black font-black text-3xl leading-tight select-none">
-                        {currentCard.text}
+                        {isSortingMode ? currentSortingCard.text : decisionQuestion}
                     </div>
-                    <div className="mt-6 text-xs font-bold text-gray-400 uppercase tracking-widest">
-                        {cardIndex + 1} / {effectiveCards.length}
-                    </div>
+                    {isSortingMode && (
+                        <div className="mt-6 text-xs font-bold text-gray-400 uppercase tracking-widest">
+                            {cardIndex + 1} / {sortingCards.length}
+                        </div>
+                    )}
+                    {!isSortingMode && lesson.content.text && (
+                         <div className="mt-6 text-sm font-bold text-gray-500 italic">
+                            "{lesson.content.text}"
+                        </div>
+                    )}
                 </motion.div>
             </div>
 
-            <div className="flex gap-8 mt-12 w-full justify-center">
-                <button onClick={(e) => handleSwipe('left', e)} className="flex-1 max-w-[100px] aspect-square bg-red-500 rounded-2xl border-b-[6px] border-red-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center shadow-lg group">
-                    <XMarkIcon className="w-8 h-8 text-white mb-1"/>
-                    <span className="text-xs font-black text-white uppercase">NOPE</span>
+            {/* BUTTONS - Labels change based on mode */}
+            <div className="flex gap-4 mt-auto w-full justify-center pb-12 px-4">
+                <button onClick={(e) => handleSwipe('left', e)} className="flex-1 bg-red-500 rounded-2xl border-b-[6px] border-red-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group">
+                    <XMarkIcon className="w-6 h-6 text-white mb-1"/>
+                    <span className="text-xs font-black text-white uppercase px-2 break-words w-full text-center">
+                        {isSortingMode ? "Left" : leftLabel}
+                    </span>
                 </button>
-                <button onClick={(e) => handleSwipe('right', e)} className="flex-1 max-w-[100px] aspect-square bg-green-500 rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center shadow-lg group">
-                    <CheckCircleIcon className="w-8 h-8 text-white mb-1"/>
-                    <span className="text-xs font-black text-white uppercase">YEAH</span>
+                
+                <button onClick={(e) => handleSwipe('right', e)} className="flex-1 bg-green-500 rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group">
+                    <CheckCircleIcon className="w-6 h-6 text-white mb-1"/>
+                    <span className="text-xs font-black text-white uppercase px-2 break-words w-full text-center">
+                         {isSortingMode ? "Right" : rightLabel}
+                    </span>
                 </button>
             </div>
         </div>
@@ -365,11 +382,22 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     const triggerReward = (e: any, xp: number, coins: number, label?: string) => {
         let x = window.innerWidth / 2, y = window.innerHeight / 2;
         if (e && e.clientX) { x = e.clientX; y = e.clientY; }
-        setRewards(prev => [...prev, 
-            { id: Date.now() + 'xp', x, y: y - 50, text: `+${xp} XP`, type: 'xp' },
-            { id: Date.now() + 'coin', x, y: y - 80, text: `+${coins} Coins`, type: 'coin' }
-        ]);
-        setTimeout(() => setRewards(prev => prev.slice(1)), 1500);
+        
+        // Generate unique IDs
+        const xpId = `xp-${Date.now()}-${Math.random()}`;
+        const coinId = `coin-${Date.now()}-${Math.random()}`;
+        
+        const newRewards: FloatingReward[] = [
+            { id: xpId, x, y: y - 50, text: `+${xp} XP`, type: 'xp' },
+            { id: coinId, x, y: y - 80, text: `+${coins} Coins`, type: 'coin' }
+        ];
+
+        setRewards(prev => [...prev, ...newRewards]);
+        
+        // Remove specific rewards after delay to avoid stale closure bugs
+        setTimeout(() => {
+            setRewards(prev => prev.filter(r => r.id !== xpId && r.id !== coinId));
+        }, 1500);
     };
 
     // Helper to trigger wrong answer roast
