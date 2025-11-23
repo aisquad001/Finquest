@@ -6,7 +6,7 @@
 import { UserState, SHOP_ITEMS, WORLDS_METADATA, getXpForNextLevel, checkStreak } from './gamification';
 import { playSound } from './audio';
 import { updateUser, getUser } from './db';
-import * as firestore from 'firebase/firestore'; // Keep for specific types if needed
+import * as firestore from 'firebase/firestore';
 
 const { serverTimestamp } = firestore;
 
@@ -21,6 +21,52 @@ const getYesterdayStr = () => {
 export const triggerVisualEffect = (text: string, type: 'xp' | 'coin' | 'level' | 'error') => {
     const event = new CustomEvent('game-effect', { detail: { text, type } });
     window.dispatchEvent(event);
+};
+
+// --- CASINO CELEBRATION ---
+const triggerCasinoEffect = () => {
+    // 1. Instant Blast
+    const count = 200;
+    const defaults = { origin: { y: 0.7 }, zIndex: 9999 };
+
+    function fire(particleRatio: number, opts: any) {
+        (window as any).confetti(Object.assign({}, defaults, opts, {
+            particleCount: Math.floor(count * particleRatio)
+        }));
+    }
+
+    fire(0.25, { spread: 26, startVelocity: 55 });
+    fire(0.2, { spread: 60 });
+    fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+    fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+    fire(0.1, { spread: 120, startVelocity: 45 });
+    
+    // 2. Sustained Gold Rain (3 Seconds)
+    const end = Date.now() + 3000;
+    const colors = ['#FFD700', '#FFA500', '#FFFFFF', '#00FF88'];
+
+    (function frame() {
+        (window as any).confetti({
+            particleCount: 3,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: colors,
+            zIndex: 9999
+        });
+        (window as any).confetti({
+            particleCount: 3,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: colors,
+            zIndex: 9999
+        });
+
+        if (Date.now() < end) {
+            requestAnimationFrame(frame);
+        }
+    }());
 };
 
 // --- ACTIONS ---
@@ -54,8 +100,9 @@ export const addXP = async (uid: string, amount: number) => {
             setTimeout(() => {
                 playSound('levelup');
                 triggerVisualEffect(`LEVEL UP! ${newLevel}`, 'level');
-                (window as any).confetti({ particleCount: 200, spread: 100 });
-            }, 500);
+                // Secondary confetti for level up
+                (window as any).confetti({ particleCount: 100, spread: 100, origin: { y: 0.6 } });
+            }, 800);
         }
     } catch (e) {
         console.error("Failed to add XP", e);
@@ -198,23 +245,48 @@ export const checkWorldCompletion = async (uid: string, worldId: string) => {
         const normalizedWorldId = worldId.replace(/\s+/g, '');
         const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(normalizedWorldId)).length;
         
-        // Check if all 8 levels are done
+        // World is complete if 8 levels are done
         if (completedInWorld >= 8) {
              const worldMeta = WORLDS_METADATA.find(w => w.id === worldId || w.title === worldId);
              
+             // Only process if badge NOT yet owned (Prevents infinite loop of rewards)
              if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
+                 
+                 // 1. Define Completion Bonus (Big enough to help unlock next world)
+                 const bonusCoins = 2000; 
+                 const bonusXP = 1000; 
+
                  const newBadges = [...(user.badges || []), worldMeta.badgeId];
                  
+                 // 2. Update DB (Badge + Coins)
+                 // We update coins here directly to batch it with badge
                  await updateUser(uid, {
-                     badges: newBadges
+                     badges: newBadges,
+                     coins: user.coins + bonusCoins
                  });
 
-                 // Delay slightly to avoid clashing with Level Up animation
+                 // 3. Add XP (This will trigger the Level Up logic internally, unlocking the next world)
+                 await addXP(uid, bonusXP);
+
+                 // 4. CASINO CELEBRATION SEQUENCE
                  setTimeout(() => {
+                     // Visual Chaos
+                     triggerCasinoEffect();
+                     
+                     // Sounds & Toasts
                      playSound('fanfare');
-                     triggerVisualEffect(`BADGE UNLOCKED: ${worldMeta.title}`, 'level');
-                     (window as any).confetti({ particleCount: 300, spread: 180 });
-                 }, 1500);
+                     triggerVisualEffect(`WORLD COMPLETE!`, 'level');
+                     
+                     setTimeout(() => {
+                         playSound('kaching');
+                         triggerVisualEffect(`+${bonusCoins} Coins`, 'coin');
+                     }, 500);
+
+                     setTimeout(() => {
+                         triggerVisualEffect(`BADGE UNLOCKED: ${worldMeta.title}`, 'level');
+                     }, 1500);
+
+                 }, 600); // Slight delay to allow view transition to dashboard
              }
         }
     } catch (e) {
