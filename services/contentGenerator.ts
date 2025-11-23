@@ -72,7 +72,7 @@ const BOSS_BATTLES: Record<string, BossQuestion[]> = {
 };
 
 // --- FULL CONTENT DATABASE ---
-// Guaranteed 8 unique items per category per world.
+// Guaranteed unique items per category per world.
 
 const CONTENT_DB: Record<string, any> = {
     "Moola Basics": {
@@ -115,6 +115,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Opportunity Cost of $100 today vs 10%?", a: 110, t: "Spending $100 today costs you $110 next year." },
             { q: "$1000 credit card debt at 20% for 1 year?", a: 1200, t: "You paid $200 just to borrow money. Ouch." },
             { q: "$5 latte x 365 days?", a: 1825, t: "That's a vacation to Hawaii you drank." }
+        ],
+        polls: [
+            { q: "Preference?", o: ["Cash", "Card", "Crypto"], a: 0, t: "Most wealth is digital now." },
+            { q: "Windfall?", o: ["Spend", "Save", "Invest"], a: 2, t: "Investing builds wealth." },
+            { q: "Risk?", o: ["Love it", "Hate it", "Calculated"], a: 2, t: "Calculated risk is the goal." },
+            { q: "Shopping?", o: ["Online", "In Store", "Thrift"], a: 2, t: "Thrifting saves 90%." },
+            { q: "Goal?", o: ["Rich", "Happy", "Both"], a: 2, t: "Money is a tool for happiness." },
+            { q: "Debt?", o: ["Never", "Sometimes", "Leverage"], a: 2, t: "Smart debt can build wealth." },
+            { q: "Work?", o: ["9-5", "Founder", "Gig"], a: 1, t: "Ownership leads to wealth." },
+            { q: "School?", o: ["Public", "Private", "YouTube"], a: 2, t: "Self-education is free." }
+        ],
+        infos: [
+            { t: "Money is just a tool. Don't worship it, master it." },
+            { t: "The first step to wealth is spending less than you earn." },
+            { t: "Inflation is the silent killer of cash savings." },
+            { t: "Your habits today determine your bank account tomorrow." },
+            { t: "Assets put money in your pocket. Liabilities take it out." },
+            { t: "Start small. Even $5 a week adds up over time." },
+            { t: "Don't try to look rich. Try to BE rich." },
+            { t: "Knowledge pays the best interest. Keep learning." }
         ]
     },
     "Budget Beach": {
@@ -157,6 +177,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Subscription $15/mo. Yearly cost?", a: 180, t: "Is it worth $180?" },
             { q: "$1000 emergency fund. Save $50/wk. Weeks?", a: 20, t: "Less than half a year to safety." },
             { q: "Spend $110 for every $100 earned.", a: -10, t: "You are going broke fast." }
+        ],
+        polls: [
+            { q: "Budget Tool?", o: ["App", "Excel", "Paper"], a: 0, t: "Apps automate the boring stuff." },
+            { q: "Impulse Buy?", o: ["Often", "Rarely", "Never"], a: 1, t: "Wait 24 hours before buying." },
+            { q: "Dining?", o: ["Cook", "Delivery", "Restaurant"], a: 0, t: "Cooking is the biggest money saver." },
+            { q: "Coffee?", o: ["Starbucks", "Home Brew", "Office Free"], a: 1, t: "$5 a day is $1800 a year." },
+            { q: "Roommates?", o: ["Yes", "No", "Parents"], a: 0, t: "Splitting rent accelerates savings." },
+            { q: "Brands?", o: ["Luxury", "Generic", "Mix"], a: 1, t: "Generic meds work the same." },
+            { q: "Track?", o: ["Daily", "Weekly", "Never"], a: 0, t: "Daily tracking catches leaks." },
+            { q: "Treats?", o: ["Budgeted", "Random", "Guilty"], a: 0, t: "Budget for fun so it's guilt-free." }
+        ],
+        infos: [
+            { t: "The 50/30/20 rule is a guideline, not a law. Adjust it to your life." },
+            { t: "Small leaks sink great ships. Watch those $5 subscriptions." },
+            { t: "Automate your savings so you don't accidentally spend it." },
+            { t: "An emergency fund prevents debt when life happens." },
+            { t: "Use cash for categories you struggle with (like dining out)." },
+            { t: "Review your spending weekly to stay on track." },
+            { t: "Buying quality can be cheaper than buying cheap twice." },
+            { t: "Your budget is your permission slip to spend." }
         ]
     },
     "Compound Cliffs": {
@@ -199,6 +239,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Years to turn $1 to $2 at 7%?", a: 10, t: "Roughly 10 years." },
             { q: "$5000 one time at 8% for 50 years?", a: 234000, t: "One deposit. Half a century. Quarter million." },
             { q: "Fee 1% vs 0.1%. On $1M?", a: 9000, t: "You save $9,000 a year just on fees!" }
+        ],
+        polls: [
+            { q: "Strategy?", o: ["Day Trade", "Hold", "Crypto"], a: 1, t: "Holding outperforms trading 90% of time." },
+            { q: "Retire?", o: ["Age 65", "Age 40", "Never"], a: 1, t: "High savings rate = Early retirement." },
+            { q: "Market?", o: ["Scary", "Exciting", "Boring"], a: 2, t: "Good investing should be boring." },
+            { q: "Risk?", o: ["Low", "High", "Balanced"], a: 2, t: "Balance risk with time horizon." },
+            { q: "Research?", o: ["TikTok", "Books", "News"], a: 1, t: "Books contain timeless wisdom." },
+            { q: "Crypto?", o: ["All In", "Small %", "None"], a: 1, t: "Keep speculative assets to <5%." },
+            { q: "Automation?", o: ["Yes", "No"], a: 0, t: "Robots are better savers than humans." },
+            { q: "Fees?", o: ["Don't Care", "Hate 'em"], a: 1, t: "Fees destroy compound growth." }
+        ],
+        infos: [
+            { t: "Time is your greatest asset. Start today, even with $5." },
+            { t: "Compound interest is the snowball effect for your money." },
+            { t: "Don't interrupt the compounding process unnecessarily." },
+            { t: "The Rule of 72 helps you estimate doubling time mentally." },
+            { t: "Inflation works against you. Compounding works for you." },
+            { t: "Consistency beats intensity. Invest monthly." },
+            { t: "Your savings rate matters more than your return rate initially." },
+            { t: "Wealth is built in decades, not days." }
         ]
     },
     "Bank Vault": {
@@ -241,6 +301,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "CD rate 5% for 2 years. $1000?", a: 1102, t: "Locked in growth." },
             { q: "ATM fee $4. Weekly widthdrawal?", a: 208, t: "$200 a year to touch your cash." },
             { q: "Check bounces. Fee?", a: 30, t: "Insufficient funds fee." }
+        ],
+        polls: [
+            { q: "Bank Type?", o: ["Big Bank", "Online", "Local"], a: 1, t: "Online banks usually have 10x higher interest." },
+            { q: "Cash App?", o: ["Use it", "Unsafe", "Rarely"], a: 0, t: "Convenient, but not a real bank." },
+            { q: "ATM?", o: ["Daily", "Weekly", "Never"], a: 2, t: "Cash is disappearing." },
+            { q: "Fees?", o: ["Acceptable", "Dealbreaker"], a: 1, t: "Never pay to hold your own money." },
+            { q: "Savings?", o: ["HYSA", "Checking", "Sock"], a: 0, t: "HYSA beats inflation (sometimes)." },
+            { q: "Checks?", o: ["Use 'em", "What's that?"], a: 1, t: "Checks are ancient tech." },
+            { q: "Statements?", o: ["Paper", "Digital"], a: 1, t: "Go green and secure." },
+            { q: "Alerts?", o: ["On", "Off"], a: 0, t: "Instant fraud detection." }
+        ],
+        infos: [
+            { t: "FDIC insurance means the government backs your cash up to $250k." },
+            { t: "A High Yield Savings Account (HYSA) is the best place for an emergency fund." },
+            { t: "Banks make money by lending YOUR money to other people." },
+            { t: "Avoid monthly maintenance fees by meeting minimum requirements." },
+            { t: "Credit Unions are member-owned and often have better loan rates." },
+            { t: "Never give your PIN or password to anyone calling you." },
+            { t: "Overdraft protection sounds nice, but usually costs money." },
+            { t: "Set up 2-Factor Authentication to protect your login." }
         ]
     },
     "Debt Dungeon": {
@@ -283,6 +363,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Payday loan $500. Pay back $600 in 2 weeks. APR?", a: 520, t: "That's a 520% annualized rate!" },
             { q: "3 inquiries. 5 pts each. Drop?", a: 15, t: "Small dip, but adds up." },
             { q: "Loan term 3yr vs 6yr. Monthly pay?", a: 0, t: "6yr has lower monthly, but higher total interest." }
+        ],
+        polls: [
+            { q: "Credit Cards?", o: ["Evil", "Tool", "Free Money"], a: 1, t: "They are power tools. Dangerous but useful." },
+            { q: "Payoff?", o: ["Snowball", "Avalanche"], a: 1, t: "Avalanche (highest rate first) is mathematically superior." },
+            { q: "BNPL?", o: ["Use it", "Never"], a: 1, t: "It encourages overspending." },
+            { q: "Score Check?", o: ["Weekly", "Yearly", "Never"], a: 0, t: "Catch errors early." },
+            { q: "Car Loan?", o: ["3 Years", "7 Years", "Cash"], a: 2, t: "Cash is king. 7 year loans are traps." },
+            { q: "Student Debt?", o: ["Worth it", "Regret"], a: 0, t: "Only if the degree pays for it." },
+            { q: "Limit Increase?", o: ["Ask for it", "Decline"], a: 0, t: "Higher limit lowers utilization ratio." },
+            { q: "Rewards?", o: ["Cash Back", "Travel", "Points"], a: 0, t: "Cash is most flexible." }
+        ],
+        infos: [
+            { t: "Your credit score is your adult report card. Protect it." },
+            { t: "Never pay interest just to build credit. That's a myth." },
+            { t: "Utilization (how much limit you use) is 30% of your score." },
+            { t: "Payment history is the biggest factor (35%). Never miss one." },
+            { t: "Debt avalanche method saves you the most money mathematically." },
+            { t: "Debt snowball method helps you psychologically with quick wins." },
+            { t: "Predatory loans target people in desperation. Avoid them." },
+            { t: "Credit freezing is free and stops identity theft." }
         ]
     },
     "Hustle Hub": {
@@ -325,6 +425,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Commute $10/day. Work from home save?", a: 2600, t: "Assuming 260 working days." },
             { q: "Side hustle $500/mo. Yearly?", a: 6000, t: "That's a nice vacation." },
             { q: "Salary $50k vs Contract $50k. Better?", a: 0, t: "Salary is better (benefits + employer pays half tax)." }
+        ],
+        polls: [
+            { q: "Hustle?", o: ["Service", "Product", "Content"], a: 0, t: "Service is fastest to cash." },
+            { q: "Taxes?", o: ["Do it myself", "Hire Pro"], a: 1, t: "A pro saves you more than they cost." },
+            { q: "Job?", o: ["Passion", "Money", "Both"], a: 2, t: "Ikigai is the goal." },
+            { q: "Boss?", o: ["Be one", "Have one"], a: 0, t: "Being boss is harder but scales better." },
+            { q: "AI?", o: ["Threat", "Tool"], a: 1, t: "Use AI to 10x your output." },
+            { q: "Equity?", o: ["Yes", "Cash instead"], a: 0, t: "Equity is how you get wealthy." },
+            { q: "Remote?", o: ["Home", "Office"], a: 0, t: "Remote saves commute costs." },
+            { q: "Retire?", o: ["ASAP", "Never"], a: 0, t: "Financial Independence > Retirement." }
+        ],
+        infos: [
+            { t: "Your network is your net worth. Build relationships." },
+            { t: "Marginal tax brackets mean you don't lose money by earning more." },
+            { t: "Freelancers must pay 'Self-Employment Tax'. Save 30%." },
+            { t: "A business writes off expenses BEFORE paying tax." },
+            { t: "Profit = Revenue - Expenses. Don't confuse sales with income." },
+            { t: "Upskilling increases your hourly rate forever." },
+            { t: "Multiple income streams protect you from job loss." },
+            { t: "LLCs separate your personal assets from business risks." }
         ]
     },
     "Stony Stocks": {
@@ -367,6 +487,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Stock splits 2-for-1. You had 10. Now?", a: 20, t: "You have double shares, price is half." },
             { q: "Expense Ratio 0.5% on $10k?", a: 50, t: "Fees eat gains." },
             { q: "Tax 15% on $100 profit?", a: 15, t: "Capital gains tax." }
+        ],
+        polls: [
+            { q: "Picking?", o: ["Individual Stocks", "Index Funds"], a: 1, t: "Index funds win 95% of the time." },
+            { q: "Horizon?", o: ["Day", "Year", "Decade"], a: 2, t: "Think in decades, not days." },
+            { q: "Dividends?", o: ["Yum", "Boring"], a: 0, t: "It's mailbox money." },
+            { q: "Tech?", o: ["High Growth", "Bubble"], a: 0, t: "High risk, high reward." },
+            { q: "Timing?", o: ["DCA", "Lump Sum"], a: 0, t: "Dollar Cost Averaging reduces timing risk." },
+            { q: "News?", o: ["Ignore", "Obsess"], a: 0, t: "News is noise. Charts are truth." },
+            { q: "Options?", o: ["Gambling", "Strategy"], a: 0, t: "For beginners, it's gambling." },
+            { q: "Robo-Advisor?", o: ["Yes", "No"], a: 0, t: "Great for hands-off investing." }
+        ],
+        infos: [
+            { t: "A stock is a piece of a real business, not just a ticker symbol." },
+            { t: "The S&P 500 tracks the 500 biggest US companies." },
+            { t: "Dividends are a share of profits paid to you just for owning the stock." },
+            { t: "Bull markets climb a wall of worry. Bear markets slide down a slope of hope." },
+            { t: "Short term, the market is a voting machine. Long term, a weighing machine." },
+            { t: "Don't confuse brains with a bull market. Everyone looks smart when stocks go up." },
+            { t: "Diversification is the only free lunch in investing." },
+            { t: "Fees matter. A 2% fee eats 40% of your wealth over 40 years." }
         ]
     },
     "Wealth Empire": {
@@ -409,6 +549,26 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Retire with $2M. 5% return. Income?", a: 100000, t: "Living off interest." },
             { q: "$1M estate. 40% tax over limit. Tax?", a: 0, t: "Estate tax usually starts at $12M+ (federal)." },
             { q: "Save 50% of income. Years to retire?", a: 17, t: "The math of early retirement." }
+        ],
+        polls: [
+            { q: "Goal?", o: ["Mansion", "Time Freedom"], a: 1, t: "Time is the ultimate luxury." },
+            { q: "Kids?", o: ["Leave it all", "Donate it all"], a: 0, t: "Warren Buffett says leave enough to do anything, but not nothing." },
+            { q: "Real Estate?", o: ["Physical", "REITs"], a: 1, t: "REITs are easier. Physical has tax perks." },
+            { q: "Lifestyle Creep?", o: ["Avoid", "Enjoy"], a: 0, t: "Keep expenses low as income rises." },
+            { q: "Giving?", o: ["Now", "Later"], a: 0, t: "Giving now lets you see the impact." },
+            { q: "Stealth Wealth?", o: ["Yes", "Flaunt it"], a: 0, t: "Money talks, wealth whispers." },
+            { q: "Retirement?", o: ["Beach", "Work on passion"], a: 1, t: "Most people get bored on the beach." },
+            { q: "Advisor?", o: ["Hire", "DIY"], a: 0, t: "At high net worth, tax complexity requires pros." }
+        ],
+        infos: [
+            { t: "Net Worth = Assets - Liabilities. Track it monthly." },
+            { t: "True wealth is waking up and saying 'I can do whatever I want today'." },
+            { t: "Lifestyle inflation keeps high earners broke. Avoid it." },
+            { t: "Real estate offers leverage, appreciation, cash flow, and tax breaks." },
+            { t: "The 4% Rule suggests you can withdraw 4% of your portfolio annually forever." },
+            { t: "Money amplifies who you are. If you're generous, you'll be more generous." },
+            { t: "Umbrella insurance protects your wealth from lawsuits." },
+            { t: "Estate planning is a gift to your heirs, preventing chaos." }
         ]
     }
 };
@@ -493,16 +653,20 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
             title = "Quick Math";
             content = { label: "Solve", question: item.q, answer: item.a, text: item.t };
         } else if (type === 'poll') {
+            // UPDATED: Now pulls unique Polls from DB
+            const item = pickContent(worldDB.polls) || { q: "Cash?", o: ["Yes", "No"], a: 0, t: "Save it." };
             title = "Your Take";
             content = {
-                question: "What matters most?",
-                options: ["Freedom", "Stuff", "Clout"],
-                correct: 0,
-                text: "Money buys freedom, not just stuff."
+                question: item.q,
+                options: item.o,
+                correct: item.a,
+                text: item.t
             };
         } else {
+            // UPDATED: Now pulls unique Infos from DB
+            const item = pickContent(worldDB.infos) || { t: "Save money." };
             title = "Knowledge Drop";
-            content = { text: `Tip: Master ${worldName} to rule the game. ${rng.pick(["Save early.", "Invest often.", "Avoid bad debt."])}` };
+            content = { text: item.t };
         }
 
         lessons.push({
