@@ -252,39 +252,133 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Loan term 3yr vs 6yr. Monthly pay?", a: 0, t: "6yr has lower monthly, but higher total interest." }
         ]
     },
-    // ... Add placeholder pools for Hustle Hub, Stony Stocks, Wealth Empire to ensure valid generation
-    // For brevity, I'll use a specialized function to clone/mutate these for the remaining worlds
-    // but in a real scenario, I'd write them out fully.
-};
-
-// Clone basic structure for missing worlds to ensure 8 distinct worlds exist
-const TEMPLATES = [
-    "Hustle Hub", "Stony Stocks", "Wealth Empire"
-];
-
-TEMPLATES.forEach(t => {
-    CONTENT_DB[t] = {
+    "Hustle Hub": {
         swipes: [
-            { q: `Scenario in ${t}`, left: "Bad Choice", right: "Good Choice", correct: "right", text: "Always choose growth." },
-            { q: "Career Move", left: "Stagnate", right: "Upskill", correct: "right", text: "Learn to earn." },
-            { q: "Tax Fraud", left: "Do it", right: "Don't", correct: "right", text: "Jail is not a vibe." },
-            { q: "Side Hustle", left: "Start Now", right: "Procrastinate", correct: "left", text: "Execution is everything." },
-            { q: "Networking", left: "Stay Home", right: "Meet People", correct: "right", text: "Network is Net Worth." },
-            { q: "Negotiation", left: "Accept First Offer", right: "Counter", correct: "right", text: "Always ask for more." },
-            { q: "Burnout", left: "Push Through", right: "Rest", correct: "right", text: "Health is wealth." },
-            { q: "Mentorship", left: "Go Alone", right: "Find Mentor", correct: "right", text: "Learn from mistakes of others." }
+            { q: "Gig Economy", left: "Drive Uber", right: "Start Brand", correct: "right", text: "Building a brand is an asset. Driving is just labor." },
+            { q: "Tax Refund", left: "Free Money", right: "My Money Back", correct: "right", text: "A refund means you gave the government an interest-free loan." },
+            { q: "Salary Negotiation", left: "Take Offer", right: "Ask 10% More", correct: "right", text: "Always ask. The worst they say is no." },
+            { q: "Side Hustle Income", left: "Hide from IRS", right: "Report It", correct: "right", text: "Tax evasion is a crime. Jail is not a vibe." },
+            { q: "Skill Up", left: "Learn Code", right: "Watch Netflix", correct: "left", text: "Skills pay bills." },
+            { q: "Networking", left: "Cold DM", right: "Warm Intro", correct: "right", text: "A warm intro is 10x more effective." },
+            { q: "Business Idea", left: "Sell Product", right: "Sell Service", correct: "right", text: "Service (time) is easier to start with $0." },
+            { q: "Profit", left: "Revenue", right: "Rev - Expenses", correct: "right", text: "Revenue is vanity, profit is sanity." }
         ],
         lies: [
-            { text: "Success Myths", options: ["Luck only", "Hard work + Strategy", "Inheritance required", "College required"], correct: 1, exp: "Strategy matters." }
+            { text: "Success Myths", options: ["Luck only", "Hard work + Strategy", "Inheritance required", "College required"], correct: 1, exp: "Strategy beats luck every time." },
+            { text: "Tax Brackets", options: ["Earn more, keep less", "Marginal rates", "Flat tax", "Only for rich"], correct: 1, exp: "You only pay higher rates on the money ABOVE the bracket." },
+            { text: "LLC", options: ["Limited Liability Company", "Legal Loophole Club", "Protects personal assets", "Business structure"], correct: 1, exp: "It protects your personal house from business lawsuits." },
+            { text: "Gross vs Net", options: ["Gross is before tax", "Net is take home", "Gross is disgusting", "Net is bigger"], correct: 2, exp: "Gross is total pay. Net is what hits your bank." },
+            { text: "1099 vs W2", options: ["W2 is employee", "1099 is contractor", "1099 pays own tax", "W2 has no benefits"], correct: 3, exp: "W2 usually HAS benefits. 1099 does not." },
+            { text: "Passive Income", options: ["Requires zero work", "Work upfront, pay later", "Rentals", "Dividends"], correct: 0, exp: "It requires work upfront to build the asset." },
+            { text: "Scalability", options: ["Selling time", "Selling software", "Reaching millions", "Low variable cost"], correct: 0, exp: "Selling time is NOT scalable. You only have 24h." },
+            { text: "Burnout", options: ["Badge of honor", "Productivity killer", "Health risk", "Avoidable"], correct: 0, exp: "Burnout stops the money. Rest is productive." }
         ],
         memes: [
-             { cap: "Me working hard", text: "Boss makes a dollar", img: "https://i.imgflip.com/30b1gx.jpg" }
+            { cap: "Me working hard", text: "Boss makes a dollar, I make a dime", img: "https://i.imgflip.com/30b1gx.jpg" },
+            { cap: "Freelancers during tax season", text: "I have no idea what I'm doing", img: "https://i.imgflip.com/24y43o.jpg" },
+            { cap: "Getting first client", text: "It's happening!", img: "https://i.imgflip.com/3l60ph.jpg" },
+            { cap: "Influencers", text: "Buy my course", img: "https://i.imgflip.com/2b7c.jpg" },
+            { cap: "Networking", text: "Adding people on LinkedIn I don't know", img: "https://i.imgflip.com/1ur9b0.jpg" },
+            { cap: "My side hustle", text: "Made $5 (spent $50)", img: "https://i.imgflip.com/2gnnjh.jpg" },
+            { cap: "Passive Income", text: "Sleep and get paid", img: "https://i.imgflip.com/1w7ygt.jpg" },
+            { cap: "IRS", text: "Knock knock", img: "https://i.imgflip.com/4t0m5.jpg" }
         ],
         math: [
-             { q: "Gross vs Net. 30% Tax on $100k?", a: 70000, t: "You keep $70k." }
+            { q: "Gross $100k. Tax 30%. Net?", a: 70000, t: "You keep $70k." },
+            { q: "Hourly $20. 40hrs/wk. 50 weeks?", a: 40000, t: "Full time annual income." },
+            { q: "Sell item for $20. Cost $5. Profit?", a: 15, t: "Margin matters." },
+            { q: "Freelance $1000. Save 30% for tax?", a: 300, t: "Always save for the tax man." },
+            { q: "Raise 5%. Inflation 3%. Real gain?", a: 2, t: "You only really gained 2% purchasing power." },
+            { q: "Commute $10/day. Work from home save?", a: 2600, t: "Assuming 260 working days." },
+            { q: "Side hustle $500/mo. Yearly?", a: 6000, t: "That's a nice vacation." },
+            { q: "Salary $50k vs Contract $50k. Better?", a: 0, t: "Salary is better (benefits + employer pays half tax)." }
         ]
-    };
-});
+    },
+    "Stony Stocks": {
+        swipes: [
+            { q: "Market Dip", left: "Panic Sell", right: "Buy More", correct: "right", text: "Buy low, sell high. Panic selling is selling low." },
+            { q: "Diversify", left: "All in Tesla", right: "S&P 500", correct: "right", text: "Don't put all your eggs in one basket." },
+            { q: "Crypto Allocation", left: "100% Portfolio", right: "5% Portfolio", correct: "right", text: "Crypto is volatile. Keep it a small slice." },
+            { q: "Bull Market", left: "Stocks Up", right: "Stocks Down", correct: "left", text: "Bull = Up. Bear = Down." },
+            { q: "Bear Market", left: "Stocks Up", right: "Stocks Down", correct: "right", text: "Bear swipes down. Markets fall." },
+            { q: "Dividends", left: "Keep Cash", right: "Reinvest", correct: "right", text: "DRIP (Dividend Reinvestment) accelerates growth." },
+            { q: "IPO Hype", left: "Buy Immediately", right: "Wait and See", correct: "right", text: "IPOs often crash after the initial hype." },
+            { q: "Research", left: "Reddit Rumors", right: "Earnings Report", correct: "right", text: "Trust data, not 'TrustMeBro69'." }
+        ],
+        lies: [
+            { text: "Stock Types", options: ["Growth", "Value", "Dividend", "Guaranteed"], correct: 3, exp: "No stock is guaranteed to go up." },
+            { text: "Market Cap", options: ["Price x Shares", "Total Value", "Number of Caps", "Size of company"], correct: 2, exp: "It has nothing to do with hats." },
+            { text: "P/E Ratio", options: ["Price to Earnings", "Physical Ed", "Valuation metric", "High means expensive"], correct: 1, exp: "It helps you know if a stock is cheap or pricey." },
+            { text: "ETF", options: ["Exchange Traded Fund", "Basket of stocks", "Electronic Transfer", "Instant diversification"], correct: 2, exp: "It stands for Exchange Traded Fund." },
+            { text: "Volatility", options: ["Price stability", "Price swings", "Risk measure", "Beta"], correct: 0, exp: "Volatility means BIG swings, not stability." },
+            { text: "Short Selling", options: ["Betting against", "Selling early", "Infinite risk", "Advanced strategy"], correct: 1, exp: "It's betting the price will go DOWN." },
+            { text: "Blue Chip", options: ["Reliable company", "Poker chip", "Coca Cola / Apple", "Stable"], correct: 1, exp: "It refers to high-quality, established companies." },
+            { text: "Recession", options: ["GDP decline", "Job losses", "Stocks fall", "Great time to sell"], correct: 3, exp: "It's usually a terrible time to sell, but a great time to buy." }
+        ],
+        memes: [
+            { cap: "Buying high selling low", text: "This is the way", img: "https://i.imgflip.com/30b1gx.jpg" },
+            { cap: "Jerome Powell", text: "Money printer go brrr", img: "https://i.imgflip.com/24y43o.jpg" },
+            { cap: "Crypto investors", text: "First time?", img: "https://i.imgflip.com/3l60ph.jpg" },
+            { cap: "Diamond Hands", text: "Holding until $0", img: "https://i.imgflip.com/2b7c.jpg" },
+            { cap: "Analyst predictions", text: "It might go up or down", img: "https://i.imgflip.com/1ur9b0.jpg" },
+            { cap: "Watching chart 24/7", text: "Productivity -100", img: "https://i.imgflip.com/2gnnjh.jpg" },
+            { cap: "Dividend payment $0.12", text: "I'm rich", img: "https://i.imgflip.com/1w7ygt.jpg" },
+            { cap: "Market Crash", text: "Fire sale!", img: "https://i.imgflip.com/4t0m5.jpg" }
+        ],
+        math: [
+            { q: "Stock $100. Div 3%. Payout?", a: 3, t: "$3 per year for holding." },
+            { q: "Buy $50. Sell $75. Gain?", a: 50, t: "50% gain. (($75-$50)/$50)." },
+            { q: "Loss 10% on $100. New price?", a: 90, t: "Math is easy when you cry." },
+            { q: "Avg return 7%. Years to double?", a: 10, t: "Rule of 72." },
+            { q: "100 shares at $10. Total?", a: 1000, t: "Your position size." },
+            { q: "Stock splits 2-for-1. You had 10. Now?", a: 20, t: "You have double shares, price is half." },
+            { q: "Expense Ratio 0.5% on $10k?", a: 50, t: "Fees eat gains." },
+            { q: "Tax 15% on $100 profit?", a: 15, t: "Capital gains tax." }
+        ]
+    },
+    "Wealth Empire": {
+        swipes: [
+            { q: "Net Worth", left: "Income", right: "Assets - Debt", correct: "right", text: "Income is what you earn. Net worth is what you keep." },
+            { q: "Inflation Hedge", left: "Cash", right: "Real Estate", correct: "right", text: "Real estate tends to rise with inflation." },
+            { q: "Luxury Car", left: "Asset", right: "Liability", correct: "right", text: "It loses value every day. That's a liability." },
+            { q: "Financial Freedom", left: "High Salary", right: "Passive Income", correct: "right", text: "Freedom is when assets pay your bills." },
+            { q: "Philanthropy", left: "Hoard Wealth", right: "Give Back", correct: "right", text: "True wealth is having enough to share." },
+            { q: "Estate Plan", left: "For Old People", right: "For Everyone", correct: "right", text: "Decide where your stuff goes, or the state will." },
+            { q: "FIRE Movement", left: "Burn Money", right: "Retire Early", correct: "right", text: "Financial Independence, Retire Early." },
+            { q: "Leverage", left: "Credit Cards", right: "Mortgage", correct: "right", text: "Good leverage (mortgage) builds wealth. Bad leverage destroys it." }
+        ],
+        lies: [
+            { text: "Wealth Factors", options: ["Mindset", "Habits", "Lottery Ticket", "Time"], correct: 2, exp: "The lottery is a tax on people who can't do math." },
+            { text: "Real Estate", options: ["Passive income", "Appreciation", "Tax benefits", "Always goes up"], correct: 3, exp: "It usually goes up, but 2008 proved it's not 'always'." },
+            { text: "Legacy", options: ["Money left behind", "Values taught", "Impact made", "High score"], correct: 3, exp: "Life isn't a video game. Legacy is people." },
+            { text: "Tax Havens", options: ["Legal minimization", "Illegal evasion", "Offshore accounts", "Panama"], correct: 1, exp: "Minimization is smart. Evasion is illegal." },
+            { text: "Prenup", options: ["Planning for divorce", "Protecting assets", "Financial agreement", "Unromantic"], correct: 0, exp: "It's insurance for your empire, not a plan to fail." },
+            { text: "Angel Investor", options: ["Divine being", "Invests in startups", "High risk", "Equity owner"], correct: 0, exp: "Rich person funding startups, not a ghost." },
+            { text: "Trust Fund", options: ["Legal structure", "Spoiled kids", "Asset protection", "Control from grave"], correct: 1, exp: "Trusts are tools. Stereotypes are side effects." },
+            { text: "Generational Wealth", options: ["Lasts forever", "Hard to build", "Easy to lose", "Requires education"], correct: 0, exp: "70% of wealthy families lose it by the 2nd generation." }
+        ],
+        memes: [
+            { cap: "Me retiring at 35", text: "My friends working till 70", img: "https://i.imgflip.com/30b1gx.jpg" },
+            { cap: "Buying a rental property", text: "Look at me, I am the landlord now", img: "https://i.imgflip.com/24y43o.jpg" },
+            { cap: "Taxes", text: "I will take half", img: "https://i.imgflip.com/3l60ph.jpg" },
+            { cap: "Inheritance", text: "Don't spend it all in one place", img: "https://i.imgflip.com/2b7c.jpg" },
+            { cap: "Rich vs Wealthy", text: "Rolex vs Freedom", img: "https://i.imgflip.com/1ur9b0.jpg" },
+            { cap: "Inflation", text: "My assets going up", img: "https://i.imgflip.com/2gnnjh.jpg" },
+            { cap: "Net Worth update", text: "Green line go up", img: "https://i.imgflip.com/1w7ygt.jpg" },
+            { cap: "Generational Wealth", text: "Planting trees you'll never sit under", img: "https://i.imgflip.com/4t0m5.jpg" }
+        ],
+        math: [
+            { q: "Assets $500k. Debt $200k. Net Worth?", a: 300000, t: "Assets minus Liabilities." },
+            { q: "4% Rule on $1M. Yearly spend?", a: 40000, t: "Safe withdrawal rate for retirement." },
+            { q: "Rent $2000. Mortgage $1500. Cashflow?", a: 500, t: "Profit per month." },
+            { q: "House $300k. Appreciates 10%. Value?", a: 330000, t: "Equity growth." },
+            { q: "Donating 10% of $50k income?", a: 5000, t: "Tithing or charity." },
+            { q: "Retire with $2M. 5% return. Income?", a: 100000, t: "Living off interest." },
+            { q: "$1M estate. 40% tax over limit. Tax?", a: 0, t: "Estate tax usually starts at $12M+ (federal)." },
+            { q: "Save 50% of income. Years to retire?", a: 17, t: "The math of early retirement." }
+        ]
+    }
+};
 
 // --- GENERATOR ---
 

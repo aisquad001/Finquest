@@ -4,7 +4,7 @@
  */
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon } from '@heroicons/react/24/solid';
+import { XMarkIcon, HeartIcon, CheckCircleIcon, ShareIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 import { Lesson, LessonDragItem } from '../services/gamification';
 import { playSound } from '../services/audio';
 import { fetchLessonsForLevel } from '../services/db';
@@ -18,8 +18,6 @@ interface LessonPlayerProps {
 
 interface FloatingReward {
     id: string;
-    x: number;
-    y: number;
     text: string;
     type: 'xp' | 'coin' | 'bonus';
 }
@@ -171,17 +169,27 @@ const SwipeView = ({ lesson, onNext, triggerRoast }: { lesson: Lesson, onNext: (
                 </motion.div>
             </div>
 
-            {/* BUTTONS - Labels change based on mode */}
+            {/* BUTTONS - Uses Neutral Colors for Binary Decision to avoid Red=Bad/Green=Good confusion */}
             <div className="flex gap-4 mt-auto w-full justify-center pb-12 px-4">
-                <button onClick={(e) => handleSwipe('left', e)} className="flex-1 bg-red-500 rounded-2xl border-b-[6px] border-red-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group">
-                    <XMarkIcon className="w-6 h-6 text-white mb-1"/>
+                <button 
+                    onClick={(e) => handleSwipe('left', e)} 
+                    className={`flex-1 rounded-2xl border-b-[6px] active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group
+                        ${isSortingMode ? 'bg-red-500 border-red-800' : 'bg-blue-500 border-blue-800'}
+                    `}
+                >
+                    {isSortingMode ? <XMarkIcon className="w-6 h-6 text-white mb-1"/> : <ArrowLeftIcon className="w-6 h-6 text-white mb-1" />}
                     <span className="text-xs font-black text-white uppercase px-2 break-words w-full text-center">
                         {isSortingMode ? "Left" : leftLabel}
                     </span>
                 </button>
                 
-                <button onClick={(e) => handleSwipe('right', e)} className="flex-1 bg-green-500 rounded-2xl border-b-[6px] border-green-800 active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group">
-                    <CheckCircleIcon className="w-6 h-6 text-white mb-1"/>
+                <button 
+                    onClick={(e) => handleSwipe('right', e)} 
+                    className={`flex-1 rounded-2xl border-b-[6px] active:border-b-0 active:translate-y-1.5 transition-all flex flex-col items-center justify-center py-4 shadow-lg group
+                        ${isSortingMode ? 'bg-green-500 border-green-800' : 'bg-purple-500 border-purple-800'}
+                    `}
+                >
+                    {isSortingMode ? <CheckCircleIcon className="w-6 h-6 text-white mb-1"/> : <ArrowRightIcon className="w-6 h-6 text-white mb-1" />}
                     <span className="text-xs font-black text-white uppercase px-2 break-words w-full text-center">
                          {isSortingMode ? "Right" : rightLabel}
                     </span>
@@ -380,16 +388,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
     // Helper to trigger floating reward
     const triggerReward = (e: any, xp: number, coins: number, label?: string) => {
-        let x = window.innerWidth / 2, y = window.innerHeight / 2;
-        if (e && e.clientX) { x = e.clientX; y = e.clientY; }
-        
-        // Generate unique IDs
+        // Force display in center of screen
         const xpId = `xp-${Date.now()}-${Math.random()}`;
         const coinId = `coin-${Date.now()}-${Math.random()}`;
         
         const newRewards: FloatingReward[] = [
-            { id: xpId, x, y: y - 50, text: `+${xp} XP`, type: 'xp' },
-            { id: coinId, x, y: y - 80, text: `+${coins} Coins`, type: 'coin' }
+            { id: xpId, text: `+${xp} XP`, type: 'xp' },
+            { id: coinId, text: `+${coins} Coins`, type: 'coin' }
         ];
 
         setRewards(prev => [...prev, ...newRewards]);
@@ -461,15 +466,16 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
     return (
         <div id="lesson-container" className="fixed inset-0 z-[100] bg-[#1a0b2e] flex flex-col overflow-hidden font-body">
             
-            {/* Rewards Layer */}
-            <div className="absolute inset-0 pointer-events-none z-[9999]">
+            {/* Rewards Layer - Centered */}
+            <div className="fixed inset-0 pointer-events-none z-[9999] flex items-center justify-center">
                 <AnimatePresence>
                     {rewards.map(r => (
                         <motion.div
                             key={r.id}
-                            initial={{ opacity: 0, y: r.y, scale: 0.5 }}
-                            animate={{ opacity: 1, y: r.y - 100, scale: 1.5 }}
+                            initial={{ opacity: 0, x: "-50%", y: 20, scale: 0.5 }}
+                            animate={{ opacity: 1, x: "-50%", y: -150, scale: 1.5 }}
                             exit={{ opacity: 0 }}
+                            style={{ left: '50%', top: '50%' }}
                             className={`absolute font-game text-shadow-neon whitespace-nowrap ${r.type === 'xp' ? 'text-neon-green text-4xl' : 'text-yellow-400 text-3xl'}`}
                         >
                             {r.text}
