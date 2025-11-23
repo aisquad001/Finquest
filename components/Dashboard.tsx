@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -31,7 +30,6 @@ import {
     UserState, 
     getXpForNextLevel, 
     SHOP_ITEMS,
-    SEASONAL_EVENTS,
     BADGES
 } from '../services/gamification';
 import { claimDailyChest } from '../services/gameLogic';
@@ -85,7 +83,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     useEffect(() => {
         const unsub = subscribeToCollection('shop_items', (items) => {
             if (items.length > 0) {
-                setShopItems(items as ShopItem[]);
+                // Merge cloud items with local static definition to keep icons/data but allow pricing updates
+                const merged = SHOP_ITEMS.map(staticItem => {
+                    const cloudItem = items.find(i => i.id === staticItem.id);
+                    return cloudItem ? { ...staticItem, ...cloudItem } : staticItem;
+                });
+                setShopItems(merged);
             }
         });
         return () => unsub();
@@ -235,6 +238,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         playSound('pop');
         setActiveTab('badges');
     };
+
+    // Helper to sort shop items by price
+    const sortedShopItems = [...shopItems].sort((a, b) => a.cost - b.cost);
 
     return (
         <div className="relative pb-24 max-w-md mx-auto md:max-w-2xl">
@@ -500,13 +506,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                 </h2>
                             </div>
                             <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
-                                {shopItems.filter(i => i.active !== false).map(item => {
+                                {sortedShopItems.filter(i => i.active !== false).map(item => {
                                     const owned = user.inventory.includes(item.id);
                                     return (
                                         <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : 'border-neon-pink/30'}`}>
                                             {owned && <div className="absolute top-2 right-2 bg-green-500 text-black text-[9px] font-bold px-1 rounded">OWNED</div>}
                                             <div className="text-4xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
-                                            <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
+                                            <div className="font-game text-white text-sm leading-none mb-1 h-8 flex items-center justify-center">{item.name}</div>
                                             <button 
                                                 onClick={() => !owned && handleBuy(item)}
                                                 disabled={owned}
