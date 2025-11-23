@@ -252,7 +252,7 @@ export const checkWorldCompletion = async (uid: string, worldId: string) => {
              // Only process if badge NOT yet owned (Prevents infinite loop of rewards)
              if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
                  
-                 // 1. Define Completion Bonus (Big enough to help unlock next world)
+                 // 1. Define Completion Bonus (Big enough to help unlock next world via XP Level Up)
                  const bonusCoins = 2000; 
                  const bonusXP = 1000; 
 
