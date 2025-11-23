@@ -88,6 +88,8 @@ export interface UserState {
     lastLoginAt?: string;
     lastLocation?: { lat: number, lng: number, country: string }; // For Admin Map
     createdAt?: string;
+    lastSyncedAt?: any; // Timestamp
+    lastActive?: any; // Timestamp
 }
 
 export interface WorldProgress {
