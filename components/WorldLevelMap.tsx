@@ -46,7 +46,10 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                 if (currentLevelEl) {
                     currentLevelEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 } else {
-                    // Scroll to bottom (Level 1) if no current indicator found
+                    // Scroll to bottom (Level 1) if no current indicator found (or top if we are treating bottom as 1)
+                    // Since we use flex-col-reverse, bottom is start. 
+                    // Actually, standard scroll puts 'top' content at top.
+                    // We want Level 1 at bottom. 
                     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
                 }
             }, 100);
@@ -104,6 +107,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                              <path 
                                 d={`M 50% 100% ${levels.map((_, i) => {
                                     // Calculate vertical position roughly based on item height (160px approx per level)
+                                    // This is visual flair, not exact collision
                                     const y = 100 - ((i + 1) / levels.length) * 100; 
                                     const x = i % 2 === 0 ? '80%' : '20%';
                                     return `Q ${x} ${y}% 50% ${y - 5}%`;
@@ -120,9 +124,8 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                     {levels.map((level, index) => {
                         const prevLevelId = index > 0 ? levels[index - 1].id : null;
                         
-                        // Strict Sequential Unlock:
-                        // Level 1 (index 0) is unlocked by default.
-                        // Level N is locked if Level N-1 is NOT completed.
+                        // Safety: Check if safeCompletedLevels is valid array. 
+                        // Lock if previous level ID exists but isn't in completed list.
                         const isLocked = index > 0 && (!prevLevelId || !safeCompletedLevels.includes(prevLevelId));
                         
                         const isCompleted = safeCompletedLevels.includes(level.id);
@@ -195,11 +198,6 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                                     {isCurrent && (
                                         <div className="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 animate-bounce">
                                             PLAY NOW
-                                        </div>
-                                    )}
-                                    {isLocked && (
-                                        <div className="text-[9px] font-bold text-red-500 mt-1 leading-tight">
-                                            Complete Level {index} to unlock
                                         </div>
                                     )}
                                 </div>

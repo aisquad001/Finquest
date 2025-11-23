@@ -395,29 +395,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                         {/* WORLDS */}
                         <div className="w-full space-y-6">
-                            {WORLDS_METADATA.map((world, index) => {
-                                // STRICT UNLOCK LOGIC: 
-                                // World N unlocks only if World N-1 Level 8 is completed.
-                                let isUnlocked = false;
-                                let lockMessage = "";
-
-                                if (index === 0) {
-                                    isUnlocked = true; // World 1 always unlocked
-                                } else {
-                                    const prevWorld = WORLDS_METADATA[index - 1];
-                                    // ID format must match contentGenerator: NameNoSpaces_l8
-                                    const prevWorldLastLevelId = `${prevWorld.id.replace(/\s+/g, '')}_l8`;
-                                    
-                                    if (user.completedLevels.includes(prevWorldLastLevelId)) {
-                                        isUnlocked = true;
-                                    } else {
-                                        isUnlocked = false;
-                                        lockMessage = `Complete ${prevWorld.title} to unlock`;
-                                    }
-                                }
-
-                                const normalizedWorldId = world.id.replace(/\s+/g, '');
-                                const completedInWorld = user.completedLevels.filter(l => l.startsWith(normalizedWorldId)).length;
+                            {WORLDS_METADATA.map((world) => {
+                                const isUnlocked = user.level >= world.unlockLevel;
+                                const worldLevels = GET_WORLD_LEVELS(world.id);
+                                const completedInWorld = user.completedLevels.filter(l => l.startsWith(world.id.replace(/\s+/g, ''))).length;
                                 const isCompleted = completedInWorld >= 8; // 8 levels per world
                                 const Icon = world.icon;
 
@@ -430,7 +411,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             w-full relative h-24 rounded-3xl border-4 transition-all duration-300 flex items-center px-4 gap-4
                                             ${isUnlocked
                                                 ? `${world.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.1)] btn-3d` 
-                                                : 'bg-black border-gray-800 opacity-60 grayscale cursor-not-allowed'
+                                                : 'bg-black border-gray-800 opacity-60 grayscale'
                                             }
                                         `}
                                     >
@@ -441,12 +422,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             <h3 className="font-game text-lg leading-none mb-1 text-white text-stroke-black">
                                                 {world.title}
                                             </h3>
-                                            {isUnlocked ? (
+                                            {isUnlocked && (
                                                 <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/8 Levels</div>
-                                            ) : (
-                                                <div className="text-[10px] font-bold text-red-400 uppercase flex items-center gap-1">
-                                                    <LockClosedIcon className="w-3 h-3" /> {lockMessage}
-                                                </div>
                                             )}
                                         </div>
                                         {isCompleted && <CheckBadgeIcon className="w-8 h-8 text-white drop-shadow-md" />}
