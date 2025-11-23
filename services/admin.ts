@@ -30,7 +30,7 @@ export const updateGlobalConfig = (configKey: string, value: any) => {
 
 export const getContentStats = () => {
     return [
-        { id: 'basics', title: 'Moola Basics', completions: 45000, rating: 4.8 },
+        { id: 'basics', title: 'Racked World 1', completions: 45000, rating: 4.8 },
         { id: 'budget', title: 'Budget Beach', completions: 32000, rating: 4.6 },
         { id: 'investing', title: 'Stony Stocks', completions: 12000, rating: 4.9 },
         { id: 'crypto', title: 'Crypto Cave', completions: 5000, rating: 3.2 }, // Low rating, needs fix

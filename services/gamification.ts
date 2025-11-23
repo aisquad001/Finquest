@@ -263,7 +263,7 @@ export const SEASONAL_EVENTS = {
 // --- CURRICULUM DEFINITION (FINAL PACK) ---
 
 export const BADGES: Badge[] = [
-    { id: 'badge_basics', name: 'Basics Boss', description: 'Mastered Moola Basics', icon: '🐷👑', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
+    { id: 'badge_basics', name: 'Basics Boss', description: 'Mastered Racked World 1', icon: '🐷👑', unlockCondition: 'Complete World 1', color: 'bg-neon-green' },
     { id: 'badge_budget', name: 'Budget Ninja', description: 'Mastered Budget Beach', icon: '🥷📊', unlockCondition: 'Complete World 2', color: 'bg-neon-blue' },
     { id: 'badge_savings', name: 'Snowball God', description: 'Conquered Compound Cliffs', icon: '❄️✨', unlockCondition: 'Complete World 3', color: 'bg-neon-purple' },
     { id: 'badge_banking', name: 'Vault Breaker', description: 'Opened the Bank Vault', icon: '🏦🔨', unlockCondition: 'Complete World 4', color: 'bg-neon-pink' },
@@ -276,7 +276,7 @@ export const BADGES: Badge[] = [
 ];
 
 export const WORLDS_METADATA: WorldData[] = [
-    { id: 'Moola Basics', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
+    { id: 'Racked World 1', title: "RACKED WORLD 1", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
     { id: 'Budget Beach', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule.", unlockLevel: 2, badgeId: 'badge_budget' },
     { id: 'Compound Cliffs', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_savings' },
     { id: 'Bank Vault', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },

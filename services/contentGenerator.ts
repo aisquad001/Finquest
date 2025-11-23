@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -38,7 +39,7 @@ export class SeededRNG {
 // Indexed by World ID -> Lesson Type -> Array of unique content objects.
 
 const CONTENT_POOLS: Record<string, Record<string, any[]>> = {
-    "Moola Basics": {
+    "Racked World 1": {
         swipe: [
             { question: "Which is Money?", left: "Sand", right: "Gold Coin", correct: "right", text: "Money must be scarce." },
             { question: "Better Trade?", left: "Chicken for Shoes", right: "$50 for Shoes", correct: "right", text: "Cash is easier than barter." },
@@ -470,7 +471,7 @@ const FALLBACK_POOL = {
 export const generateLevelContent = (worldId: string, levelNum: number): { level: LevelData, lessons: Lesson[] } => {
     // Normalize World ID
     const worldMeta = WORLDS_METADATA.find(w => w.id === worldId || w.title === worldId);
-    const worldName = worldMeta ? worldMeta.id : "Moola Basics"; 
+    const worldName = worldMeta ? worldMeta.id : "Racked World 1"; 
     const levelId = `${worldName.replace(/\s+/g, '')}_l${levelNum}`;
     
     const rng = new SeededRNG(levelId);
@@ -482,7 +483,7 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     // let's ensure we have the Boss logic. I will inject a basic boss structure here to keep it self-contained.
     
     const BOSS_DATA: Record<string, any> = {
-        "Moola Basics": { name: "Inflation Dragon", emoji: "🐲", intro: ["I eat value!", "Prices rising!"] },
+        "Racked World 1": { name: "Inflation Dragon", emoji: "🐲", intro: ["I eat value!", "Prices rising!"] },
         "Budget Beach": { name: "Impulse Imp", emoji: "👺", intro: ["Buy it now!", "YOLO!"] },
         "Compound Cliffs": { name: "Time Thief", emoji: "⏳", intro: ["Wait later!", "Procrastinate!"] },
         "Bank Vault": { name: "Fee Fiend", emoji: "🦇", intro: ["Overdraft!", "Service Fee!"] },
@@ -492,7 +493,7 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
         "Wealth Empire": { name: "Lifestyle Creep", emoji: "🧟", intro: ["Upgrade!", "Spend more!"] }
     };
 
-    const bossInfo = BOSS_DATA[worldName] || BOSS_DATA["Moola Basics"];
+    const bossInfo = BOSS_DATA[worldName] || BOSS_DATA["Racked World 1"];
     
     // Generate Boss Quiz (reuse poll questions for now, or specific boss pool if added)
     // We can pull 3 random unique polls from the pool for the boss
