@@ -395,9 +395,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
                         {/* WORLDS */}
                         <div className="w-full space-y-6">
-                            {WORLDS_METADATA.map((world) => {
-                                const isUnlocked = user.level >= world.unlockLevel;
-                                const worldLevels = GET_WORLD_LEVELS(world.id);
+                            {WORLDS_METADATA.map((world, index) => {
+                                // STRICT SEQUENTIAL UNLOCK LOGIC
+                                let isUnlocked = index === 0; // World 1 always unlocked
+                                
+                                if (index > 0) {
+                                    // For World N (index), check if World N-1 (index-1) is FULLY mastered
+                                    // "Mastered" means all 8 levels completed
+                                    const prevWorldId = WORLDS_METADATA[index - 1].id;
+                                    
+                                    // Normalize ID to match what's stored in completedLevels (e.g. "Moola Basics" -> "MoolaBasics")
+                                    const normalizedPrevId = prevWorldId.replace(/\s+/g, '');
+                                    const completedInPrev = user.completedLevels.filter(l => l.startsWith(normalizedPrevId)).length;
+                                    
+                                    // Check if previous world is done (8 levels) OR if explicitly in masteredWorlds
+                                    const isPrevMastered = completedInPrev >= 8 || (user.masteredWorlds && user.masteredWorlds.includes(prevWorldId));
+                                    
+                                    isUnlocked = isPrevMastered;
+                                }
+
                                 const completedInWorld = user.completedLevels.filter(l => l.startsWith(world.id.replace(/\s+/g, ''))).length;
                                 const isCompleted = completedInWorld >= 8; // 8 levels per world
                                 const Icon = world.icon;
@@ -411,7 +427,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             w-full relative h-24 rounded-3xl border-4 transition-all duration-300 flex items-center px-4 gap-4
                                             ${isUnlocked
                                                 ? `${world.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.1)] btn-3d` 
-                                                : 'bg-black border-gray-800 opacity-60 grayscale'
+                                                : 'bg-black border-gray-800 opacity-60 grayscale cursor-not-allowed'
                                             }
                                         `}
                                     >
@@ -422,8 +438,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                             <h3 className="font-game text-lg leading-none mb-1 text-white text-stroke-black">
                                                 {world.title}
                                             </h3>
-                                            {isUnlocked && (
+                                            {isUnlocked ? (
                                                 <div className="text-[10px] font-bold text-black/60 uppercase">{completedInWorld}/8 Levels</div>
+                                            ) : (
+                                                <div className="text-[10px] font-bold text-gray-500 uppercase">Complete {WORLDS_METADATA[index-1].title}</div>
                                             )}
                                         </div>
                                         {isCompleted && <CheckBadgeIcon className="w-8 h-8 text-white drop-shadow-md" />}

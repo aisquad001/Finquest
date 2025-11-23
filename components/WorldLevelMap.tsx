@@ -124,8 +124,8 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                     {levels.map((level, index) => {
                         const prevLevelId = index > 0 ? levels[index - 1].id : null;
                         
-                        // Safety: Check if safeCompletedLevels is valid array. 
-                        // Lock if previous level ID exists but isn't in completed list.
+                        // STRICT SEQUENTIAL CHECK:
+                        // Locked if it's NOT level 1 AND the previous level is NOT in completed list.
                         const isLocked = index > 0 && (!prevLevelId || !safeCompletedLevels.includes(prevLevelId));
                         
                         const isCompleted = safeCompletedLevels.includes(level.id);
@@ -198,6 +198,11 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                                     {isCurrent && (
                                         <div className="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-2 animate-bounce">
                                             PLAY NOW
+                                        </div>
+                                    )}
+                                    {isLocked && index > 0 && (
+                                        <div className="text-[9px] text-slate-600 mt-1">
+                                            Complete Lvl {index}
                                         </div>
                                     )}
                                 </div>

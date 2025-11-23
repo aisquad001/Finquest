@@ -249,44 +249,52 @@ export const checkWorldCompletion = async (uid: string, worldId: string) => {
         if (completedInWorld >= 8) {
              const worldMeta = WORLDS_METADATA.find(w => w.id === worldId || w.title === worldId);
              
-             // Only process if badge NOT yet owned (Prevents infinite loop of rewards)
-             if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
+             if (worldMeta) {
+                 const newBadges = [...(user.badges || [])];
+                 let badgeAdded = false;
                  
-                 // 1. Define Completion Bonus (Big enough to help unlock next world via XP Level Up)
-                 const bonusCoins = 2000; 
-                 const bonusXP = 1000; 
+                 if (worldMeta.badgeId && !newBadges.includes(worldMeta.badgeId)) {
+                     newBadges.push(worldMeta.badgeId);
+                     badgeAdded = true;
+                 }
 
-                 const newBadges = [...(user.badges || []), worldMeta.badgeId];
+                 // ALSO update masteredWorlds list for unlocking next world
+                 const newMastered = [...(user.masteredWorlds || [])];
+                 if (!newMastered.includes(worldMeta.id)) {
+                     newMastered.push(worldMeta.id);
+                 }
                  
-                 // 2. Update DB (Badge + Coins)
-                 // We update coins here directly to batch it with badge
-                 await updateUser(uid, {
-                     badges: newBadges,
-                     coins: user.coins + bonusCoins
-                 });
+                 // Only award coins/xp if this is the FIRST time mastering (detected via badge or mastered list update)
+                 if (badgeAdded || newMastered.length > (user.masteredWorlds?.length || 0)) {
+                     const bonusCoins = 2000; 
+                     const bonusXP = 1000; 
 
-                 // 3. Add XP (This will trigger the Level Up logic internally, unlocking the next world)
-                 await addXP(uid, bonusXP);
+                     await updateUser(uid, {
+                         badges: newBadges,
+                         coins: user.coins + bonusCoins,
+                         masteredWorlds: newMastered
+                     });
 
-                 // 4. CASINO CELEBRATION SEQUENCE
-                 setTimeout(() => {
-                     // Visual Chaos
-                     triggerCasinoEffect();
-                     
-                     // Sounds & Toasts
-                     playSound('fanfare');
-                     triggerVisualEffect(`WORLD COMPLETE!`, 'level');
-                     
+                     await addXP(uid, bonusXP);
+
+                     // 4. CASINO CELEBRATION SEQUENCE
                      setTimeout(() => {
-                         playSound('kaching');
-                         triggerVisualEffect(`+${bonusCoins} Coins`, 'coin');
-                     }, 500);
+                         triggerCasinoEffect();
+                         playSound('fanfare');
+                         triggerVisualEffect(`WORLD COMPLETE!`, 'level');
+                         
+                         setTimeout(() => {
+                             playSound('kaching');
+                             triggerVisualEffect(`+${bonusCoins} Coins`, 'coin');
+                         }, 500);
 
-                     setTimeout(() => {
-                         triggerVisualEffect(`BADGE UNLOCKED: ${worldMeta.title}`, 'level');
-                     }, 1500);
-
-                 }, 600); // Slight delay to allow view transition to dashboard
+                         if (badgeAdded) {
+                             setTimeout(() => {
+                                 triggerVisualEffect(`BADGE UNLOCKED: ${worldMeta.title}`, 'level');
+                             }, 1500);
+                         }
+                     }, 600); 
+                 }
              }
         }
     } catch (e) {
