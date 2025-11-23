@@ -1,13 +1,14 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import { db } from './firebase';
 import * as firestore from 'firebase/firestore';
-import { UserState, SHOP_ITEMS } from './gamification';
+import { UserState, SHOP_ITEMS, WORLDS_METADATA } from './gamification';
 import { playSound } from './audio';
 
-const { doc, updateDoc, increment, arrayUnion, serverTimestamp, runTransaction } = firestore;
+const { doc, updateDoc, increment, arrayUnion, serverTimestamp, runTransaction, getDoc } = firestore;
 
 // --- UTILS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local time approximation for streaks
@@ -96,20 +97,6 @@ export const claimDailyChest = async (uid: string, user: UserState) => {
     }
 };
 
-export const triggerMoneyCheat = async (uid: string) => {
-    try {
-        const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, {
-            coins: increment(1337)
-        });
-        playSound('kaching');
-        triggerVisualEffect("+1,337 Coins (HACKER MODE)", 'coin');
-        (window as any).confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 }, colors: ['#00FF00', '#000000'] });
-    } catch (e) {
-        console.error("Cheat failed", e);
-    }
-};
-
 export const processDailyStreak = async (uid: string, user: UserState) => {
     const today = getTodayStr();
     const lastActive = user.streakLastDate;
@@ -120,6 +107,7 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
     let newStreak = user.streak;
     let message = '';
     let rewards = { coins: 0, xp: 0 };
+    let badgeToUnlock = null;
 
     if (lastActive === yesterday) {
         // Streak Continues
@@ -129,7 +117,11 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
         // Streak Milestones
         if (newStreak === 3) { rewards = { coins: 1500, xp: 500 }; message += " (Bonus!)"; }
         else if (newStreak === 7) { rewards = { coins: 5000, xp: 1000 }; message += " (EPIC!)"; }
-        else if (newStreak === 30) { rewards = { coins: 50000, xp: 10000 }; message += " (GODLIKE!)"; }
+        else if (newStreak === 30) { 
+            rewards = { coins: 50000, xp: 10000 }; 
+            message += " (GODLIKE!)"; 
+            if (!user.badges?.includes('badge_streak_30')) badgeToUnlock = 'badge_streak_30';
+        }
         else { rewards = { coins: 100, xp: 50 }; } // Base reward
 
     } else {
@@ -151,43 +143,54 @@ export const processDailyStreak = async (uid: string, user: UserState) => {
 
     try {
         const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, {
+        const updates: any = {
             streak: newStreak,
             streakLastDate: today,
             coins: increment(rewards.coins),
             xp: increment(rewards.xp),
             lastLoginAt: serverTimestamp()
-        });
+        };
+        if (badgeToUnlock) updates.badges = arrayUnion(badgeToUnlock);
+
+        await updateDoc(userRef, updates);
         
         if (newStreak > 1) {
             playSound('fanfare');
             triggerVisualEffect(message, 'level');
             if (rewards.coins > 0) setTimeout(() => triggerVisualEffect(`+${rewards.coins} Coins`, 'coin'), 800);
+            if (badgeToUnlock) setTimeout(() => triggerVisualEffect("NEW BADGE UNLOCKED! 💎", 'level'), 2000);
         }
     } catch (e) {
         console.error("Streak processing failed", e);
     }
 };
 
-export const processReferral = async (referrerCode: string) => {
-    // NOTE: In a real app, this would be a Cloud Function to prevent client-side exploitation
-    // We simulate it here.
-    console.log(`[REFERRAL] Processing code: ${referrerCode}`);
-    // For demo, we just assume it's valid and applied to the current user during creation logic in db.ts
-};
-
-// --- DEV TOOLS ---
-export const devAddResources = async (uid: string) => {
+// NEW: Check for World Completion Badges
+export const checkWorldCompletion = async (uid: string, worldId: string, levelCount: number) => {
     try {
         const userRef = doc(db, 'users', uid);
-        await updateDoc(userRef, {
-            xp: increment(10000),
-            coins: increment(50000),
-            streak: 1 // Reset streak to test logic
-        });
-        playSound('levelup');
-        triggerVisualEffect("DEV MODE ACTIVATED", "level");
+        const snap = await getDoc(userRef);
+        if(!snap.exists()) return;
+        const user = snap.data() as UserState;
+
+        // Count completed levels in this world
+        const completedInWorld = user.completedLevels.filter(lvl => lvl.startsWith(worldId)).length;
+        
+        // If all 8 levels are done
+        if (completedInWorld >= 8) {
+             const worldMeta = WORLDS_METADATA.find(w => w.id === worldId);
+             if (worldMeta && worldMeta.badgeId && !user.badges?.includes(worldMeta.badgeId)) {
+                 await updateDoc(userRef, {
+                     badges: arrayUnion(worldMeta.badgeId)
+                 });
+                 setTimeout(() => {
+                     playSound('fanfare');
+                     triggerVisualEffect(`BADGE UNLOCKED: ${worldMeta.title}`, 'level');
+                     (window as any).confetti({ particleCount: 300, spread: 180 });
+                 }, 1000);
+             }
+        }
     } catch (e) {
-        console.error("Dev tool failed", e);
+        console.error("Badge check failed", e);
     }
 };

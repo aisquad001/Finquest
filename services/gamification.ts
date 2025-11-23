@@ -18,6 +18,15 @@ import { StockAsset, ASSET_LIST } from './stockMarket';
 
 // --- Types ---
 
+export interface Badge {
+    id: string;
+    name: string;
+    description: string;
+    icon: string; // Emoji
+    condition: string; // Description of how to unlock
+    color: string;
+}
+
 export interface UserState {
     uid?: string; // Firebase UID
     nickname: string;
@@ -64,6 +73,8 @@ export interface UserState {
     progress: Record<string, WorldProgress>; // worldId -> data
 
     inventory: string[];
+    badges: string[]; // List of badge IDs owned
+    
     joinedAt: string;
     knowledgeGems: string[]; // Collected gems IDs
     
@@ -147,7 +158,7 @@ export interface LeaderboardEntry {
 
 // --- Content Types for Firestore ---
 
-export type LessonType = 'swipe' | 'drag_drop' | 'tap_lie' | 'calculator' | 'meme' | 'video' | 'info';
+export type LessonType = 'swipe' | 'drag_drop' | 'tap_lie' | 'calculator' | 'meme' | 'video' | 'info' | 'fun_fact' | 'poll' | 'scenario';
 
 // CMS Types
 export interface LessonSwipeCard { text: string; isRight: boolean; label: string; }
@@ -155,7 +166,7 @@ export interface LessonDragItem { id: string; text: string; category: string; }
 export interface LessonStatement { text: string; isLie: boolean; }
 
 export interface LessonContent {
-    // Swipe
+    // Swipe / Scenario
     cards?: LessonSwipeCard[];
     // Drag Drop
     buckets?: string[];
@@ -171,9 +182,10 @@ export interface LessonContent {
     label?: string;
     formula?: string;
     resultLabel?: string;
-    // Info / Video
+    // Info / Video / Fun Fact
     text?: string;
     videoUrl?: string;
+    factSource?: string;
 }
 
 export interface Lesson {
@@ -218,6 +230,7 @@ export interface WorldData {
     color: string;
     description: string;
     unlockLevel: number; // Legacy unlock check
+    badgeId: string;
 }
 
 export const SEASONAL_EVENTS = {
@@ -230,15 +243,30 @@ export const SEASONAL_EVENTS = {
     icon: '🛍️'
 };
 
+// --- CURRICULUM DEFINITION ---
+
+export const BADGES: Badge[] = [
+    { id: 'badge_basics', name: 'Money Rookie', description: 'Understood that money is fake.', icon: '👶', condition: 'Complete World 1', color: 'bg-neon-green' },
+    { id: 'badge_budget', name: 'Budget Boss', description: 'Mastered the 50/30/20 Rule.', icon: '📊', condition: 'Complete World 2', color: 'bg-neon-blue' },
+    { id: 'badge_compound', name: 'Compound God', description: 'Unlocked the 8th Wonder of the World.', icon: '📈', condition: 'Complete World 3', color: 'bg-neon-purple' },
+    { id: 'badge_banking', name: 'Banker', description: 'Opened the Vault.', icon: '🏦', condition: 'Complete World 4', color: 'bg-neon-pink' },
+    { id: 'badge_debt', name: 'Debt Destroyer', description: 'Escaped the trap.', icon: '⚔️', condition: 'Complete World 5', color: 'bg-orange-500' },
+    { id: 'badge_taxes', name: 'Tax Avoider', description: 'Legally kept your money.', icon: '🕵️', condition: 'Complete World 6', color: 'bg-yellow-400' },
+    { id: 'badge_investing', name: 'Index Fund Chad', description: 'Bought the haystack.', icon: '🐮', condition: 'Complete World 7', color: 'bg-emerald-500' },
+    { id: 'badge_freedom', name: 'Freedom Fighter', description: 'Achieved Financial Nirvana.', icon: '🧘', condition: 'Complete World 8', color: 'bg-indigo-500' },
+    { id: 'badge_streak_30', name: 'Diamond Hands', description: '30 Day Streak', icon: '💎', condition: 'Login 30 days in a row', color: 'bg-blue-400' },
+    { id: 'badge_zoo_win', name: 'Wolf of Wall St', description: 'Made profit in the Zoo.', icon: '🐺', condition: 'Trade a stock for profit', color: 'bg-red-500' },
+];
+
 export const WORLDS_METADATA: WorldData[] = [
-    { id: 'world1', title: "MOOLA BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Money isn't real bro.", unlockLevel: 1 },
-    { id: 'world2', title: "BUDGET BEACH", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule but hot.", unlockLevel: 2 },
-    { id: 'world3', title: "COMPOUND CLIFFS", icon: ScaleIcon, color: "bg-neon-purple", description: "Money making money.", unlockLevel: 3 },
-    { id: 'world4', title: "BANK VAULT", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "Don't keep cash under mattress.", unlockLevel: 5 },
-    { id: 'world5', title: "DEBT DUNGEON", icon: CreditCardIcon, color: "bg-orange-500", description: "Credit cards = Toxic Ex.", unlockLevel: 8 },
-    { id: 'world6', title: "HUSTLE HUB", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Taxation is theft (jk... unless?).", unlockLevel: 12 },
-    { id: 'world7', title: "STONY STOCKS", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Invest like a sneaker flipper.", unlockLevel: 15 },
-    { id: 'world8', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Roth IRA = Cheat Code.", unlockLevel: 20 }
+    { id: 'world1', title: "MONEY BASICS", icon: BanknotesIcon, color: "bg-neon-green", description: "Inflation & Needs vs Wants.", unlockLevel: 1, badgeId: 'badge_basics' },
+    { id: 'world2', title: "BUDGETING", icon: CalculatorIcon, color: "bg-neon-blue", description: "50/30/20 Rule (Shein/Food).", unlockLevel: 2, badgeId: 'badge_budget' },
+    { id: 'world3', title: "COMPOUNDING", icon: ScaleIcon, color: "bg-neon-purple", description: "The Cheat Code to Wealth.", unlockLevel: 3, badgeId: 'badge_compound' },
+    { id: 'world4', title: "BANKING 101", icon: BuildingLibraryIcon, color: "bg-neon-pink", description: "HYSA vs Checking.", unlockLevel: 5, badgeId: 'badge_banking' },
+    { id: 'world5', title: "DEBT TRAPS", icon: CreditCardIcon, color: "bg-orange-500", description: "Klarna, Credit Cards & Loans.", unlockLevel: 8, badgeId: 'badge_debt' },
+    { id: 'world6', title: "INCOME & TAX", icon: BriefcaseIcon, color: "bg-yellow-400", description: "Side Hustles & The IRS.", unlockLevel: 12, badgeId: 'badge_taxes' },
+    { id: 'world7', title: "INVESTING", icon: PresentationChartLineIcon, color: "bg-emerald-500", description: "Stocks, ETFs & Roth IRA.", unlockLevel: 15, badgeId: 'badge_investing' },
+    { id: 'world8', title: "FREEDOM", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Credit Score & Net Worth.", unlockLevel: 20, badgeId: 'badge_freedom' }
 ];
 
 export const SHOP_ITEMS: ShopItem[] = [
@@ -291,7 +319,6 @@ export const generateDailyChallenges = (): Challenge[] => [
     },
 ];
 
-// Leaderboard should be fetched from DB, no mocks
 export const getMockLeaderboard = (): LeaderboardEntry[] => [];
 
 export const calculateRiskScore = (portfolio: Portfolio): number => {
@@ -335,27 +362,18 @@ export const generateRandomProfile = () => {
 export const createInitialUser = (onboardingData: any): UserState => {
     const today = new Date().toISOString().split('T')[0];
     const code = Math.random().toString(36).substring(2, 5).toUpperCase() + Math.floor(Math.random() * 900 + 100);
-
-    // Generate a base random profile for defaults
     const randomProfile = generateRandomProfile();
 
-    // We intentionally set isProfileComplete to false so the user 
-    // is forced to confirm/change these random values on first login.
-    
-    let nickname = randomProfile.nickname; 
-    let avatar = randomProfile.avatar;
-
     return {
-        nickname: nickname,
-        avatar: avatar,
+        nickname: randomProfile.nickname,
+        avatar: randomProfile.avatar,
         level: 1, 
         xp: onboardingData.xp || 500, 
         coins: 500,
         subscriptionStatus: 'free',
         lifetimeSpend: 0,
-        isProfileComplete: false, // Forces profile setup screen
+        isProfileComplete: false, 
         
-        // Security Defaults
         isAdmin: false,
         role: 'user',
         loginType: onboardingData.authMethod || 'guest',
@@ -375,6 +393,7 @@ export const createInitialUser = (onboardingData: any): UserState => {
         masteredWorlds: [],
         progress: {}, 
         inventory: [],
+        badges: [], // NEW
         knowledgeGems: [],
         joinedAt: new Date().toISOString(),
         lastLoginAt: new Date().toISOString(),
