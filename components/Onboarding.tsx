@@ -60,9 +60,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onOpenPortal
              <div className="flex-1 flex flex-col items-center justify-center w-full slide-enter">
                  <div className="relative mb-6 group cursor-pointer transform transition-transform hover:scale-110" onClick={() => playSound('pop')}>
                     <div className="absolute inset-0 bg-white blur-[60px] opacity-30 rounded-full animate-pulse"></div>
-                    <div className="text-[120px] animate-bounce drop-shadow-2xl filter brightness-110">
-                        💸
-                    </div>
+                    <img 
+                        src="/icons/icon-512x512.png" 
+                        alt="Racked Ghost" 
+                        className="w-48 h-48 animate-bounce drop-shadow-2xl filter brightness-110 relative z-10 object-contain"
+                    />
                  </div>
                  
                  <h1 className="font-game text-[5.5rem] leading-none text-white mb-6 drop-shadow-[0_8px_0_rgba(0,0,0,0.4)] tracking-tighter italic -rotate-3 text-stroke-black">

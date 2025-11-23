@@ -76,8 +76,8 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
             <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col items-center justify-center p-6 font-sans">
                 <div className="max-w-md w-full bg-white p-8 rounded-2xl shadow-xl border border-slate-200">
                     <div className="flex justify-center mb-6">
-                        <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white text-3xl">
-                            🛡️
+                        <div className="w-20 h-20 bg-[#1a0b2e] rounded-2xl flex items-center justify-center text-white shadow-lg border-2 border-blue-500">
+                            <img src="/icons/icon-192x192.png" className="w-12 h-12" alt="Racked" />
                         </div>
                     </div>
                     <h1 className="text-2xl font-bold text-center text-slate-900 mb-2">Racked Parent Portal</h1>
@@ -119,7 +119,7 @@ export const PortalDashboard: React.FC<PortalProps> = ({ childData: initialData,
             {/* Top Navigation */}
             <nav className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-50">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white">🛡️</div>
+                    <img src="/icons/icon-192x192.png" className="w-8 h-8 bg-black rounded-lg p-1" alt="Racked" />
                     <span className="font-bold text-xl text-slate-900 tracking-tight">Racked Portal</span>
                 </div>
                 <div className="flex items-center gap-4">

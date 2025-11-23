@@ -307,7 +307,7 @@ const App: React.FC = () => {
       return (
           <div className="min-h-screen bg-[#1a0b2e] flex flex-col items-center justify-center p-6 text-center">
               <div className="flex flex-col items-center animate-pulse mb-8">
-                  <div className="text-6xl mb-4 animate-bounce">💸</div>
+                  <img src="/icons/icon-512x512.png" className="w-32 h-32 mb-4 animate-bounce drop-shadow-[0_0_15px_rgba(0,255,157,0.5)]" alt="Racked" />
                   <h2 className="font-game text-white text-2xl">RACKING UP...</h2>
               </div>
               {storeError ? (
