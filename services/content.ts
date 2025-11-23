@@ -11,9 +11,10 @@ export type GameLevel = LevelData;
 
 export const GET_WORLD_LEVELS = (worldId: string) => {
     // Return mock structure matching seed data (8 levels per world)
-    // This is used for synchronous UI progress calculation
+    // This is used for synchronous UI progress calculation in Dashboard
+    // Ensure ID generation strips spaces to match contentGenerator logic (e.g. "Moola Basics" -> "MoolaBasics_l1")
     return Array.from({ length: 8 }, (_, i) => ({
-        id: `${worldId}_l${i + 1}`,
+        id: `${worldId.replace(/\s+/g, '')}_l${i + 1}`,
         levelNumber: i + 1
     }));
 };
