@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -54,7 +53,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const [showSocialShare, setShowSocialShare] = useState<{type: any, data: any} | null>(null);
     const [familyCode, setFamilyCode] = useState<string | null>(user.parentCode || null);
     const [installPrompt, setInstallPrompt] = useState<any>(null);
-    const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS); 
+    const [shopItems, setShopItems] = useState<ShopItem[]>(SHOP_ITEMS);
+    const [shopTier, setShopTier] = useState<1 | 2 | 3>(1);
     
     // Admin Secret Trigger
     const avatarPressTimer = useRef<any>(null);
@@ -78,19 +78,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
         let currentValue = user.portfolio.cash;
         
         // Calculate value of holdings based on latest market data
-        if (user.portfolio.holdings) {
-            Object.entries(user.portfolio.holdings).forEach(([symbol, qty]) => {
-                const stock = marketData.find(s => s.symbol === symbol);
-                if (stock) {
-                    currentValue += stock.price * (qty as number);
-                }
-            });
-        }
+        Object.entries(user.portfolio.holdings).forEach(([symbol, qty]) => {
+            const stock = marketData.find(s => s.symbol === symbol);
+            if (stock) {
+                currentValue += stock.price * (qty as number);
+            }
+        });
 
         const startValue = 100000;
         const totalGain = currentValue - startValue;
         const percentGain = (totalGain / startValue) * 100;
-        const hasTrades = user.portfolio.transactions && user.portfolio.transactions.length > 0;
+        const hasTrades = user.portfolio.transactions.length > 0;
 
         return { currentValue, totalGain, percentGain, hasTrades };
     }, [user.portfolio]);
@@ -582,13 +580,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                     ITEM SHOP
                                 </h2>
                             </div>
-                            <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x">
-                                {shopItems.filter(i => i.active !== false).map(item => {
+
+                            {/* Shop Tabs */}
+                            <div className="flex gap-2 mb-4 px-2 overflow-x-auto no-scrollbar">
+                                <button onClick={() => setShopTier(1)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 1 ? 'bg-green-500 text-black' : 'bg-white/10 text-gray-400'}`}>Starter (&lt;5k)</button>
+                                <button onClick={() => setShopTier(2)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 2 ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-400'}`}>Baller (5k-10k)</button>
+                                <button onClick={() => setShopTier(3)} className={`px-4 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${shopTier === 3 ? 'bg-yellow-500 text-black' : 'bg-white/10 text-gray-400'}`}>Empire (15k+)</button>
+                            </div>
+
+                            <div className="flex overflow-x-auto gap-4 pb-4 no-scrollbar snap-x px-2">
+                                {shopItems.filter(i => i.active !== false && i.tier === shopTier).map(item => {
                                     const owned = user.inventory.includes(item.id);
+                                    // Determine styling based on tier
+                                    const borderColor = shopTier === 1 ? 'border-green-500/30' : shopTier === 2 ? 'border-blue-500/50' : 'border-yellow-500';
+                                    const glow = shopTier === 3 ? 'shadow-[0_0_15px_rgba(234,179,8,0.3)]' : '';
+
                                     return (
-                                        <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : 'border-neon-pink/30'}`}>
+                                        <div key={item.id} className={`flex-shrink-0 w-36 snap-start bg-[#1e112a] border-2 rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden group ${owned ? 'border-gray-600 opacity-70' : borderColor} ${glow}`}>
                                             {owned && <div className="absolute top-2 right-2 bg-green-500 text-black text-[9px] font-bold px-1 rounded">OWNED</div>}
-                                            <div className="text-4xl mb-2 mt-2 transition-transform group-hover:scale-110">{item.emoji}</div>
+                                            {item.category === 'cosmetic' && <div className="absolute top-2 left-2 text-[8px] bg-white/10 px-1 rounded text-white/70 uppercase tracking-wider">{item.tier === 3 ? 'LUXURY' : 'STYLE'}</div>}
+                                            
+                                            <div className="text-4xl mb-2 mt-4 transition-transform group-hover:scale-110">{item.emoji}</div>
                                             <div className="font-game text-white text-sm leading-none mb-1">{item.name}</div>
                                             <button 
                                                 onClick={() => !owned && handleBuy(item)}
@@ -597,7 +609,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                                                     ${owned ? 'bg-transparent text-gray-500' : 'bg-white/10 hover:bg-neon-pink hover:text-black text-white border border-white/20'}
                                                 `}
                                             >
-                                                {owned ? 'In Bag' : <><span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost}</>}
+                                                {owned ? 'In Inventory' : <><span className="text-yellow-400 group-hover:text-black">🪙</span> {item.cost.toLocaleString()}</>}
                                             </button>
                                         </div>
                                     );

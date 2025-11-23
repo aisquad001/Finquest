@@ -1,13 +1,12 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Avatar } from './Avatar';
 import { playSound } from '../services/audio';
-import { UserState } from '../services/gamification';
-import { ArrowRightIcon, ArrowPathIcon } from '@heroicons/react/24/solid';
+import { UserState, SHOP_ITEMS } from '../services/gamification';
+import { ArrowRightIcon, ArrowPathIcon, LockClosedIcon } from '@heroicons/react/24/solid';
 
 interface ProfileSetupProps {
     user: UserState;
@@ -15,14 +14,39 @@ interface ProfileSetupProps {
     isNewUser: boolean;
 }
 
-const EMOJIS = ['😎', '🤠', '👽', '👻', '🤖', '😼', '🦁', '🦄', '💀', '💩', '🤓', '🐼', '🐯', '🦊'];
-const OUTFITS = ['👕', '🧥', '👗', '🥋', '🦺', '👔', '👘', '🦸', '🕴️', '👚'];
-const BACKGROUNDS = ['bg-neon-blue', 'bg-neon-green', 'bg-neon-pink', 'bg-neon-purple', 'bg-yellow-400', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500'];
+// Base (Free) Items
+const BASE_EMOJIS = ['😎', '🤠', '👽', '👻', '🤖', '😼', '🦁', '🦄', '💀', '💩', '🤓', '🐼', '🐯', '🦊'];
+const BASE_OUTFITS = ['👕', '🧥', '👗', '🥋', '🦺', '👔', '👘', '🦸', '🕴️', '👚'];
+const BASE_BACKGROUNDS = ['bg-neon-blue', 'bg-neon-green', 'bg-neon-pink', 'bg-neon-purple', 'bg-yellow-400', 'bg-orange-500', 'bg-red-500', 'bg-indigo-500'];
 
 export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, isNewUser }) => {
     const [nickname, setNickname] = useState(user.nickname || '');
     const [avatarConfig, setAvatarConfig] = useState(user.avatar || { emoji: '😎', outfit: '👕', accessory: '🧢', bg: 'bg-neon-blue' });
     const [activeTab, setActiveTab] = useState<'emoji' | 'outfit' | 'bg'>('emoji');
+
+    // Merge Free Items with Premium Shop Items
+    const availableOptions = useMemo(() => {
+        // Helper to check if an item is premium and locked
+        const checkStatus = (val: string, type: 'emoji' | 'outfit' | 'bg') => {
+            const shopItem = SHOP_ITEMS.find(i => i.category === 'cosmetic' && i.cosmeticType === type && i.cosmeticValue === val);
+            if (shopItem) {
+                const isUnlocked = user.inventory.includes(shopItem.id);
+                return { isPremium: true, isUnlocked, cost: shopItem.cost };
+            }
+            return { isPremium: false, isUnlocked: true, cost: 0 };
+        };
+
+        // Get all unique values from both lists
+        const allEmojis = Array.from(new Set([...BASE_EMOJIS, ...SHOP_ITEMS.filter(i => i.cosmeticType === 'emoji').map(i => i.cosmeticValue!)]));
+        const allOutfits = Array.from(new Set([...BASE_OUTFITS, ...SHOP_ITEMS.filter(i => i.cosmeticType === 'outfit').map(i => i.cosmeticValue!)]));
+        const allBgs = Array.from(new Set([...BASE_BACKGROUNDS, ...SHOP_ITEMS.filter(i => i.cosmeticType === 'bg').map(i => i.cosmeticValue!)]));
+
+        return {
+            emoji: allEmojis.map(e => ({ val: e, ...checkStatus(e, 'emoji') })),
+            outfit: allOutfits.map(o => ({ val: o, ...checkStatus(o, 'outfit') })),
+            bg: allBgs.map(b => ({ val: b, ...checkStatus(b, 'bg') }))
+        };
+    }, [user.inventory]);
 
     const handleSave = () => {
         if (!nickname.trim()) {
@@ -40,12 +64,27 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, isNewU
 
     const randomize = () => {
         playSound('pop');
+        // Only pick from UNLOCKED options
+        const unlockedEmojis = availableOptions.emoji.filter(o => o.isUnlocked).map(o => o.val);
+        const unlockedOutfits = availableOptions.outfit.filter(o => o.isUnlocked).map(o => o.val);
+        const unlockedBgs = availableOptions.bg.filter(o => o.isUnlocked).map(o => o.val);
+
         setAvatarConfig({
-            emoji: EMOJIS[Math.floor(Math.random() * EMOJIS.length)],
-            outfit: OUTFITS[Math.floor(Math.random() * OUTFITS.length)],
+            emoji: unlockedEmojis[Math.floor(Math.random() * unlockedEmojis.length)],
+            outfit: unlockedOutfits[Math.floor(Math.random() * unlockedOutfits.length)],
             accessory: '🧢',
-            bg: BACKGROUNDS[Math.floor(Math.random() * BACKGROUNDS.length)]
+            bg: unlockedBgs[Math.floor(Math.random() * unlockedBgs.length)]
         });
+    };
+
+    const handleSelect = (type: 'emoji' | 'outfit' | 'bg', item: any) => {
+        if (!item.isUnlocked) {
+            playSound('error');
+            alert(`This item is locked! Buy it in the Shop for ${item.cost} Coins.`);
+            return;
+        }
+        playSound('pop');
+        setAvatarConfig({ ...avatarConfig, [type]: item.val });
     };
 
     return (
@@ -103,14 +142,44 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, isNewU
                     </div>
 
                     <div className="grid grid-cols-5 gap-3 h-48 overflow-y-auto pr-1 content-start">
-                        {activeTab === 'emoji' && EMOJIS.map(e => (
-                            <button key={e} onClick={() => { playSound('pop'); setAvatarConfig({...avatarConfig, emoji: e}) }} className={`aspect-square flex items-center justify-center text-2xl rounded-xl hover:bg-white/20 ${avatarConfig.emoji === e ? 'bg-white/20 border-2 border-white' : 'bg-white/5'}`}>{e}</button>
+                        {activeTab === 'emoji' && availableOptions.emoji.map((item, i) => (
+                            <button 
+                                key={i} 
+                                onClick={() => handleSelect('emoji', item)} 
+                                className={`aspect-square flex items-center justify-center text-2xl rounded-xl relative
+                                    ${item.isUnlocked ? 'hover:bg-white/20 cursor-pointer' : 'bg-black/50 cursor-not-allowed opacity-60'}
+                                    ${avatarConfig.emoji === item.val ? 'bg-white/20 border-2 border-white' : 'bg-white/5'}
+                                `}
+                            >
+                                {item.val}
+                                {!item.isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl"><LockClosedIcon className="w-4 h-4 text-yellow-500"/></div>}
+                            </button>
                         ))}
-                        {activeTab === 'outfit' && OUTFITS.map(o => (
-                            <button key={o} onClick={() => { playSound('pop'); setAvatarConfig({...avatarConfig, outfit: o}) }} className={`aspect-square flex items-center justify-center text-2xl rounded-xl hover:bg-white/20 ${avatarConfig.outfit === o ? 'bg-white/20 border-2 border-white' : 'bg-white/5'}`}>{o}</button>
+                        {activeTab === 'outfit' && availableOptions.outfit.map((item, i) => (
+                            <button 
+                                key={i} 
+                                onClick={() => handleSelect('outfit', item)} 
+                                className={`aspect-square flex items-center justify-center text-2xl rounded-xl relative
+                                    ${item.isUnlocked ? 'hover:bg-white/20 cursor-pointer' : 'bg-black/50 cursor-not-allowed opacity-60'}
+                                    ${avatarConfig.outfit === item.val ? 'bg-white/20 border-2 border-white' : 'bg-white/5'}
+                                `}
+                            >
+                                {item.val}
+                                {!item.isUnlocked && <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-xl"><LockClosedIcon className="w-4 h-4 text-yellow-500"/></div>}
+                            </button>
                         ))}
-                        {activeTab === 'bg' && BACKGROUNDS.map(bg => (
-                            <button key={bg} onClick={() => { playSound('pop'); setAvatarConfig({...avatarConfig, bg: bg}) }} className={`aspect-square rounded-xl hover:scale-105 transition-transform border-2 ${bg} ${avatarConfig.bg === bg ? 'border-white scale-105 shadow-lg' : 'border-transparent opacity-70'}`}></button>
+                        {activeTab === 'bg' && availableOptions.bg.map((item, i) => (
+                            <button 
+                                key={i} 
+                                onClick={() => handleSelect('bg', item)} 
+                                className={`aspect-square rounded-xl border-2 relative
+                                    ${item.val} 
+                                    ${item.isUnlocked ? 'hover:scale-105 transition-transform cursor-pointer' : 'cursor-not-allowed opacity-50'}
+                                    ${avatarConfig.bg === item.val ? 'border-white scale-105 shadow-lg' : 'border-transparent'}
+                                `}
+                            >
+                                {!item.isUnlocked && <div className="absolute inset-0 flex items-center justify-center"><LockClosedIcon className="w-6 h-6 text-white/50 shadow-black drop-shadow-md"/></div>}
+                            </button>
                         ))}
                     </div>
                 </div>
