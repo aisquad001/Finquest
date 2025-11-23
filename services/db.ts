@@ -70,6 +70,13 @@ export const convertDocToUser = (data: any): UserState => {
     if (user.joinedAt instanceof Timestamp) user.joinedAt = user.joinedAt.toDate().toISOString();
     if (user.streakLastDate instanceof Timestamp) user.streakLastDate = user.streakLastDate.toDate().toISOString();
     if (user.proExpiresAt instanceof Timestamp) user.proExpiresAt = user.proExpiresAt.toDate().toISOString();
+    
+    // SAFETY: Ensure arrays exist
+    if (!user.completedLevels) user.completedLevels = [];
+    if (!user.badges) user.badges = [];
+    if (!user.inventory) user.inventory = [];
+    if (!user.progress) user.progress = {};
+
     return user as UserState;
 };
 
@@ -342,6 +349,9 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         if (mockDB[uid]) {
             const user = mockDB[uid];
             if (completed) {
+                // Ensure array exists
+                if (!user.completedLevels) user.completedLevels = [];
+                
                 if (!user.completedLevels.includes(levelId)) {
                     user.completedLevels.push(levelId);
                 }
@@ -524,7 +534,16 @@ export const adminMassUpdate = async (action: 'give_coins' | 'reset' | 'reward_a
         if (action === 'give_coins') {
             batch.update(doc.ref, { coins: increment(1000) });
         } else if (action === 'reset') {
-            batch.update(doc.ref, { coins: 500, level: 1, xp: 0, inventory: [] });
+            // FIX: Explicitly clear completedLevels so map resets correctly
+            batch.update(doc.ref, { 
+                coins: 500, 
+                level: 1, 
+                xp: 0, 
+                inventory: [],
+                completedLevels: [],
+                progress: {},
+                badges: []
+            });
         } else if (action === 'reward_all') {
              batch.update(doc.ref, { lastDailyChestClaim: '' }); // Reset chest
         }

@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -23,6 +24,9 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
     const [loading, setLoading] = useState(true);
     const { user } = useUserStore();
     const scrollRef = useRef<HTMLDivElement>(null);
+    
+    // Ensure completedLevels is safe
+    const safeCompletedLevels = completedLevels || [];
 
     useEffect(() => {
         const loadLevels = async () => {
@@ -72,7 +76,7 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                 <div className="flex items-center gap-2 bg-black/40 px-3 py-1 rounded-full border border-white/10">
                     <StarIcon className="w-4 h-4 text-yellow-400" />
                     <span className="text-white font-bold text-sm">
-                        {levels.filter(l => completedLevels.includes(l.id)).length}/{levels.length}
+                        {levels.filter(l => safeCompletedLevels.includes(l.id)).length}/{levels.length}
                     </span>
                 </div>
             </div>
@@ -118,8 +122,13 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                     )}
 
                     {levels.map((level, index) => {
-                        const isLocked = index > 0 && !completedLevels.includes(levels[index - 1].id);
-                        const isCompleted = completedLevels.includes(level.id);
+                        const prevLevelId = index > 0 ? levels[index - 1].id : null;
+                        
+                        // Safety: Check if safeCompletedLevels is valid array. 
+                        // Lock if previous level ID exists but isn't in completed list.
+                        const isLocked = index > 0 && (!prevLevelId || !safeCompletedLevels.includes(prevLevelId));
+                        
+                        const isCompleted = safeCompletedLevels.includes(level.id);
                         const isCurrent = !isLocked && !isCompleted;
                         const isBoss = level.bossName && index === levels.length - 1;
 
