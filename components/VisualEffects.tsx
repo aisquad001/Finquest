@@ -39,15 +39,15 @@ export const VisualEffects: React.FC = () => {
                 {effects.map(effect => (
                     <motion.div
                         key={effect.id}
-                        initial={{ opacity: 0, y: 20, scale: 0.5 }}
-                        animate={{ opacity: 1, y: -20, scale: 1.1 }}
-                        exit={{ opacity: 0, y: -60 }}
+                        initial={{ opacity: 0, y: 50, scale: 0.5, rotate: -10 }}
+                        animate={{ opacity: 1, y: 0, scale: 1.5, rotate: 0 }}
+                        exit={{ opacity: 0, y: -100, scale: 2 }}
                         className={`
-                            px-6 py-2 rounded-full font-game text-2xl text-white shadow-xl border-2 text-stroke-black
+                            px-8 py-4 rounded-2xl font-game text-3xl md:text-4xl text-white shadow-[0_0_30px_rgba(0,0,0,0.5)] border-4 text-stroke-black
                             ${effect.type === 'xp' ? 'bg-neon-green border-white' : ''}
                             ${effect.type === 'coin' ? 'bg-yellow-400 border-white' : ''}
-                            ${effect.type === 'level' ? 'bg-neon-pink border-white text-3xl' : ''}
-                            ${effect.type === 'error' ? 'bg-red-500 border-white text-lg' : ''}
+                            ${effect.type === 'level' ? 'bg-neon-pink border-white text-5xl' : ''}
+                            ${effect.type === 'error' ? 'bg-red-500 border-white text-2xl' : ''}
                         `}
                     >
                         {effect.text}

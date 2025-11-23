@@ -472,11 +472,13 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                     {rewards.map(r => (
                         <motion.div
                             key={r.id}
-                            initial={{ opacity: 0, x: "-50%", y: 20, scale: 0.5 }}
-                            animate={{ opacity: 1, x: "-50%", y: -150, scale: 1.5 }}
-                            exit={{ opacity: 0 }}
+                            initial={{ opacity: 0, x: "-50%", y: 50, scale: 0.5 }} // Start lower
+                            animate={{ opacity: 1, x: "-50%", y: -200, scale: 2.5 }} // Move higher, scale larger
+                            exit={{ opacity: 0, scale: 3 }}
+                            transition={{ duration: 0.8, ease: "easeOut" }} // Slower, smoother
                             style={{ left: '50%', top: '50%' }}
-                            className={`absolute font-game text-shadow-neon whitespace-nowrap ${r.type === 'xp' ? 'text-neon-green text-4xl' : 'text-yellow-400 text-3xl'}`}
+                            className={`absolute font-game text-shadow-neon whitespace-nowrap text-stroke-black border-black drop-shadow-2xl
+                                ${r.type === 'xp' ? 'text-neon-green text-6xl md:text-8xl' : 'text-yellow-400 text-5xl md:text-7xl'}`}
                         >
                             {r.text}
                         </motion.div>
