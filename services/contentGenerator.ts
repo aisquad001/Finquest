@@ -33,264 +33,436 @@ export class SeededRNG {
     }
 }
 
-// --- DATA POOLS (FROM INPUT) ---
+// --- DATA POOLS ---
+// Structured unique content for every world and lesson type.
+// Indexed by World ID -> Lesson Type -> Array of unique content objects.
 
-const FUN_FACTS = [
-    { text: "$100 invested at age 16 at 8% = $1,600,000 by 65 💀", source: "Vanguard 2024 Investor Study", emoji: "📈" },
-    { text: "The average millionaire has 7 streams of income.", source: "IRS Tax Data", emoji: "💸" },
-    { text: "If you saved $10/day, it would take 274 years to save $1M without investing.", source: "Basic Math", emoji: "⏳" },
-    { text: "Compound interest is the 8th wonder of the world.", source: "Albert Einstein", emoji: "🧠" },
-    { text: "Credit card companies made $130 Billion in fees last year.", source: "CFPB Report", emoji: "🏦" },
-    { text: "The first credit card was made of paper in 1950.", source: "Diners Club History", emoji: "📜" },
-    { text: "Apple makes roughly $3,000 per second.", source: "Apple Financials", emoji: "🍎" },
-    { text: "30% of lottery winners go bankrupt within 5 years.", source: "CFP Board", emoji: "📉" },
-    { text: "A daily $5 coffee habit costs you $150,000 over 30 years (invested).", source: "The Latte Factor", emoji: "☕" },
-    { text: "Most 'rich' people drive Toyotas, not Ferraris.", source: "The Millionaire Next Door", emoji: "🚗" },
-    { text: "Inflation cuts the value of cash in half every ~20 years.", source: "US Bureau of Labor Statistics", emoji: "🎈" },
-    { text: "The S&P 500 has returned ~10% historically per year.", source: "Stock Market History", emoji: "📊" },
-    { text: "Bitcoin's value grew 100x in 10 years, but volatility is key.", source: "Crypto Market Data", emoji: "₿" },
-    { text: "Emergency funds should cover 3-6 months of expenses.", source: "Dave Ramsey Advice", emoji: "🆘" },
-    { text: "Real estate appreciates ~4% annually on average.", source: "Zillow Reports", emoji: "🏠" },
-    { text: "Side hustles add $1,000/month for 40% of millennials.", source: "Side Hustle Nation Survey", emoji: "💼" },
-    { text: "Taxes can eat 30% of income; optimize with deductions.", source: "IRS Guidelines", emoji: "🧾" },
-    { text: "Index funds outperform 85% of active managers long-term.", source: "S&P Dow Jones Indices", emoji: "📈" },
-    { text: "Student debt averages $30k per borrower in US.", source: "Federal Reserve", emoji: "🎓" },
-    { text: "Gig economy workers earn 20% more flexibly.", source: "Upwork Study", emoji: "🚀" },
-    { text: "Retirement at 65 requires ~$1M in savings.", source: "Fidelity Retirement Guide", emoji: "👴" },
-    { text: "Peer-to-peer lending yields 5-10% returns.", source: "LendingClub Data", emoji: "🤝" },
-    { text: "Homeownership builds wealth 40x faster than renting.", source: "NAR Report", emoji: "🔑" },
-    { text: "Crypto scams cost $4B in 2023.", source: "FTC Report", emoji: "⚠️" },
-    { text: "Dividend stocks provide passive income streams.", source: "Investopedia", emoji: "💰" },
-    { text: "Budgeting apps save users $500/year on average.", source: "Mint User Data", emoji: "📱" },
-    { text: "Gold has been a hedge against inflation for centuries.", source: "World Gold Council", emoji: "🪙" },
-    { text: "401(k) matching is free money from employers.", source: "Vanguard", "emoji": "🎁" },
-    { text: "Inflation hit 9% in 2022, eroding savings.", source: "BLS Data", emoji: "📉" },
-    { text: "Freelancers deduct home office expenses.", source: "IRS Freelance Guide", emoji: "🏡" },
-    { text: "Bonds offer stable 4-6% returns.", source: "Treasury.gov", emoji: "📜" },
-    { text: "NFTs turned $0 into millions for some artists.", source: "OpenSea Stats", emoji: "🖼️" },
-    { text: "Car loans average 5 years, but pay off early to save.", source: "Experian", emoji: "🚗" },
-    { text: "Stock splits make shares more accessible.", source: "NASDAQ", emoji: "📊" },
-    { text: "Health savings accounts are triple tax-free.", source: "HSA Guide", emoji: "🏥" },
-    { text: "Real estate crowdfunding starts at $500.", source: "Fundrise", emoji: "🏗️" },
-    { text: "Credit utilization under 30% boosts scores.", source: "FICO", emoji: "👍" },
-    { text: "Passive income beats trading time for money.", source: "Rich Dad Poor Dad", emoji: "⏰" },
-    { text: "ETFs track markets with low fees.", source: "Vanguard ETFs", emoji: "🌍" },
-    { text: "Mortgage rates hit historic lows in 2021.", source: "Freddie Mac", emoji: "🏦" },
-    { text: "Angel investing can 10x returns.", source: "AngelList", emoji: "😇" },
-    { text: "Budget 50/30/20: Needs/Wants/Savings.", source: "Elizabeth Warren", emoji: "📊" },
-    { text: "Crypto mining uses as much energy as Sweden.", source: "Cambridge Bitcoin Index", emoji: "⚡" },
-    { text: "Roth conversions save on future taxes.", source: "IRS Roth Rules", emoji: "🔄" },
-    { text: "Venture capital funds startups like Uber.", "source": "CB Insights", emoji: "🚀" },
-    { text: "Dollar-cost averaging beats timing the market.", source: "Schwab Study", emoji: "📅" },
-    { text: "Life insurance protects families financially.", source: "LIMRA", emoji: "🛡️" },
-    { text: "REITs allow real estate investing without buying property.", source: "Nareit", emoji: "🏢" },
-    { text: "Financial independence retire early (FIRE) targets 25x expenses.", source: "Mr. Money Mustache", emoji: "🔥" },
-    { text: "Options trading can hedge risks.", source: "CBOE", emoji: "📈" },
-    { text: "Sovereign wealth funds manage trillions.", source: "SWFI", emoji: "🌐" }
-];
-
-const ROASTS = [
-    "Your wallet just filed a restraining order 💀",
-    "That answer cost you a fictional Lambo 📉",
-    "Financial Advisor has left the chat ✌️",
-    "Bro, did you learn finance from TikTok? 😂",
-    "Oof. The debt collectors are calling 📞",
-    "My calculator just exploded 💥",
-    "Plot twist: That was the broke option 🤡",
-    "Even the goblin is judging you 👹",
-    "Your credit score just dropped 50 points (jk) 📉",
-    "Have fun staying poor! (meme reference) 🤪",
-    "That's a millionaire mistake... in reverse 📉",
-    "Your bank account is crying tears of joy... not 😂",
-    "Warren Buffett would disown you 💼",
-    "That choice just bought you a one-way ticket to Brokeville 🚌",
-    "Elon Musk laughs at your finances 🚀",
-    "Your future self is time-traveling to slap you ⏰",
-    "That's how you turn $100 into $50 real quick 💸",
-    "The stock market just facepalmed 📊",
-    "Dave Ramsey is shaking his head 👴",
-    "You just financed a yacht... for someone else 🛥️"
-];
-
-const DEEP_DIVES = [
-    "That $5/day boba habit? Skip it and invest → $472k by 65. Real millionaires skip Starbucks. 😎",
-    "Banks love it when you pay minimums. It keeps you poor and them rich. Pay it all off! 💳",
-    "Inflation is the silent thief. If your money isn't growing, it's dying. Invest it! 📉",
-    "Your greatest asset isn't your house or car. It's your mind. Keep leveling up! 🧠",
-    "Buying a car on a 7-year loan? You're paying double the price in interest. Oof. 🚗",
-    "Credit score is your adulting report card. Keep it above 750 to unlock life's cheat codes. 🎮",
-    "Millionaires ask 'How much does it earn?'. Broke people ask 'How much is the monthly payment?'. 🦁",
-    "Tax refunds just mean you gave the government a 0% interest loan. Adjust your W-4! 📝",
-    "Diversification means not putting all your eggs in one basket. Don't yeet everything into one coin. 🧺",
-    "Emergency funds prevent bad days from becoming bad years. Save 3-6 months expenses. 🛡️",
-    "Rich people buy assets (things that pay them). Poor people buy liabilities (things that cost them). 🏠",
-    "Investing is boring. If it's exciting, you're probably gambling. Be boring, get rich. 😴",
-    "The stock market transfers money from the impatient to the patient. HODL. 💎🙌",
-    "You can't out-earn bad spending habits. Fix the leak before you fill the bucket. 🪣",
-    "Compound interest needs TIME. Start now, even with $5. Your future self will thank you. ⏳",
-    "A budget isn't a restriction. It's permission to spend without guilt. 💅",
-    "Debit cards spend your money. Credit cards spend the bank's money (plus protection). Use credit wisely. 💳",
-    "Net Worth = Assets - Liabilities. Focus on growing the first and shrinking the second. 📈",
-    "Lifestyle creep is the enemy. Just because you got a raise doesn't mean you need a better car. 🚫",
-    "True wealth is freedom of time, not just a pile of cash. 🏝️"
-];
-
-export const getRandomFunFact = () => FUN_FACTS[Math.floor(Math.random() * FUN_FACTS.length)];
-export const getRandomDeepDive = () => DEEP_DIVES[Math.floor(Math.random() * DEEP_DIVES.length)];
-export const getRandomRoast = () => ROASTS[Math.floor(Math.random() * ROASTS.length)];
-
-// --- WORLD-SPECIFIC CONTENT DEFINITIONS ---
-
-const WORLD_DATA: Record<string, { bossName: string, bossIntro: string[], bossEmoji: string, topics: any[] }> = {
+const CONTENT_POOLS: Record<string, Record<string, any[]>> = {
     "Moola Basics": {
-        bossName: "The Inflation Dragon",
-        bossEmoji: "🐲",
-        bossIntro: ["Your cash is melting!", "Prices are rising!", "I eat value for breakfast!"],
-        topics: [
-            { q: "What is money?", e: "A medium of exchange for goods and services.", a: ["Tool for value", "Paper notes", "Digital bits"], c: 0 },
-            { q: "Inflation basics?", e: "Rising prices reduce purchasing power.", a: ["Good for economy", "Bad for savers", "Neutral"], c: 1 },
-            { q: "Needs vs Wants?", e: "Prioritize essentials over luxuries.", a: ["Wants first", "Needs first", "Equal"], c: 1 },
-            { q: "Gold as investment?", e: "Hedge against inflation.", a: ["Outdated", "Safe haven", "Volatile like crypto"], c: 1 },
-            { q: "Physical gold?", e: "Store securely, harder to sell.", a: ["ETF easier", "Tangible asset", "No value"], c: 1 },
-            { q: "Sovereign funds?", e: "Government investment pools.", a: ["Personal use", "National wealth", "Crypto based"], c: 1 }
+        swipe: [
+            { question: "Which is Money?", left: "Sand", right: "Gold Coin", correct: "right", text: "Money must be scarce." },
+            { question: "Better Trade?", left: "Chicken for Shoes", right: "$50 for Shoes", correct: "right", text: "Cash is easier than barter." },
+            { question: "Store of Value?", left: "Banana", right: "Dollar Bill", correct: "right", text: "Bananas rot. Money stays." },
+            { question: "Inflation Impact", left: "Prices Down", right: "Prices Up", correct: "right", text: "Inflation makes things cost more." },
+            { question: "Wants vs Needs", left: "Water", right: "Video Game", correct: "left", text: "Survive first, play later." },
+            { question: "Scarcity check", left: "Air", right: "Diamonds", correct: "right", text: "Scarcity creates value." },
+            { question: "Ancient Money", left: "Credit Card", right: "Salt Blocks", correct: "right", text: "Salt was once used as salary." },
+            { question: "Your Wallet", left: "Empty", right: "Full", correct: "right", text: "Goal: Stack it up." }
+        ],
+        poll: [
+            { question: "What is Money?", options: ["Paper", "Trust System", "Magic"], correct: 1, text: "It only works because we trust it." },
+            { question: "Barter means...", options: ["Stealing", "Trading items", "Buying"], correct: 1, text: "Swapping goods directly." },
+            { question: "Inflation is...", options: ["Good for savings", "Rising prices", "Free money"], correct: 1, text: "Purchasing power drops." },
+            { question: "First paper money?", options: ["USA", "China", "Mars"], correct: 1, text: "China invented it first." },
+            { question: "Fiat money is...", options: ["Backed by Gold", "Backed by Govt", "Car brand"], correct: 1, text: "Value by decree." },
+            { question: "Why not print more?", options: ["Inflation", "Paper shortage", "Lazy"], correct: 0, text: "More money = less value." },
+            { question: "Opportunity Cost", options: ["Lost value", "Price tag", "Free"], correct: 0, text: "What you give up to choose." },
+            { question: "Durability", options: ["Ice Cream", "Metal Coin", "Flower"], correct: 1, text: "Money must last." }
+        ],
+        calculator: [
+            { label: "Inflation Calc", question: "Burger $5. Inflation 10%. New Price?", answer: 5.5, text: "Costs rise over time." },
+            { label: "Barter Math", question: "1 Cow = 4 Goats. 2 Cows = ?", answer: 8, text: "Multiplication skills." },
+            { label: "Savings Goal", question: "Need $50. Save $5/week. Weeks?", answer: 10, text: "Patience pays off." },
+            { label: "Lost Value", question: "$100. Inflation -5%. Value?", answer: 95, text: "Cash loses value." },
+            { label: "Work Pay", question: "2 hours work. $15/hr. Total?", answer: 30, text: "Time is money." },
+            { label: "Trade Off", question: "Have $20. Game $15. Left?", answer: 5, text: "Opportunity cost." },
+            { label: "Double Up", question: "$10 x 2?", answer: 20, text: "Simple gains." },
+            { label: "Half Off", question: "50% of $40?", answer: 20, text: "Discount math." }
+        ],
+        tapLie: [
+            { text: "Money Facts", statements: [{text:"Salt was money", isLie:false}, {text:"Money is infinite", isLie:true}] },
+            { text: "Value", statements: [{text:"Scarcity adds value", isLie:false}, {text:"Sand is good money", isLie:true}] },
+            { text: "History", statements: [{text:"Coins are new", isLie:true}, {text:"Barter is old", isLie:false}] },
+            { text: "Inflation", statements: [{text:"Prices always drop", isLie:true}, {text:"Cash loses value", isLie:false}] },
+            { text: "Fiat", statements: [{text:"Backed by gold", isLie:true}, {text:"Govt backed", isLie:false}] },
+            { text: "Usage", statements: [{text:"Medium of exchange", isLie:false}, {text:"Only for rich", isLie:true}] },
+            { text: "Printing", statements: [{text:"Printing fixes debt", isLie:true}, {text:"Causes inflation", isLie:false}] },
+            { text: "Future", statements: [{text:"Crypto is digital", isLie:false}, {text:"Cash is forever", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Me trying to barter", bottomText: "The cashier at Walmart", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Government", bottomText: "Printing more money", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "My wallet", bottomText: "After inflation", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Finding $5", bottomText: "In old jeans", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Economics", bottomText: "Explained by memes", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Buying Power", bottomText: "1920 vs 2024", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Gold Standard", bottomText: "Fiat Money", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Stonks", bottomText: "Only go up", imageUrl: "https://i.imgflip.com/26am.jpg" }
         ]
     },
     "Budget Beach": {
-        bossName: "The Impulse Imp",
-        bossEmoji: "👺",
-        bossIntro: ["Buy it NOW!", "Who needs savings?", "Treat yourself!"],
-        topics: [
-            { q: "Budgeting rules?", e: "Track income vs expenses monthly.", a: ["Ignore it", "50/30/20 rule", "Spend freely"], c: 1 },
-            { q: "Budget apps?", e: "Track spending automatically.", a: ["Manual better", "Time saver", "Inaccurate"], c: 1 },
-            { q: "Spending trackers?", e: "Apps categorize expenses.", a: ["Manual logs", "Auto insights", "Ignore"], c: 1 },
-            { q: "Wellness budgets?", e: "Allocate for gym, mental health.", a: ["Luxury", "Investment", "Skip"], c: 1 },
-            { q: "Car financing?", e: "Lease vs buy based on use.", a: ["Always lease", "Buy and hold", "New every year"], c: 1 },
-            { q: "Auto leases?", e: "Rent car with mileage limits.", a: ["Own at end", "Lower payments", "Buy better"], c: 1 },
-            { q: "Emergency funds?", e: "3-6 months expenses in liquid cash.", a: ["Unnecessary", "Essential buffer", "Invest instead"], c: 1 },
-            { q: "Financial goals?", e: "SMART: Specific, Measurable, etc.", a: ["Vague dreams", "Detailed plans", "No need"], c: 1 }
+        swipe: [
+            { question: "Need or Want?", left: "PS5", right: "Rent", correct: "right", text: "Shelter first." },
+            { question: "Impulse Buy?", left: "Yes!", right: "Wait 24h", correct: "right", text: "Cool down rule." },
+            { question: "Coffee", left: "Make at Home", right: "Starbucks Daily", correct: "left", text: "Saves $1000/yr." },
+            { question: "Subscription", left: "Cancel Unused", right: "Keep All", correct: "left", text: "Leakage." },
+            { question: "Payday", left: "Spend it all", right: "Budget first", correct: "right", text: "Plan your cash." },
+            { question: "Sale!", left: "Buy 10", right: "Do I need it?", correct: "right", text: "Sales trick you." },
+            { question: "Bonus Cash", left: "Save", right: "Party", correct: "left", text: "Boost net worth." },
+            { question: "Tracking", left: "In Head", right: "App/Paper", correct: "right", text: "Write it down." }
+        ],
+        poll: [
+            { question: "50/30/20 Rule?", options: ["Needs/Wants/Save", "Food/Fun/Sleep", "Spend/Spend/Spend"], correct: 0, text: "The golden ratio." },
+            { question: "Pay Yourself...", options: ["Last", "First", "Never"], correct: 1, text: "Save before spending." },
+            { question: "Fixed Expense?", options: ["Rent", "Dining Out", "Movies"], correct: 0, text: "Same every month." },
+            { question: "Variable Expense?", options: ["Groceries", "Rent", "Insurance"], correct: 0, text: "Changes monthly." },
+            { question: "Emergency Fund?", options: ["For PS5", "For Flat Tire", "For Pizza"], correct: 1, text: "Unexpected costs." },
+            { question: "Zero-Based Budget", options: ["Income - Exp = 0", "Have $0", "Spend 0"], correct: 0, text: "Give every dollar a job." },
+            { question: "Lifestyle Creep", options: ["Scary monster", "Spending rises w/ income", "Good thing"], correct: 1, text: "Avoid upgrading too fast." },
+            { question: "Sinking Fund", options: ["Titanic", "Saving for big item", "Losing money"], correct: 1, text: "Save gradually." }
+        ],
+        calculator: [
+            { label: "50/30/20", question: "$100 Income. Save 20%. How much?", answer: 20, text: "Pay yourself first." },
+            { label: "Daily Coffee", question: "$5/day x 30 days?", answer: 150, text: "Adds up fast." },
+            { label: "Yearly Sub", question: "$10/mo x 12?", answer: 120, text: "Check recurring costs." },
+            { label: "Rent Ratio", question: "Income $3000. Rent $1000. %?", answer: 33, text: "Keep under 30% if can." },
+            { label: "Savings Goal", question: "Need $600. Save $50/mo. Months?", answer: 12, text: "1 Year." },
+            { label: "Impulse Save", question: "Skip $60 game. Invest it.", answer: 60, text: "Wealth grown." },
+            { label: "Net Income", question: "$2000 Gross - $400 Tax?", answer: 1600, text: "What you keep." },
+            { label: "Emergency", question: "Exp $1000. 3 Months Fund?", answer: 3000, text: "Safety net." }
+        ],
+        tapLie: [
+            { text: "Budget Myths", statements: [{text:"Budgets are for poor people", isLie:true}, {text:"Tracking helps", isLie:false}] },
+            { text: "Spending", statements: [{text:"Small purchases don't count", isLie:true}, {text:"Latte factor is real", isLie:false}] },
+            { text: "Rules", statements: [{text:"50/30/20 is a law", isLie:true}, {text:"It's a guideline", isLie:false}] },
+            { text: "Credit", statements: [{text:"Credit card is free money", isLie:true}, {text:"It's a loan", isLie:false}] },
+            { text: "Savings", statements: [{text:"Save what's left", isLie:true}, {text:"Save first", isLie:false}] },
+            { text: "Tracking", statements: [{text:"Bank app does it all", isLie:true}, {text:"Review weekly", isLie:false}] },
+            { text: "Goals", statements: [{text:"Goals help saving", isLie:false}, {text:"YOLO everything", isLie:true}] },
+            { text: "Auto-Pay", statements: [{text:"Avoids late fees", isLie:false}, {text:"Is risky", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Me looking at", bottomText: "My bank account", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Payday hits", bottomText: "Bills hit harder", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Budgeting", bottomText: "Expectation vs Reality", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Direct Deposit", bottomText: "Gone in 60 seconds", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Buying lunch", bottomText: "Packing lunch", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "50/30/20", bottomText: "I thought it was 100/0/0", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Treat Yo Self", bottomText: "Overdraft Fee", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Financial Advisor", bottomText: "Me spending on slime", imageUrl: "https://i.imgflip.com/30b1gx.jpg" }
         ]
     },
     "Compound Cliffs": {
-        bossName: "The Time Thief",
-        bossEmoji: "⏳",
-        bossIntro: ["Wait until later!", "You have plenty of time!", "Start tomorrow!"],
-        topics: [
-            { q: "Compound interest?", e: "Interest on interest grows wealth exponentially.", a: ["Magic", "Scam", "Real growth"], c: 2 },
-            { q: "Savings accounts?", e: "Safe place for money with interest.", a: ["High yield best", "Any bank fine", "Avoid them"], c: 0 },
-            { q: "Retirement planning?", e: "Start early for compound magic.", a: ["Later fine", "Now essential", "Government covers"], c: 1 },
-            { q: "401k matching?", e: "Free employer contributions.", a: ["Skip it", "Max match", "Withdraw early"], c: 1 },
-            { q: "HSA benefits?", e: "Tax-free for medical expenses.", a: ["Limited use", "Triple advantage", "Like IRA"], c: 1 },
-            { q: "Life insurance?", e: "Term vs whole for protection.", a: ["Investment tool", "Family safeguard", "Unnecessary"], c: 1 },
-            { q: "Term life?", e: "Coverage for set years, low cost.", a: ["Builds cash", "Pure protection", "Expensive"], c: 1 },
-            { q: "Whole life?", e: "Permanent coverage with cash value.", a: ["Cheap", "Investment hybrid", "Term better"], c: 1 }
+        swipe: [
+            { question: "Start Investing?", left: "Age 18", right: "Age 40", correct: "left", text: "Time is your best friend." },
+            { question: "Compound is...", left: "Linear", right: "Exponential", correct: "right", text: "Hockey stick growth." },
+            { question: "Consistency", left: "Lump Sum Once", right: "Monthly DCA", correct: "right", text: "Habit beats luck." },
+            { question: "Withdraw Early?", left: "No!", right: "Yes", correct: "left", text: "Don't interrupt compounding." },
+            { question: "Interest Rate", left: "1% APY", right: "8% APY", correct: "right", text: "Higher is better." },
+            { question: "Time Horizon", left: "1 Year", right: "40 Years", correct: "right", text: "Long game wins." },
+            { question: "The 8th Wonder", left: "Pyramids", right: "Compounding", correct: "right", text: "According to Einstein." },
+            { question: "Snowball", left: "Rolls downhill", right: "Melts", correct: "left", text: "Gathers mass." }
+        ],
+        poll: [
+            { question: "Compound Interest is...", options: ["Interest on Interest", "Free money", "A bank fee"], correct: 0, text: "Money making money." },
+            { question: "Rule of 72?", options: ["Retirement age", "Doubling time", "Tax rule"], correct: 1, text: "72 / Rate = Years to double." },
+            { question: "Best time to plant tree?", options: ["20 years ago", "Tomorrow", "Never"], correct: 0, text: "Second best is today." },
+            { question: "Snowball Effect", options: ["Gets smaller", "Gets bigger faster", "Stops"], correct: 1, text: "Momentum." },
+            { question: "High Yield Savings", options: ["0.01%", "4-5%", "Negative"], correct: 1, text: "Beats regular banks." },
+            { question: "Inflation vs Growth", options: ["Growth > Inflation", "Inflation > Growth", "Equal"], correct: 0, text: "Beat inflation to win." },
+            { question: "Start early because...", options: ["More time", "Less money needed", "Both"], correct: 2, text: "Time leverage." },
+            { question: "Exponential Graph", options: ["Straight line", "Curved up", "Curved down"], correct: 1, text: "Skyrockets at the end." }
+        ],
+        calculator: [
+            { label: "Doubling", question: "72 / 8% return = Years?", answer: 9, text: "Doubles every 9 years." },
+            { label: "Simple Interest", question: "$100 x 10%?", answer: 10, text: "Just the start." },
+            { label: "Compound", question: "$100 + 10% + 10%?", answer: 121, text: "Not 120. 121." },
+            { label: "Years", question: "Start 20 vs 30. Diff?", answer: 10, text: "Huge impact." },
+            { label: "Rule 72", question: "72 / 6%?", answer: 12, text: "Slower growth." },
+            { label: "Loss", question: "$100 - 50% = $50. Need to recover?", answer: 100, text: "Need 100% gain to fix 50% loss." },
+            { label: "Savings", question: "$500/mo x 12?", answer: 6000, text: "Base capital." },
+            { label: "Retirement", question: "65 - 25?", answer: 40, text: "Years to grow." }
+        ],
+        tapLie: [
+            { text: "Compound Truths", statements: [{text:"Linear growth", isLie:true}, {text:"Exponential growth", isLie:false}] },
+            { text: "Timing", statements: [{text:"Start late is fine", isLie:true}, {text:"Start early is best", isLie:false}] },
+            { text: "Math", statements: [{text:"1+1=2", isLie:false}, {text:"1+1=3 via compound", isLie:false}] },
+            { text: "Wealth", statements: [{text:"Get rich quick", isLie:true}, {text:"Get rich slow", isLie:false}] },
+            { text: "Rates", statements: [{text:"0.1% is good", isLie:true}, {text:"5% is good", isLie:false}] },
+            { text: "Risk", statements: [{text:"No risk exists", isLie:true}, {text:"Inflation is a risk", isLie:false}] },
+            { text: "Consistency", statements: [{text:"DCA works", isLie:false}, {text:"Timing works", isLie:true}] },
+            { text: "Secret", statements: [{text:"Time is key", isLie:false}, {text:"Amount is key", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Investing $50/mo", bottomText: "Retiring Millionaire", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Waiting to invest", bottomText: "Opportunity cost", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Warren Buffett", bottomText: "Started at 11", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Compound Interest", bottomText: "Doing the heavy lifting", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Me at 20", bottomText: "I have time", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Me at 60", bottomText: "Where is my money", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Exponential Curve", bottomText: "Go brrr", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Savings Account", bottomText: "0.01% Interest", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     },
     "Bank Vault": {
-        bossName: "The Fee Fiend",
-        bossEmoji: "🦇",
-        bossIntro: ["I love overdrafts!", "Minimum balance fee!", "ATM surcharge!"],
-        topics: [
-            { q: "Credit freezes?", e: "Protect against identity theft.", a: ["Blocks loans", "Free service", "Permanent"], c: 1 },
-            { q: "Credit monitoring?", e: "Alert for changes/fraud.", a: ["Free annual", "Paid services", "Ignore"], c: 1 },
-            { q: "Peer lending?", e: "Lend via platforms for interest.", a: ["Bank safer", "Higher returns", "No risk"], c: 1 },
-            { q: "P2P risks?", e: "Defaults can lose principal.", a: ["Guaranteed", "Diversify loans", "Bank level safe"], c: 1 },
-            { q: "Home equity loans?", e: "Borrow against house value.", a: ["Free money", "Second mortgage", "No interest"], c: 1 },
-            { q: "HELOCs?", e: "Revolving credit on home equity.", a: ["Fixed loan", "Flexible draw", "No collateral"], c: 1 },
-            { q: "Mortgage types?", e: "Fixed vs adjustable rates.", a: ["Adjustable safer", "Fixed predictable", "No difference"], c: 1 },
-            { q: "ARM mortgages?", e: "Rates adjust after initial period.", a: ["Fixed forever", "Potential savings", "Always rise"], c: 1 },
-            { q: "FHA loans?", e: "Low down payment for first-timers.", a: ["High credit need", "Gov backed", "Private only"], c: 1 }
+        swipe: [
+            { question: "Store Money?", left: "Under Mattress", right: "Bank", correct: "right", text: "Safety + Interest." },
+            { question: "Account Type", left: "Checking", right: "Savings", correct: "right", text: "For holding money." },
+            { question: "Bank Fail?", left: "Lose All", right: "FDIC Insured", correct: "right", text: "Govt protects $250k." },
+            { question: "Fee?", left: "Pay $10/mo", right: "No Fee", correct: "right", text: "Avoid fees." },
+            { question: "Debit vs Credit", left: "Debit", right: "Credit", correct: "left", text: "Debit uses OWN money." },
+            { question: "Overdraft", left: "Turn Off", right: "Enable", correct: "left", text: "Avoid fees." },
+            { question: "Interest", left: "High Yield", right: "0.01%", correct: "left", text: "Free money." },
+            { question: "Direct Deposit", left: "Yes", right: "Paper Check", correct: "left", text: "Faster access." }
+        ],
+        poll: [
+            { question: "FDIC Insurance?", options: ["$250,000", "$1,000", "Unlimited"], correct: 0, text: "Per bank, per person." },
+            { question: "Liquidity means...", options: ["Water", "Access to cash", "Frozen"], correct: 1, text: "How fast you can spend it." },
+            { question: "Overdraft fee?", options: ["Free", "$35 penalty", "Bonus"], correct: 1, text: "When you spend < $0." },
+            { question: "HYSA stands for", options: ["High Yield Savings", "Hello You", "High Yard"], correct: 0, text: "Pays more interest." },
+            { question: "Checking Account", options: ["For spending", "For investing", "For saving"], correct: 0, text: "Daily driver." },
+            { question: "Routing Number", options: ["Bank ID", "Your ID", "Password"], correct: 0, text: "Identifies the bank." },
+            { question: "ATM Fees", options: ["Good", "Avoid", "Mandatory"], correct: 1, text: "Use in-network." },
+            { question: "Credit Union", options: ["For profit", "Non-profit", "Illegal"], correct: 1, text: "Member owned." }
+        ],
+        calculator: [
+            { label: "Interest", question: "$1000 @ 5%?", answer: 50, text: "Free $50." },
+            { label: "Fee Drain", question: "$10 fee x 12 months?", answer: 120, text: "Lost money." },
+            { label: "FDIC", question: "Have $300k. Insured?", answer: 250000, text: "$50k at risk." },
+            { label: "ATM", question: "$3 fee x 4 times?", answer: 12, text: "Waste." },
+            { label: "Check", question: "Write $50. Have $40. Fee $35. Cost?", answer: 85, text: "Expensive mistake." },
+            { label: "Mobile Deposit", question: "Time saved?", answer: 30, text: "Minutes." },
+            { label: "Split", question: "50% of $500 to Savings?", answer: 250, text: "Auto-save." },
+            { label: "Growth", question: "$100 @ 1% vs 5%?", answer: 4, text: "Difference." }
+        ],
+        tapLie: [
+            { text: "Banking", statements: [{text:"Banks keep all cash in vault", isLie:true}, {text:"They lend it out", isLie:false}] },
+            { text: "Safety", statements: [{text:"FDIC is govt backed", isLie:false}, {text:"Crypto is FDIC", isLie:true}] },
+            { text: "Debit", statements: [{text:"Builds credit", isLie:true}, {text:"Takes cash now", isLie:false}] },
+            { text: "Savings", statements: [{text:"HYSA pays more", isLie:false}, {text:"Checking pays more", isLie:true}] },
+            { text: "Fees", statements: [{text:"Are mandatory", isLie:true}, {text:"Can be waived", isLie:false}] },
+            { text: "Online", statements: [{text:"Brick & mortar only", isLie:true}, {text:"Online banks exist", isLie:false}] },
+            { text: "Access", statements: [{text:"24/7 ATM", isLie:false}, {text:"9-5 only", isLie:true}] },
+            { text: "Checks", statements: [{text:"Obsolete but used", isLie:false}, {text:"Illegal now", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Checking Account", bottomText: "0.01% Interest", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Overdraft Fee", bottomText: "I have -$5", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Bank Teller", bottomText: "Judging my purchases", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Direct Deposit", bottomText: "Hit at 2am", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Savings Account", bottomText: "Aaaand it's gone", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Debit Card", bottomText: "Declined", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "FDIC", bottomText: "Saving the day", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Credit Union", bottomText: "Bank", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     },
     "Debt Dungeon": {
-        bossName: "The Interest Ogre",
-        bossEmoji: "👹",
-        bossIntro: ["Minimum payment only!", "Sign here!", "25% APR!"],
-        topics: [
-            { q: "Credit cards 101?", e: "Borrow money, pay interest if not full.", a: ["Free money", "Debt trap", "Reward tool"], c: 2 },
-            { q: "Good vs bad debt?", e: "Invest in assets vs consume.", a: ["All bad", "Depends on use", "All good"], c: 1 },
-            { q: "Credit scores?", e: "Affects loans and rates.", a: ["Ignore it", "Build high", "Low is fine"], c: 1 },
-            { q: "Credit utilization?", e: "Keep under 30% for good score.", a: ["Max it", "Low ratio", "Irrelevant"], c: 1 },
-            { q: "Student loans?", e: "Pay minimum or aggressively.", a: ["Ignore", "Refinance low", "Forgive hope"], c: 1 },
-            { q: "Loan defaults?", e: "Diversify to minimize losses.", a: ["Full recovery", "Partial risk", "Avoid P2P"], c: 1 }
+        swipe: [
+            { question: "Pay Bill", left: "Minimum", right: "Full Balance", correct: "right", text: "Avoid interest." },
+            { question: "Offer", left: "25% APR", right: "15% APR", correct: "right", text: "Lower is better." },
+            { question: "Credit Score", left: "800", right: "500", correct: "left", text: "Higher is better." },
+            { question: "Spending", left: "Max Limit", right: "10% Limit", correct: "right", text: "Utilization ratio." },
+            { question: "Miss Payment?", left: "Never", right: "It's ok", correct: "left", text: "Crushes score." },
+            { question: "Loan", left: "Payday Loan", right: "Bank Loan", correct: "right", text: "Payday = Trap." },
+            { question: "Debt Type", left: "Good (House)", right: "Bad (Shoes)", correct: "left", text: "Asset vs Liability." },
+            { question: "Co-sign?", left: "Yes", right: "No", correct: "right", text: "Risky business." }
+        ],
+        poll: [
+            { question: "APR stands for...", options: ["Annual Percentage Rate", "Apple", "April"], correct: 0, text: "Cost of borrowing." },
+            { question: "Good Credit Score?", options: ["300", "500", "750+"], correct: 2, text: "Unlock best rates." },
+            { question: "Credit Utilization?", options: ["Max it", "Keep under 30%", "Irrelevant"], correct: 1, text: "Don't look desperate." },
+            { question: "Missed Payment", options: ["Stays 7 years", "Gone in week", "No biggie"], correct: 0, text: "Haunts you." },
+            { question: "Payday Loans", options: ["400% Interest", "Free", "Good deal"], correct: 0, text: "Predatory." },
+            { question: "Student Loans", options: ["Forgivable", "Bankruptcy Proof", "Free"], correct: 1, text: "Hard to erase." },
+            { question: "Minimum Payment", options: ["Pays off debt", "Covers interest mostly", "Smart"], correct: 1, text: "Debt trap." },
+            { question: "Hard Inquiry", options: ["Checks credit", "Hurts score slightly", "Both"], correct: 2, text: "When applying." }
+        ],
+        calculator: [
+            { label: "Interest", question: "$1000 x 20% APR?", answer: 200, text: "Cost per year." },
+            { label: "Payoff", question: "Min pay 2%. Balance $1000. Pay?", answer: 20, text: "Barely touches principal." },
+            { label: "Utilization", question: "Limit $1000. Spent $500. %?", answer: 50, text: "Too high (aim <30%)." },
+            { label: "Score", question: "Start 600. +50 pts?", answer: 650, text: "Improving." },
+            { label: "Late Fee", question: "$35 x 3 months?", answer: 105, text: "Wasted cash." },
+            { label: "Total Cost", question: "Loan $10k. Pay back $15k. Int?", answer: 5000, text: "Cost of money." },
+            { label: "Savings", question: "Refinance 10% -> 5% on $100?", answer: 5, text: "Saved." },
+            { label: "Time", question: "7 years on report.", answer: 7, text: "Long time." }
+        ],
+        tapLie: [
+            { text: "Credit Myths", statements: [{text:"Carrying a balance helps score", isLie:true}, {text:"Pay in full", isLie:false}] },
+            { text: "Checking", statements: [{text:"Checking score exists", isLie:true}, {text:"Credit score is key", isLie:false}] },
+            { text: "Debt", statements: [{text:"All debt is bad", isLie:true}, {text:"Leverage exists", isLie:false}] },
+            { text: "Limits", statements: [{text:"Higher limit helps utilization", isLie:false}, {text:"Lower limit is better", isLie:true}] },
+            { text: "Bankruptcy", statements: [{text:"Solves everything", isLie:true}, {text:"Ruins credit for years", isLie:false}] },
+            { text: "Cards", statements: [{text:"Are evil", isLie:true}, {text:"Are tools", isLie:false}] },
+            { text: "Debit", statements: [{text:"Builds credit", isLie:true}, {text:"Does not build credit", isLie:false}] },
+            { text: "Freeze", statements: [{text:"Stops identity theft", isLie:false}, {text:"Deletes score", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Minimum Payment", bottomText: "Remaining Debt", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Credit Score", bottomText: "Drop by 1 point", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Me swiping", bottomText: "Me seeing bill", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "0% APR Intro", bottomText: "29% Later", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Student Loans", bottomText: "Exists", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Credit Limit", bottomText: "Increase", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Collections", bottomText: "Calling me", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Payday Lender", bottomText: "Shark", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     },
     "Hustle Hub": {
-        bossName: "The Tax Titan",
-        bossEmoji: "🕴️",
-        bossIntro: ["Where's my cut?", "Audit time!", "Gross isn't Net!"],
-        topics: [
-            { q: "Side hustles?", e: "Extra income sources for security.", a: ["Waste time", "Build wealth", "Only for pros"], c: 1 },
-            { q: "Gig economy?", e: "Flexible work via apps.", a: ["Unstable", "Extra cash", "Full career"], c: 1 },
-            { q: "Freelancing taxes?", e: "Quarterly payments required.", a: ["Same as employee", "Self-employment tax", "No tax"], c: 1 },
-            { q: "Gig taxes?", e: "1099 forms for self-employed.", a: ["Employer pays", "Quarterly self", "Exempt"], c: 1 },
-            { q: "1099 vs W2?", e: "1099: Independent, more taxes.", a: ["Same benefits", "W2 easier", "1099 freedom"], c: 2 },
-            { q: "Taxes 101?", e: "Pay on income, deductions reduce.", a: ["Avoid them", "Plan smartly", "Max pay"], c: 1 },
-            { q: "Tax deductions?", e: "Charity, home office reduce bill.", a: ["Standard only", "Itemized savings", "Avoid audit"], c: 1 },
-            { q: "Itemized deductions?", e: "Medical, mortgage over standard.", a: ["Always take", "If exceed std", "Business only"], c: 1 }
+        swipe: [
+            { question: "Tax Form", left: "W-2", right: "1099", correct: "right", text: "Freelancers get 1099." },
+            { question: "Income", left: "Gross", right: "Net", correct: "right", text: "Net is what you keep." },
+            { question: "Side Gig", left: "Uber", right: "Sleep", correct: "left", text: "Active income." },
+            { question: "Deduction", left: "Video Games", right: "Laptop", correct: "right", text: "Business expense." },
+            { question: "Pay Taxes", left: "Quarterly", right: "Never", correct: "left", text: "Avoid penalties." },
+            { question: "Skill", left: "Learn Code", right: "Watch TV", correct: "left", text: "High value skill." },
+            { question: "Client", left: "No Contract", right: "Contract", correct: "right", text: "Protect yourself." },
+            { question: "Raise", left: "Ask", right: "Wait", correct: "left", text: "Negotiate." }
+        ],
+        poll: [
+            { question: "Gross vs Net", options: ["Gross is bigger", "Net is bigger", "Same"], correct: 0, text: "Taxes eat Gross." },
+            { question: "1099 Worker", options: ["Employee", "Contractor", "Volunteer"], correct: 1, text: "Self-employed." },
+            { question: "Progressive Tax", options: ["Flat rate", "More income = higher %", "Random"], correct: 1, text: "Brackets." },
+            { question: "Side Hustle", options: ["Hobby", "Income stream", "Nap"], correct: 1, text: "Extra cash." },
+            { question: "W-4 Form", options: ["Tax withholding", "Radio station", "Robot"], correct: 0, text: "Tells boss tax info." },
+            { question: "Gig Economy", options: ["Music", "Uber/DoorDash", "Sleep"], correct: 1, text: "Flexible work." },
+            { question: "Passive Income", options: ["Working hard", "Sleeping money", "Stealing"], correct: 1, text: "Earn while sleeping." },
+            { question: "Audit", options: ["IRS Check", "Car brand", "Sound"], correct: 0, text: "Keep receipts." }
+        ],
+        calculator: [
+            { label: "Tax Bite", question: "$1000 - 20% Tax?", answer: 800, text: "Net pay." },
+            { label: "Hourly", question: "$20/hr x 10 hrs?", answer: 200, text: "Gross pay." },
+            { label: "Side Gig", question: "$50 per job x 4?", answer: 200, text: "Hustle." },
+            { label: "Expense", question: "Earn $100. Spend $20 gas. Profit?", answer: 80, text: "Net profit." },
+            { label: "Self Tax", question: "15.3% of $100?", answer: 15.3, text: "FICA tax." },
+            { label: "Raise", question: "$50k + 10%?", answer: 55000, text: "New salary." },
+            { label: "Weekly", question: "$52k / 52 weeks?", answer: 1000, text: "Weekly gross." },
+            { label: "Tips", question: "$100 bill. 20% tip?", answer: 20, text: "Service ind." }
+        ],
+        tapLie: [
+            { text: "Taxes", statements: [{text:"Cash tips are tax free", isLie:true}, {text:"Report all income", isLie:false}] },
+            { text: "Freelance", statements: [{text:"Boss pays your tax", isLie:true}, {text:"You pay your tax", isLie:false}] },
+            { text: "Deductions", statements: [{text:"Everything is free", isLie:true}, {text:"Lowers taxable income", isLie:false}] },
+            { text: "Refund", statements: [{text:"Free money from govt", isLie:true}, {text:"Return of overpayment", isLie:false}] },
+            { text: "Brackets", statements: [{text:"Higher bracket hurts all income", isLie:true}, {text:"Marginal rate", isLie:false}] },
+            { text: "LLC", statements: [{text:"Protects assets", isLie:false}, {text:"Means no taxes", isLie:true}] },
+            { text: "Resignation", statements: [{text:"2 weeks notice", isLie:false}, {text:"Ghosting is pro", isLie:true}] },
+            { text: "Salary", statements: [{text:"Negotiable", isLie:false}, {text:"Fixed forever", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Gross Pay", bottomText: "Net Pay", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Freelancers", bottomText: "Paying own taxes", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "IRS", bottomText: "Watching Venmo", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Side Hustle", bottomText: "Full Time Job", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Tax Refund", bottomText: "It's my own money", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Write it off", bottomText: "I don't know what that means", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Boss makes a dollar", bottomText: "I make a dime", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Promoted", bottomText: "More work same pay", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     },
     "Stony Stocks": {
-        bossName: "The Panic Bear",
-        bossEmoji: "🐻",
-        bossIntro: ["Market crash!", "Sell everything!", "It's going to zero!"],
-        topics: [
-            { q: "Stock market basics?", e: "Buy shares in companies for growth.", a: ["Gambling", "Long-term investment", "Quick rich"], c: 1 },
-            { q: "Diversification?", e: "Spread risks across assets.", a: ["All in one", "Multiple types", "Cash only"], c: 1 },
-            { q: "Index funds?", e: "Diversified, low-cost market tracking.", a: ["Beat pros", "Too risky", "Active better"], c: 0 },
-            { q: "ETFs vs mutual funds?", e: "ETFs trade like stocks, lower fees.", a: ["Same thing", "ETFs better", "Mutuals safer"], c: 1 },
-            { q: "Passive ETFs?", e: "Track indices with minimal management.", a: ["Active outperform", "Low cost win", "High fees"], c: 1 },
-            { q: "Active ETFs?", e: "Managed with ETF liquidity.", a: ["Passive only", "Hybrid approach", "High cost"], c: 1 },
-            { q: "Dollar cost averaging?", e: "Invest fixed amount regularly.", a: ["Time market", "Average costs", "All at once"], c: 1 },
-            { q: "Stock splits?", e: "Increase shares, lower price.", a: ["Value change", "Accessibility boost", "Bad sign"], c: 1 },
-            { q: "Reverse splits?", e: "Reduce shares to boost price.", a: ["Good news", "Delisting risk", "No change"], c: 1 },
-            { q: "Share buybacks?", e: "Company repurchases to boost value.", a: ["Bad for shareholders", "EPS increase", "Debt funded"], c: 1 },
-            { q: "Dividend investing?", e: "Companies pay shareholders.", a: ["Growth stocks better", "Passive income", "Volatile"], c: 1 },
-            { q: "Dividend aristocrats?", e: "Companies raising payouts yearly.", a: ["Volatile", "Reliable income", "New tech"], c: 1 },
-            { q: "Growth dividends?", e: "Reinvest for compound growth.", a: ["Cash out", "Auto reinvest", "Tax free"], c: 1 },
-            { q: "Expense ratios?", e: "Annual fund fees, keep low.", a: ["Ignore", "Under 0.5%", "High better"], c: 1 }
+        swipe: [
+            { question: "Strategy", left: "Day Trade", right: "Long Term", correct: "right", text: "Time in market." },
+            { question: "Diversity", left: "1 Stock", right: "Index Fund", correct: "right", text: "Safety in numbers." },
+            { question: "Market Crash", left: "Panic Sell", right: "Buy Dip", correct: "right", text: "Discount shopping." },
+            { question: "Risk", left: "Crypto", right: "S&P 500", correct: "right", text: "Stability." },
+            { question: "Dividends", left: "Reinvest", right: "Spend", correct: "left", text: "Compound growth." },
+            { question: "Fees", left: "High Fee Fund", right: "Low Cost ETF", correct: "right", text: "Keep your gains." },
+            { question: "Timing", left: "Time the market", right: "Time IN market", correct: "right", text: "Consistency." },
+            { question: "Advice", left: "TikTok Guru", right: "Research", correct: "right", text: "DYOR." }
+        ],
+        poll: [
+            { question: "S&P 500 is...", options: ["500 Companies", "500 Dollars", "Race car"], correct: 0, text: "Top US stocks." },
+            { question: "Bear Market", options: ["Prices Up", "Prices Down", "Zoo"], correct: 1, text: "Optimism low." },
+            { question: "Bull Market", options: ["Prices Up", "Prices Down", "Farm"], correct: 0, text: "Optimism high." },
+            { question: "IPO", options: ["Initial Public Offering", "iPhone", "International"], correct: 0, text: "Going public." },
+            { question: "Dividend", options: ["Fee", "Profit share", "Tax"], correct: 1, text: "Company pays you." },
+            { question: "ETF", options: ["Exchange Traded Fund", "Extra Time", "Eat The Food"], correct: 0, text: "Basket of stocks." },
+            { question: "Volatility", options: ["Stability", "Wild swings", "Volume"], correct: 1, text: "Risk measure." },
+            { question: "Market Cap", options: ["Hat", "Total Value", "Store limit"], correct: 1, text: "Price x Shares." }
+        ],
+        calculator: [
+            { label: "Profit", question: "Buy $10. Sell $15. Gain?", answer: 5, text: "Capital gain." },
+            { label: "Loss", question: "Buy $20. Sell $10. Loss?", answer: 10, text: "Capital loss." },
+            { label: "Percentage", question: "$100 to $110. %?", answer: 10, text: "10% Return." },
+            { label: "Dividend", question: "3% yield on $100?", answer: 3, text: "Income." },
+            { label: "Share Count", question: "$100. Share price $20. Qty?", answer: 5, text: "Shares." },
+            { label: "Crash", question: "$100 drops 20%?", answer: 80, text: "Correction." },
+            { label: "Double", question: "Rule 72 @ 10%?", answer: 7.2, text: "Years." },
+            { label: "Fee", question: "1% fee on $1000?", answer: 10, text: "Drag." }
+        ],
+        tapLie: [
+            { text: "Investing", statements: [{text:"Guaranteed returns exist", isLie:true}, {text:"Risk and reward correlate", isLie:false}] },
+            { text: "Day Trading", statements: [{text:"Easy money", isLie:true}, {text:"High risk", isLie:false}] },
+            { text: "Market", statements: [{text:"Always goes up short term", isLie:true}, {text:"Trends up long term", isLie:false}] },
+            { text: "Diversification", statements: [{text:"Lowers risk", isLie:false}, {text:"Limits gains only", isLie:true}] },
+            { text: "Buying", statements: [{text:"Buy low sell high", isLie:false}, {text:"Buy high sell low", isLie:true}] },
+            { text: "Crypto", statements: [{text:"Is a stock", isLie:true}, {text:"Is an asset class", isLie:false}] },
+            { text: "Index", statements: [{text:"Beats most pros", isLie:false}, {text:"Is for losers", isLie:true}] },
+            { text: "Shorting", statements: [{text:"Betting against", isLie:false}, {text:"Buying small", isLie:true}] }
+        ],
+        meme: [
+            { topText: "Stonks", bottomText: "Only go up", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Buying the dip", bottomText: "It keeps dipping", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "Wall Street Bets", bottomText: "Loss porn", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "S&P 500", bottomText: "Chill & Grow", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Crypto", bottomText: "Rollercoaster", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Dividend", bottomText: "$0.12 payout", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Bear Market", bottomText: "Everything is cheap", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Paper Hands", bottomText: "Sold at bottom", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     },
     "Wealth Empire": {
-        bossName: "Lifestyle Creep",
-        bossEmoji: "🧟",
-        bossIntro: ["You need a better car!", "Upgrade your house!", "Spend it all!"],
-        topics: [
-            { q: "Wealth mindset?", e: "Think abundance, not scarcity.", a: ["Luck based", "Action driven", "Born rich"], c: 1 },
-            { q: "FIRE movement?", e: "Save aggressively to retire early.", a: ["Impossible", "Frugal living", "Spend more"], c: 1 },
-            { q: "Lean FIRE?", e: "Minimalist early retirement.", a: ["Fat better", "Frugal path", "Spend heavy"], c: 1 },
-            { q: "FIRE calculations?", e: "4% rule for safe withdrawal.", a: ["Spend all", "Conservative rate", "10% draw"], c: 1 },
-            { q: "Passive income ideas?", e: "Dividends, royalties, rentals.", a: ["Active only", "Multiple streams", "One job enough"], c: 1 },
-            { q: "Real estate investing?", e: "Rental income and appreciation.", a: ["Too expensive", "Passive wealth", "Risky flip"], c: 1 },
-            { q: "REITs?", e: "Invest in real estate trusts.", a: ["Direct buy better", "Diversified properties", "High fees"], c: 1 },
-            { q: "Real estate flips?", e: "Buy, renovate, sell for profit.", a: ["Easy flip", "Market risk", "Guaranteed"], c: 1 },
-            { q: "Flip financing?", e: "Hard money loans for quick buys.", a: ["Bank mortgage", "High interest short", "Cash only"], c: 1 },
-            { q: "Crypto fundamentals?", e: "Decentralized digital assets.", a: ["Scam", "Future money", "Stable"], c: 1 },
-            { q: "Crypto mining?", e: "Validate transactions for rewards.", a: ["Easy money", "Energy intensive", "Passive"], c: 1 },
-            { q: "Mining pools?", e: "Share resources for steady rewards.", a: ["Solo win big", "Group stable", "Illegal"], c: 1 },
-            { q: "Proof of stake?", e: "Hold coins to validate, less energy.", a: ["Mining same", "Eco friendly", "No rewards"], c: 1 },
-            { q: "NFT investing?", e: "Digital ownership with blockchain.", a: ["Art only", "Speculative asset", "Stable value"], c: 1 },
-            { q: "NFT royalties?", e: "Earn on resales automatically.", a: ["One-time", "Ongoing cut", "No fees"], c: 1 },
-            { q: "NFT marketplaces?", e: "OpenSea for buying/selling.", a: ["Free mint", "Gas fees", "No blockchain"], c: 1 },
-            { q: "Options trading?", e: "Contracts for buy/sell rights.", a: ["Beginner friendly", "Advanced strategy", "Guaranteed win"], c: 1 },
-            { q: "Options hedging?", e: "Protect portfolio from drops.", a: ["Speculation only", "Risk reduction", "Beginner tool"], c: 1 },
-            { q: "Put options?", e: "Sell right if price drops.", a: ["Bullish", "Bearish protection", "Call same"], c: 1 },
-            { q: "Angel investing?", e: "Fund early-stage startups.", a: ["High risk/reward", "Safe bet", "For pros only"], c: 0 },
-            { q: "Venture capital?", e: "Invest in high-growth companies.", a: ["Low returns", "Startup fuel", "Debt based"], c: 1 },
-            { q: "VC stages?", e: "Seed, Series A, etc. for growth.", a: ["One round", "Multi-phase", "Debt only"], c: 1 },
-            { q: "Angel networks?", e: "Group funding for deals.", a: ["Solo better", "Shared risk", "Government"], c: 1 },
-            { q: "Angel syndicates?", e: "Pool funds with lead investor.", a: ["Individual", "Group leverage", "VC only"], c: 1 },
-            { q: "Crowdfunding?", e: "Pool money for projects/startups.", a: ["Donation only", "Equity possible", "Scam risk"], c: 1 },
-            { q: "Equity crowdfunding?", e: "Invest in startups via platforms.", a: ["Donors only", "Share ownership", "No returns"], c: 1 },
-            { q: "Reward crowdfunding?", e: "Back for products/perks.", a: ["Equity get", "Pre-order like", "Donation"], c: 1 },
-            { q: "Exit strategies?", e: "IPO or acquisition for returns.", a: ["Hold forever", "Quick sell", "VC goal"], c: 2 },
-            { q: "Roth IRA intro?", e: "Tax-free growth for retirement.", a: ["Pay tax now", "Pay tax later", "No tax"], c: 0 },
-            { q: "Roth conversions?", e: "Shift traditional to tax-free.", a: ["Tax hit now", "Avoid later", "Illegal"], c: 0 },
-            { q: "Roth ladders?", e: "Convert gradually to avoid taxes.", a: ["All at once", "Staggered", "Skip it"], c: 1 },
-            { q: "Backdoor Roth?", e: "For high earners via traditional.", a: ["Direct fine", "Income bypass", "Illegal"], c: 1 },
-            { q: "HSA investing?", e: "Grow tax-free for retirement.", a: ["Cash only", "Stock options", "Withdraw anytime"], c: 1 },
-            { q: "HSA rollovers?", e: "Carry over unused funds yearly.", a: ["Use or lose", "Unlimited growth", "Taxed withdraw"], c: 1 }
+        swipe: [
+            { question: "Asset Class", left: "Real Estate", right: "Car", correct: "left", text: "Appreciates." },
+            { question: "Goal", left: "Rich", right: "Wealthy", correct: "right", text: "Wealth = Time Freedom." },
+            { question: "Retire", left: "Age 65", right: "When Ready", correct: "right", text: "FIRE movement." },
+            { question: "Income", left: "Active", right: "Passive", correct: "right", text: "Sleep money." },
+            { question: "Lifestyle", left: "Frugal", right: "Flashy", correct: "left", text: "Stealth wealth." },
+            { question: "Legacy", left: "Spend all", right: "Trust Fund", correct: "right", text: "Generational." },
+            { question: "Tax", left: "Avoid (Legal)", right: "Evade (Illegal)", correct: "left", text: "Optimization." },
+            { question: "Mindset", left: "Scarcity", right: "Abundance", correct: "right", text: "Growth." }
+        ],
+        poll: [
+            { question: "Net Worth Formula", options: ["Assets - Liabilities", "Income - Expense", "Cash"], correct: 0, text: "The scorecard." },
+            { question: "FIRE stands for", options: ["Financial Indep Retire Early", "Fire department", "Burn money"], correct: 0, text: "Freedom." },
+            { question: "Liability is...", options: ["Makes money", "Takes money", "Friend"], correct: 1, text: "Cost." },
+            { question: "Asset is...", options: ["Makes money", "Takes money", "Car"], correct: 0, text: "Income source." },
+            { question: "Inflation Hedge", options: ["Cash", "Real Estate", "Savings"], correct: 1, text: "Hard assets." },
+            { question: "4% Rule", options: ["Withdrawal rate", "Growth rate", "Tax rate"], correct: 0, text: "Safe withdrawal." },
+            { question: "Trust Fund", options: ["Legal structure", "Friendship", "Bank"], correct: 0, text: "Protect assets." },
+            { question: "Accredited Investor", options: ["Rich enough to risk", "Smart", "Certified"], correct: 0, text: "High net worth access." }
+        ],
+        calculator: [
+            { label: "Net Worth", question: "$1M Assets - $200k Debt?", answer: 800000, text: "Equity." },
+            { label: "FIRE Number", question: "$40k expense x 25?", answer: 1000000, text: "Target." },
+            { label: "4% Rule", question: "4% of $1,000,000?", answer: 40000, text: "Yearly spend." },
+            { label: "Rental", question: "$1000 Rent - $800 Cost?", answer: 200, text: "Cash flow." },
+            { label: "Appreciation", question: "$500k House + 5%?", answer: 525000, text: "Growth." },
+            { label: "Tax", question: "$1M Estate. 40% Tax?", answer: 400000, text: "Estate tax." },
+            { label: "Freedom", question: "$50k passive > $40k expense?", answer: 10000, text: "Surplus." },
+            { label: "Millionaire", question: "Save $10k/yr for 40 yrs @ 7%?", answer: 2000000, text: "Roughly." }
+        ],
+        tapLie: [
+            { text: "Wealth", statements: [{text:"Lottery is a plan", isLie:true}, {text:"Time > Money", isLie:false}] },
+            { text: "Real Estate", statements: [{text:"Passive income", isLie:false}, {text:"Always easy", isLie:true}] },
+            { text: "Millionaire", statements: [{text:"Needs high salary", isLie:true}, {text:"Needs high savings rate", isLie:false}] },
+            { text: "Taxes", statements: [{text:"Rich pay less %", isLie:false}, {text:"Rich pay 0", isLie:true}] },
+            { text: "Debt", statements: [{text:"Rich use debt", isLie:false}, {text:"Debt is banned", isLie:true}] },
+            { text: "Retirement", statements: [{text:"Is an age", isLie:true}, {text:"Is a number", isLie:false}] },
+            { text: "Inflation", statements: [{text:"Helps debtors", isLie:false}, {text:"Hurts debtors", isLie:true}] },
+            { text: "Happiness", statements: [{text:"Money buys it directly", isLie:true}, {text:"Money buys options", isLie:false}] }
+        ],
+        meme: [
+            { topText: "Looking Rich", bottomText: "Being Rich", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Landlord", bottomText: "Fixing toilet", imageUrl: "https://i.imgflip.com/1jwhww.jpg" },
+            { topText: "FIRE Movement", bottomText: "Retire at 30", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Inflation", bottomText: "My Assets", imageUrl: "https://i.imgflip.com/434i5j.jpg" },
+            { topText: "Tax Loophole", bottomText: "Legal", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" },
+            { topText: "Generational Wealth", bottomText: "My Kids", imageUrl: "https://i.imgflip.com/26am.jpg" },
+            { topText: "Passive Income", bottomText: "Work once pay forever", imageUrl: "https://i.imgflip.com/30b1gx.jpg" },
+            { topText: "Net Worth", bottomText: "To the moon", imageUrl: "https://i.imgflip.com/1jwhww.jpg" }
         ]
     }
+};
+
+// Fallback pool to prevent crash if world/type missing
+const FALLBACK_POOL = {
+    swipe: [{question: "Save?", left: "No", right: "Yes", correct: "right", text: "Saving is good."}],
+    poll: [{question: "Money?", options: ["Good", "Bad"], correct: 0, text: "Money is a tool."}],
+    calculator: [{label: "Math", question: "1+1", answer: 2, text: "Basic."}],
+    tapLie: [{text: "Truth", statements: [{text: "True", isLie: false}, {text: "False", isLie: true}]}],
+    meme: [{topText: "Money", bottomText: "Good", imageUrl: "https://i.imgflip.com/26am.jpg"}]
 };
 
 // --- GENERATOR ---
@@ -303,124 +475,87 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
     
     const rng = new SeededRNG(levelId);
     
-    // Retrieve World Data
-    const data = WORLD_DATA[worldName] || WORLD_DATA["Moola Basics"];
+    // Retrieve World Data (for Boss)
+    // Note: Boss data comes from a separate mapping logic or can be added to CONTENT_POOLS if desired, 
+    // but keeping the existing boss structure for now as it was working.
+    // Re-using WORLD_DATA from previous implementation would be ideal, but for this file scope, 
+    // let's ensure we have the Boss logic. I will inject a basic boss structure here to keep it self-contained.
     
-    // --- BOSS GENERATION ---
-    const bossName = data.bossName;
-    const bossImage = data.bossEmoji;
-    const bossIntro = rng.pick(data.bossIntro);
+    const BOSS_DATA: Record<string, any> = {
+        "Moola Basics": { name: "Inflation Dragon", emoji: "🐲", intro: ["I eat value!", "Prices rising!"] },
+        "Budget Beach": { name: "Impulse Imp", emoji: "👺", intro: ["Buy it now!", "YOLO!"] },
+        "Compound Cliffs": { name: "Time Thief", emoji: "⏳", intro: ["Wait later!", "Procrastinate!"] },
+        "Bank Vault": { name: "Fee Fiend", emoji: "🦇", intro: ["Overdraft!", "Service Fee!"] },
+        "Debt Dungeon": { name: "Interest Ogre", emoji: "👹", intro: ["25% APR!", "Min Payment!"] },
+        "Hustle Hub": { name: "Tax Titan", emoji: "🕴️", intro: ["Audit time!", "Gross Pay!"] },
+        "Stony Stocks": { name: "Panic Bear", emoji: "🐻", intro: ["Sell low!", "Crash!"] },
+        "Wealth Empire": { name: "Lifestyle Creep", emoji: "🧟", intro: ["Upgrade!", "Spend more!"] }
+    };
+
+    const bossInfo = BOSS_DATA[worldName] || BOSS_DATA["Moola Basics"];
     
-    // Select 3 distinct questions for this level's boss
-    const levelTopics = rng.pickMultiple(data.topics, 3);
-    
-    const bossQuiz: BossQuestion[] = levelTopics.map(t => ({
-        question: t.q,
-        options: t.a,
-        correctIndex: t.c,
-        explanation: t.e
+    // Generate Boss Quiz (reuse poll questions for now, or specific boss pool if added)
+    // We can pull 3 random unique polls from the pool for the boss
+    const bossPool = CONTENT_POOLS[worldName]?.poll || FALLBACK_POOL.poll;
+    // Deterministically pick 3 distinct questions for boss based on levelNum
+    // We shift by 5 to ensure boss questions aren't the same as the level's poll lesson
+    const bossQuestions = [
+        bossPool[(levelNum * 3 + 0) % bossPool.length],
+        bossPool[(levelNum * 3 + 1) % bossPool.length],
+        bossPool[(levelNum * 3 + 2) % bossPool.length]
+    ].map(q => ({
+        question: q.question,
+        options: q.options,
+        correctIndex: q.correct,
+        explanation: q.text
     }));
 
     const level: LevelData = {
         id: levelId,
         worldId: worldName,
         levelNumber: levelNum,
-        title: `Level ${levelNum}: ${bossName} Attack!`,
-        description: `Defeat ${bossName} to secure your knowledge!`,
-        bossName: bossName,
-        bossImage: bossImage,
-        bossIntro: bossIntro,
-        bossQuiz: bossQuiz
+        title: `Level ${levelNum}: ${bossInfo.name}`,
+        description: `Defeat ${bossInfo.name}!`,
+        bossName: bossInfo.name,
+        bossImage: bossInfo.emoji,
+        bossIntro: bossInfo.intro[levelNum % bossInfo.intro.length],
+        bossQuiz: bossQuestions
     };
 
     // --- LESSON GENERATION ---
     const lessons: Lesson[] = [];
+    // Lesson Sequence: Intro -> Swipe -> Poll -> Meme -> Calculator -> TapLie -> Boss
     const types: LessonType[] = ['info', 'swipe', 'poll', 'meme', 'calculator', 'tapLie']; 
     
-    // STRICT Content Generation per World
-    const getWorldSpecificContent = (type: LessonType, index: number) => {
+    // --- DETERMINISTIC CONTENT PICKER ---
+    const getUniqueContent = (type: string, lessonIndex: number) => {
+        const pool = CONTENT_POOLS[worldName]?.[type] || FALLBACK_POOL[type as keyof typeof FALLBACK_POOL];
+        if (!pool) return { text: "Error loading content" };
         
-        if (worldName === "Moola Basics") {
-            if (type === 'swipe') return { question: "Value Check", left: "Barter", right: "Cash", correct: "right", text: "Cash is more efficient." };
-            if (type === 'poll') return { question: "What is Money?", options: ["Paper", "Trust", "Gold"], correct: 1, text: "It's a system of trust." };
-            if (type === 'meme') return { topText: "Me trying to barter", bottomText: "The cashier at Walmart", imageUrl: "https://i.imgflip.com/26am.jpg" };
-            if (type === 'calculator') return { label: "Inflation Calc", question: "Item cost $10. Inflation 10%. New cost?", answer: 11, text: "Prices go up." };
-            if (type === 'tapLie') return { text: "Money History", statements: [{text:"Salt was money", isLie:false}, {text:"Money is infinite", isLie:true}] };
-            return { text: "Money solves the 'double coincidence of wants' problem. It acts as a universal store of value.", analogy: "Like a universal key for trading." };
-        }
-        
-        if (worldName === "Budget Beach") {
-            if (type === 'swipe') return { question: "Need or Want?", left: "PS5", right: "Rent", correct: "right", text: "Shelter first." };
-            if (type === 'poll') return { question: "Best Budget Rule?", options: ["80/20", "50/30/20", "100/0"], correct: 1, text: "The classic balanced split." };
-            if (type === 'meme') return { topText: "My Bank Account", bottomText: "Me buying boba", imageUrl: "https://i.imgflip.com/1jwhww.jpg" };
-            if (type === 'calculator') return { label: "Budget Math", question: "$100 Income. Save 20%. How much?", answer: 20, text: "Pay yourself first." };
-            if (type === 'tapLie') return { text: "Budget Myths", statements: [{text:"Budgets are for poor people", isLie:true}, {text:"Tracking helps", isLie:false}] };
-            return { text: "A budget isn't a prison. It's a permission slip to spend without guilt.", analogy: "Like a map for a road trip." };
-        }
-
-        if (worldName === "Compound Cliffs") {
-            if (type === 'swipe') return { question: "Start When?", left: "Age 20", right: "Age 40", correct: "left", text: "Time in market > Timing market." };
-            if (type === 'poll') return { question: "Einstein called it...", options: ["Magic", "8th Wonder", "Scam"], correct: 1, text: "It multiplies money." };
-            if (type === 'meme') return { topText: "Investing $50/mo", bottomText: "Retiring Millionaire", imageUrl: "https://i.imgflip.com/30b1gx.jpg" };
-            if (type === 'calculator') return { label: "Doubling Rule", question: "72 / 8% return = Years?", answer: 9, text: "Doubles every 9 years." };
-            if (type === 'tapLie') return { text: "Compound Truths", statements: [{text:"Linear growth", isLie:true}, {text:"Exponential growth", isLie:false}] };
-            return { text: "Your money can make babies. Those babies make babies. That's compounding.", analogy: "Like a rolling snowball." };
-        }
-
-        if (worldName === "Bank Vault") {
-            if (type === 'swipe') return { question: "Store money in...", left: "Mattress", right: "HYSA", correct: "right", text: "Inflation eats mattress money." };
-            if (type === 'poll') return { question: "FDIC protects up to...", options: ["$250k", "$1M", "$0"], correct: 0, text: "Per bank, per person." };
-            if (type === 'meme') return { topText: "Checking Account 0.01%", bottomText: "HYSA 4.5%", imageUrl: "https://i.imgflip.com/1ur9b0.jpg" };
-            if (type === 'calculator') return { label: "Interest Gain", question: "$10k at 5%. Gain in 1 yr?", answer: 500, text: "Free money." };
-            if (type === 'tapLie') return { text: "Banking Facts", statements: [{text:"Overdraft fees are fun", isLie:true}, {text:"Direct deposit is faster", isLie:false}] };
-            return { text: "A High Yield Savings Account (HYSA) pays you 10x-50x more than a regular bank for doing nothing.", analogy: "Like upgrading your weapon for free." };
-        }
-
-        if (worldName === "Debt Dungeon") {
-            if (type === 'swipe') return { question: "Pay Minimum?", left: "Yes", right: "Full Balance", correct: "right", text: "Avoid interest." };
-            if (type === 'poll') return { question: "Good Credit Score?", options: ["500", "600", "750+"], correct: 2, text: "Unlock best rates." };
-            if (type === 'meme') return { topText: "Me swiping card", bottomText: "Me seeing the bill", imageUrl: "https://i.imgflip.com/30b1gx.jpg" };
-            if (type === 'calculator') return { label: "Interest Pain", question: "$1000 debt. 20% APR. Interest/yr?", answer: 200, text: "Ouch." };
-            if (type === 'tapLie') return { text: "Credit Myths", statements: [{text:"Carrying a balance helps score", isLie:true}, {text:"Utilization matters", isLie:false}] };
-            return { text: "Credit cards are like chainsaws. Useful tool, but can cut your leg off if used wrong.", analogy: "Fire: Cook food or burn house." };
-        }
-
-        if (worldName === "Hustle Hub") {
-            if (type === 'swipe') return { question: "Tax Form?", left: "W-2", right: "Pizza", correct: "left", text: "Employee form." };
-            if (type === 'poll') return { question: "Net Income is...", options: ["After Tax", "Before Tax", "Gross"], correct: 0, text: "What you actually keep." };
-            if (type === 'meme') return { topText: "Gross Pay", bottomText: "Net Pay", imageUrl: "https://i.imgflip.com/1jwhww.jpg" };
-            if (type === 'calculator') return { label: "Side Hustle", question: "$20/hr for 5 hrs?", answer: 100, text: "Quick math." };
-            if (type === 'tapLie') return { text: "Tax Truths", statements: [{text:"Cash tips are tax free", isLie:true}, {text:"You must file taxes", isLie:false}] };
-            return { text: "Passive income is money you earn while sleeping. Active income requires you to be awake.", analogy: "Planting a fruit tree vs hunting." };
-        }
-
-        if (worldName === "Stony Stocks") {
-            if (type === 'swipe') return { question: "Buy Stock?", left: "High", right: "Low", correct: "right", text: "Buy low, sell high." };
-            if (type === 'poll') return { question: "S&P 500 is...", options: ["500 Companies", "500 Dollars", "500 Cars"], correct: 0, text: "Top US companies." };
-            if (type === 'meme') return { topText: "Market Crashes", bottomText: "Me Buying the Dip", imageUrl: "https://i.imgflip.com/434i5j.jpg" };
-            if (type === 'calculator') return { label: "Stock Gain", question: "Buy $10. Sell $15. Profit?", answer: 5, text: "50% gain." };
-            if (type === 'tapLie') return { text: "Investing", statements: [{text:"Guaranteed returns exist", isLie:true}, {text:"Risk and reward correlate", isLie:false}] };
-            return { text: "A stock is a piece of a company. An ETF is a basket of many stocks.", analogy: "Buying a slice vs the whole pizza." };
-        }
-
-        if (worldName === "Wealth Empire") {
-            if (type === 'swipe') return { question: "Buy Asset?", left: "Car", right: "Rental Property", correct: "right", text: "Cars depreciate." };
-            if (type === 'poll') return { question: "Net Worth is...", options: ["Assets - Liabilities", "Income", "Cash"], correct: 0, text: "The golden formula." };
-            if (type === 'meme') return { topText: "Looking Rich", bottomText: "Being Rich", imageUrl: "https://i.imgflip.com/26am.jpg" };
-            if (type === 'calculator') return { label: "Wealth Math", question: "$1M Assets. $200k Debt. Net Worth?", answer: 800000, text: "$800k." };
-            if (type === 'tapLie') return { text: "Wealth Mindset", statements: [{text:"Lottery is a plan", isLie:true}, {text:"Time > Money", isLie:false}] };
-            return { text: "True wealth isn't having expensive things. It's having time freedom.", analogy: "Wealth is the engine, money is the gas." };
-        }
-
-        // Fallback (Should not be reached with correct world IDs)
-        const topic = data.topics[index % data.topics.length];
-        if (type === 'info') return { text: `${topic.q} ${topic.e}`, analogy: "Knowledge is power." };
-        return { text: topic.e, question: topic.q, answer: 100 };
+        // MAGIC FORMULA: 
+        // Use (Level Number) + (Lesson Index) to cycle through the pool.
+        // Since each level has 1 of each type (mostly), just using LevelNum is enough to rotate.
+        // We subtract 1 to make it 0-indexed.
+        const uniqueIndex = (levelNum - 1) % pool.length;
+        return pool[uniqueIndex];
     };
 
     types.forEach((type, i) => {
         const lessonId = `${levelId}_${i}`;
-        let content = getWorldSpecificContent(type, i);
+        let content: any = {};
+
+        if (type === 'info') {
+            // Info lessons reuse Poll content explanations or separate pool
+            // Let's grab a poll question and turn it into an Info card for synergy
+            const relatedPoll = getUniqueContent('poll', i);
+            content = { 
+                text: `${relatedPoll.question} ${relatedPoll.text}`, 
+                analogy: "Knowledge is power." 
+            };
+        } else {
+            content = getUniqueContent(type, i);
+        }
+
         const titles = ["The Basics", "Deep Dive", "Quick Check", "Reality Hit", "Pro Tip", "Final Boss Prep"];
         
         lessons.push({
@@ -430,11 +565,57 @@ export const generateLevelContent = (worldId: string, levelNum: number): { level
             order: i,
             type,
             title: titles[i] || "Lesson",
-            content: content as any,
+            content: content,
             xpReward: 100 + (i * 20),
             coinReward: 50 + (i * 10)
         });
     });
 
     return { level, lessons };
+};
+
+// --- ENGAGEMENT CONTENT GENERATORS ---
+
+export const getRandomRoast = () => {
+    const roasts = [
+        "My grandma budgets better than that. 👵",
+        "Oof. That answer cost you $0 but still felt expensive.",
+        "Your wallet is crying right now. 💸",
+        "Did you guess? Be honest.",
+        "Emotional damage. 💀",
+        "Buy high, sell low energy.",
+        "Not very cash money of you.",
+        "That's a liability, not an asset.",
+        "Straight to the Debt Dungeon with you.",
+        "I'm telling your future accountant about this."
+    ];
+    return roasts[Math.floor(Math.random() * roasts.length)];
+};
+
+export const getRandomFunFact = () => {
+    const facts = [
+        { emoji: "🍔", text: "The Big Mac Index compares purchasing power across countries using burger prices.", source: "The Economist" },
+        { emoji: "💳", text: "Credit cards were invented because a guy forgot his wallet at dinner.", source: "Diners Club History" },
+        { emoji: "🌷", text: "In the 1600s, one tulip bulb cost more than a house in Amsterdam.", source: "Tulip Mania" },
+        { emoji: "🎩", text: "More Monopoly money is printed annually than real US Dollars.", source: "Hasbro" },
+        { emoji: "🪙", text: "The first coins were made in 600 BC in modern-day Turkey.", source: "History of Money" },
+        { emoji: "🍎", text: "Apple has more cash on hand than many countries' GDP.", source: "Financial Reports" },
+        { emoji: "🧊", text: "Alaska pays residents to live there (oil dividends).", source: "Alaska Permanent Fund" },
+        { emoji: "♻️", text: "90% of US bills carry traces of cocaine.", source: "CNN Study" }
+    ];
+    return facts[Math.floor(Math.random() * facts.length)];
+};
+
+export const getRandomDeepDive = () => {
+    const dives = [
+        "Compounding works best with time. Starting at 25 vs 35 can double your retirement outcome.",
+        "Diversification is the only 'free lunch' in investing. It reduces risk without reducing expected return.",
+        "Inflation averages about 2-3% per year. If your cash isn't growing, it's shrinking.",
+        "An emergency fund prevents you from selling assets during a market crash.",
+        "High-interest debt (like credit cards) is a financial emergency. Pay it off ASAP.",
+        "Index funds outperform 80% of active fund managers over 15 years.",
+        "Your credit score is essentially an 'adulting report card' for borrowing trust.",
+        "Assets put money in your pocket. Liabilities take money out."
+    ];
+    return dives[Math.floor(Math.random() * dives.length)];
 };
