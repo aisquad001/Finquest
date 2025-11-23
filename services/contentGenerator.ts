@@ -365,55 +365,46 @@ const CONTENT_DB: Record<string, any> = {
             { 
                 t: "Money is just a tool. Don't worship it, master it.",
                 analogy: "A hammer can build a house or hit your thumb. Money is the same—it depends how you use it.",
-                img: "https://images.unsplash.com/photo-1554672723-b208dc2d7197?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=800&q=80"
             },
             { 
                 t: "The first step to wealth is spending less than you earn.",
                 analogy: "If you fill a bucket with water but it has a hole (spending), it will never be full, no matter how much you pour in.",
-                img: "https://images.unsplash.com/photo-1561414927-6d86591d0c4f?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1605792657660-596af9009e82?w=800&q=80"
             },
             { 
                 t: "Inflation is the silent killer of cash savings.",
                 analogy: "Imagine an ice cube melting in your hand. That's your dollar losing value every year.",
-                img: "https://images.unsplash.com/photo-1565514020176-6c2235c8d27d?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1562619934-1647a4d53823?w=800&q=80"
             },
             { 
                 t: "Your habits today determine your bank account tomorrow.",
                 analogy: "Brushing your teeth once doesn't work. It's the daily habit that prevents decay. Saving is the same.",
-                img: "https://images.unsplash.com/photo-1593113598332-cd288d649433?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1559592413-7ec4d7a48d1d?w=800&q=80"
             },
             { 
                 t: "Assets put money in your pocket. Liabilities take it out.",
                 analogy: "An asset is a golden goose that lays eggs. A liability is a pet tiger that just eats meat (cash).",
-                img: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800&q=80"
             },
             { 
                 t: "Start small. Even $5 a week adds up over time.",
                 analogy: "A giant oak tree starts as a tiny acorn. Don't underestimate small beginnings.",
-                img: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800&q=80"
             },
             { 
                 t: "Don't try to look rich. Try to BE rich.",
                 analogy: "A fake Rolex tells time, but has zero value. Real wealth is quiet.",
-                img: "https://images.unsplash.com/photo-1450226926693-b407e37e21c2?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=800&q=80"
             },
             { 
                 t: "Knowledge pays the best interest. Keep learning.",
                 analogy: "Your brain is your most expensive asset. Upgrade its software daily.",
-                img: "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=60"
+                img: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?w=800&q=80"
             }
         ]
     },
-    // We assume the other worlds are populated similarly in existing file or follow same pattern.
-    // To save XML space, I am relying on the previously provided CONTENT_DB which already had unique content for swips/lies/etc.
-    // The main fix requested is BOSS QUESTIONS.
 };
-// Re-apply unique content for other worlds to CONTENT_DB if needed (omitted for brevity as user asked about BOSS questions mostly, but I will ensure the CONTENT_DB variable is valid).
-// In a real patch, I would include the full CONTENT_DB if I suspected it was missing. 
-// Based on previous turn, CONTENT_DB was populated. I will assume it persists or merge carefully if this was a partial update.
-// Actually, to be safe, I should probably ensure the CONTENT_DB has the keys if I'm referencing them.
-// The provided previous file had CONTENT_DB fully populated. I will just reference it.
-
 
 // --- GENERATOR ---
 

@@ -609,8 +609,16 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
                                 <h2 className="font-game text-3xl text-white mb-6 uppercase tracking-widest">{currentLesson.title}</h2>
                                 
                                 {currentLesson.content.imageUrl && (
-                                    <div className="w-full max-w-sm mb-6 rounded-3xl overflow-hidden border-4 border-black shadow-lg">
-                                        <img src={currentLesson.content.imageUrl} alt="Analogy" className="w-full h-48 object-cover" />
+                                    <div className="w-full max-w-sm mb-6 rounded-3xl overflow-hidden border-4 border-black shadow-lg bg-black/20">
+                                        <img 
+                                            src={currentLesson.content.imageUrl} 
+                                            alt="Analogy" 
+                                            className="w-full h-48 object-cover"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                                e.currentTarget.parentElement!.style.display = 'none'; // Hide container too if image fails
+                                            }} 
+                                        />
                                     </div>
                                 )}
 
