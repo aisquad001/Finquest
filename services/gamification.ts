@@ -1,4 +1,3 @@
-
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -194,6 +193,8 @@ export interface LessonContent {
     left?: string; // For binary swipe in JSON
     right?: string;
     answer?: number; // For calculator answer
+    // Extra
+    analogy?: string;
 }
 
 export interface Lesson {
