@@ -3,7 +3,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Avatar } from './Avatar';
 import { SocialShare } from './SocialShare';
 import { CreationHistory } from './CreationHistory'; // Badge Collection View
@@ -17,7 +17,9 @@ import {
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
     CheckBadgeIcon,
-    ArrowRightIcon
+    ArrowRightIcon,
+    ArrowTrendingUpIcon,
+    ArrowTrendingDownIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -33,6 +35,7 @@ import { generateLinkCode } from '../services/portal';
 import { playSound } from '../services/audio';
 import { signInWithGoogle, logout } from '../services/firebase';
 import { migrateGuestToReal, subscribeToCollection, updateParentCode, subscribeToLeaderboard } from '../services/db';
+import { getMarketData } from '../services/stockMarket';
 
 interface DashboardProps {
     user: UserState;
@@ -68,6 +71,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
     const currentLevelProgress = user.xp - prevLevelXp;
     const levelRange = nextLevelXp - prevLevelXp;
     const progressPercent = Math.min(100, Math.max(0, (currentLevelProgress / levelRange) * 100));
+
+    // Portfolio Calculation for Home Screen Widget
+    const portfolioStats = useMemo(() => {
+        const marketData = getMarketData();
+        let currentValue = user.portfolio.cash;
+        
+        // Calculate value of holdings based on latest market data
+        if (user.portfolio.holdings) {
+            Object.entries(user.portfolio.holdings).forEach(([symbol, qty]) => {
+                const stock = marketData.find(s => s.symbol === symbol);
+                if (stock) {
+                    currentValue += stock.price * (qty as number);
+                }
+            });
+        }
+
+        const startValue = 100000;
+        const totalGain = currentValue - startValue;
+        const percentGain = (totalGain / startValue) * 100;
+        const hasTrades = user.portfolio.transactions && user.portfolio.transactions.length > 0;
+
+        return { currentValue, totalGain, percentGain, hasTrades };
+    }, [user.portfolio]);
 
     // PWA Install Logic
     useEffect(() => {
@@ -432,21 +458,61 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 {activeTab === 'map' && (
                     <div className="relative flex flex-col items-center gap-8 py-4">
                         
-                        {/* ZOO BUTTON - ALWAYS UNLOCKED */}
+                        {/* WALL STREET ZOO BUTTON */}
                         <button 
                             onClick={onOpenZoo}
-                            className={`w-full rounded-3xl p-[2px] btn-3d group transition-all bg-gradient-to-r from-neon-green via-white to-neon-green animate-pulse-fast cursor-pointer`}
+                            className={`w-full relative overflow-hidden rounded-3xl p-[1px] btn-3d group transition-all duration-300
+                                ${portfolioStats.hasTrades 
+                                    ? (portfolioStats.totalGain >= 0 
+                                        ? 'bg-gradient-to-r from-neon-green via-emerald-500 to-neon-green' 
+                                        : 'bg-gradient-to-r from-red-500 via-orange-500 to-red-500')
+                                    : 'bg-gradient-to-r from-neon-purple via-indigo-500 to-neon-purple'}
+                            `}
                         >
-                            <div className="bg-[#1a0b2e] rounded-[22px] p-4 flex items-center gap-4 h-full relative overflow-hidden">
-                                <div className="absolute right-0 bottom-0 opacity-20 text-6xl rotate-12 translate-x-4 translate-y-4">🦍</div>
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-neon border border-white/20 bg-white/10`}>
-                                    📈
-                                </div>
-                                <div className="text-left flex-1 relative z-10">
-                                    <h3 className="font-game text-xl text-white leading-none mb-1 text-stroke-black">WALL STREET ZOO</h3>
-                                    <p className="text-[10px] text-gray-300 font-bold leading-tight">
-                                        Trade Stocks. Get Rich. No Cap.
-                                    </p>
+                            <div className="bg-[#1a0b2e] rounded-[23px] p-4 h-full relative overflow-hidden">
+                                {/* Background Pulse */}
+                                <div className={`absolute inset-0 opacity-10 transition-opacity group-hover:opacity-20 
+                                    ${portfolioStats.hasTrades && portfolioStats.totalGain < 0 ? 'bg-red-500' : 'bg-neon-green'}
+                                `}></div>
+
+                                <div className="flex items-center justify-between relative z-10 gap-4">
+                                    {/* Icon & Title */}
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shadow-inner border border-white/10 bg-black/30 backdrop-blur-md`}>
+                                            {portfolioStats.hasTrades ? (portfolioStats.totalGain >= 0 ? '📈' : '📉') : '🦍'}
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="font-game text-xl text-white leading-none mb-1 text-stroke-black tracking-wide">
+                                                WALL STREET ZOO
+                                            </h3>
+                                            {!portfolioStats.hasTrades && (
+                                                <p className="text-[10px] text-gray-300 font-bold leading-tight">
+                                                    Trade Stocks. Get Rich. No Cap.
+                                                </p>
+                                            )}
+                                            {portfolioStats.hasTrades && (
+                                                <div className="flex items-center gap-2">
+                                                     <span className={`text-xs font-black px-2 py-0.5 rounded text-black ${portfolioStats.totalGain >= 0 ? 'bg-neon-green' : 'bg-red-500 text-white'}`}>
+                                                        {portfolioStats.totalGain >= 0 ? '+' : ''}{portfolioStats.percentGain.toFixed(2)}%
+                                                     </span>
+                                                     <span className="text-[10px] text-gray-400 font-bold uppercase">All Time</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Value Display (Right Side) */}
+                                    {portfolioStats.hasTrades && (
+                                        <div className="text-right">
+                                            <div className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Net Worth</div>
+                                            <div className="font-mono font-bold text-white text-2xl tracking-tighter drop-shadow-md">
+                                                ${portfolioStats.currentValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                                            </div>
+                                            <div className={`text-[10px] font-bold ${portfolioStats.totalGain >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                                {portfolioStats.totalGain >= 0 ? '+' : ''}${Math.abs(portfolioStats.totalGain).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </button>
