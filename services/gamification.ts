@@ -143,10 +143,10 @@ export interface ShopItem {
     description: string;
     limitedTime?: boolean;
     active?: boolean;
-    tier: 1 | 2 | 3; // 1 (<5k), 2 (5k-10k), 3 (15k+)
+    tier: 1 | 2 | 3 | 4; // 1 (<5k), 2 (5k-10k), 3 (15k-40k), 4 (50k+)
     
     // For profile integration
-    cosmeticType?: 'emoji' | 'outfit' | 'bg';
+    cosmeticType?: 'emoji' | 'outfit' | 'bg' | 'accessory';
     cosmeticValue?: string; // The actual emoji char or css class
 }
 
@@ -285,31 +285,39 @@ export const WORLDS_METADATA: WorldData[] = [
     { id: 'Wealth Empire', title: "EMPIRE CITY", icon: BuildingOffice2Icon, color: "bg-indigo-500", description: "Net Worth & Freedom.", unlockLevel: 20, badgeId: 'badge_wealth' }
 ];
 
-// --- SHOP ITEMS (TIERED) ---
+// --- SHOP ITEMS (EXPANDED & TIERED) ---
 export const SHOP_ITEMS: ShopItem[] = [
-    // TIER 1: 0 - 5,000 Coins (Starter / Fun)
+    // --- POWERUPS (Tier 1) ---
     { id: 'item_freeze', name: 'Streak Freeze', emoji: '🧊', cost: 500, category: 'powerup', tier: 1, description: 'Miss a day without losing your streak.', active: true },
     { id: 'item_boost_2x', name: '2x XP Booster', emoji: '⚡', cost: 1200, category: 'powerup', tier: 1, description: 'Double XP for 24 hours', limitedTime: true, active: true },
-    { id: 'cosmetic_cowboy', name: 'Cowboy Hat', emoji: '🤠', cost: 2500, category: 'cosmetic', tier: 1, description: 'Yeehaw!', cosmeticType: 'emoji', cosmeticValue: '🤠', active: true },
-    { id: 'cosmetic_nerd', name: 'Smarty Pants', emoji: '🤓', cost: 2000, category: 'cosmetic', tier: 1, description: 'Big brain energy.', cosmeticType: 'emoji', cosmeticValue: '🤓', active: true },
-    { id: 'cosmetic_suit', name: 'CEO Suit', emoji: '👔', cost: 3500, category: 'cosmetic', tier: 1, description: 'Dress for success.', cosmeticType: 'outfit', cosmeticValue: '👔', active: true },
-    { id: 'cosmetic_coat', name: 'Trench Coat', emoji: '🧥', cost: 3000, category: 'cosmetic', tier: 1, description: 'Mystery vibes.', cosmeticType: 'outfit', cosmeticValue: '🧥', active: true },
-    
-    // TIER 2: 5,001 - 10,000 Coins (Premium / Flex)
-    { id: 'cosmetic_lion', name: 'Lion Face', emoji: '🦁', cost: 6000, category: 'cosmetic', tier: 2, description: 'King of the jungle.', cosmeticType: 'emoji', cosmeticValue: '🦁', active: true },
-    { id: 'cosmetic_robot', name: 'Mecha Bot', emoji: '🤖', cost: 7500, category: 'cosmetic', tier: 2, description: 'Future tech.', cosmeticType: 'emoji', cosmeticValue: '🤖', active: true },
-    { id: 'cosmetic_hero', name: 'Super Cape', emoji: '🦸', cost: 8000, category: 'cosmetic', tier: 2, description: 'Save the day.', cosmeticType: 'outfit', cosmeticValue: '🦸', active: true },
-    { id: 'cosmetic_spy', name: 'Spy Gear', emoji: '🕵️', cost: 9000, category: 'cosmetic', tier: 2, description: 'Top secret.', cosmeticType: 'outfit', cosmeticValue: '🕵️', active: true },
-    { id: 'cosmetic_bg_space', name: 'Deep Space', emoji: '🌌', cost: 10000, category: 'cosmetic', tier: 2, description: 'Dark mode aura.', cosmeticType: 'bg', cosmeticValue: 'bg-indigo-950', active: true },
-    { id: 'cosmetic_bg_lava', name: 'Molten Lava', emoji: '🌋', cost: 9500, category: 'cosmetic', tier: 2, description: 'Hot stuff.', cosmeticType: 'bg', cosmeticValue: 'bg-red-900', active: true },
 
-    // TIER 3: 15,000 - 50,000 Coins (Luxury / God Mode)
-    { id: 'cosmetic_alien', name: 'Martian', emoji: '👽', cost: 15000, category: 'cosmetic', tier: 3, description: 'Take me to your leader.', cosmeticType: 'emoji', cosmeticValue: '👽', active: true },
-    { id: 'cosmetic_unicorn', name: 'Unicorn', emoji: '🦄', cost: 25000, category: 'cosmetic', tier: 3, description: '1 of 1.', cosmeticType: 'emoji', cosmeticValue: '🦄', active: true },
-    { id: 'cosmetic_levitate', name: 'Ascended', emoji: '🕴️', cost: 30000, category: 'cosmetic', tier: 3, description: 'Too rich to walk.', cosmeticType: 'outfit', cosmeticValue: '🕴️', active: true },
-    { id: 'cosmetic_lambo', name: 'Gold Lambo', emoji: '🏎️', cost: 50000, category: 'cosmetic', tier: 3, description: 'The ultimate flex.', cosmeticType: 'outfit', cosmeticValue: '🏎️', active: true }, // Mapped to outfit for visual
-    { id: 'cosmetic_bg_gold', name: 'Solid Gold', emoji: '🏆', cost: 40000, category: 'cosmetic', tier: 3, description: 'Pure luxury.', cosmeticType: 'bg', cosmeticValue: 'bg-yellow-600', active: true },
-    { id: 'cosmetic_bg_diamond', name: 'Diamond Blue', emoji: '💎', cost: 35000, category: 'cosmetic', tier: 3, description: 'Ice cold.', cosmeticType: 'bg', cosmeticValue: 'bg-cyan-300', active: true },
+    // --- TIER 1: Cheap (500 - 2,000 Coins) ---
+    { id: 'acc_blue_cap', name: 'Blue Cap', emoji: '🧢', cost: 600, category: 'cosmetic', tier: 1, description: 'Classic vibes.', cosmeticType: 'accessory', cosmeticValue: '🧢', active: true },
+    { id: 'bg_green_glow', name: 'Green Glow', emoji: '💚', cost: 800, category: 'cosmetic', tier: 1, description: 'Radioactive riches.', cosmeticType: 'bg', cosmeticValue: 'bg-neon-green', active: true },
+    { id: 'acc_basic_chain', name: 'Basic Chain', emoji: '⛓️', cost: 1000, category: 'cosmetic', tier: 1, description: 'Started from the bottom.', cosmeticType: 'accessory', cosmeticValue: '⛓️', active: true },
+    { id: 'face_money_cat', name: 'Money Cat', emoji: '🐱', cost: 1200, category: 'cosmetic', tier: 1, description: 'Meow money.', cosmeticType: 'emoji', cosmeticValue: '🐱', active: true },
+    
+    // --- TIER 2: Medium (3,000 - 10,000 Coins) ---
+    { id: 'acc_shades_rich', name: 'Rich Shades', emoji: '🕶️', cost: 4000, category: 'cosmetic', tier: 2, description: 'Haters cant see me.', cosmeticType: 'accessory', cosmeticValue: '🕶️', active: true },
+    { id: 'fit_wings', name: 'Angel Wings', emoji: '🧚', cost: 5000, category: 'cosmetic', tier: 2, description: 'Financial guardian.', cosmeticType: 'outfit', cosmeticValue: '🧚', active: true },
+    { id: 'acc_money_rain', name: 'Money Rain', emoji: '💸', cost: 6000, category: 'cosmetic', tier: 2, description: 'Make it rain.', cosmeticType: 'accessory', cosmeticValue: '💸', active: true },
+    { id: 'acc_diamond_chain', name: 'Ice Chain', emoji: '💠', cost: 7500, category: 'cosmetic', tier: 2, description: 'VVS Diamonds.', cosmeticType: 'accessory', cosmeticValue: '💠', active: true },
+    { id: 'acc_lambo', name: 'Gold Lambo', emoji: '🏎️', cost: 8000, category: 'cosmetic', tier: 2, description: 'Vroom vroom.', cosmeticType: 'accessory', cosmeticValue: '🏎️', active: true },
+    { id: 'bg_space', name: 'Deep Space', emoji: '🌌', cost: 9000, category: 'cosmetic', tier: 2, description: 'To the moon.', cosmeticType: 'bg', cosmeticValue: 'bg-indigo-950', active: true },
+    { id: 'bg_lava', name: 'Molten Lava', emoji: '🌋', cost: 9500, category: 'cosmetic', tier: 2, description: 'Hot streak.', cosmeticType: 'bg', cosmeticValue: 'bg-red-900', active: true },
+
+    // --- TIER 3: Expensive (15,000 - 40,000 Coins) ---
+    { id: 'fit_ceo', name: 'CEO Suit', emoji: '🕴️', cost: 18000, category: 'cosmetic', tier: 3, description: 'Boss moves only.', cosmeticType: 'outfit', cosmeticValue: '🕴️', active: true },
+    { id: 'bg_jet', name: 'Private Jet', emoji: '✈️', cost: 20000, category: 'cosmetic', tier: 3, description: 'Cloud 9 living.', cosmeticType: 'bg', cosmeticValue: 'bg-slate-600', active: true },
+    { id: 'acc_money_gun', name: 'Cash Cannon', emoji: '🔫', cost: 25000, category: 'cosmetic', tier: 3, description: 'Pew pew pay.', cosmeticType: 'accessory', cosmeticValue: '🔫', active: true },
+    { id: 'acc_rolex', name: 'Gold Watch', emoji: '⌚', cost: 30000, category: 'cosmetic', tier: 3, description: 'Time is money.', cosmeticType: 'accessory', cosmeticValue: '⌚', active: true },
+    { id: 'acc_crown', name: 'King Crown', emoji: '👑', cost: 35000, category: 'cosmetic', tier: 3, description: 'Royalty.', cosmeticType: 'accessory', cosmeticValue: '👑', active: true },
+    { id: 'bg_gold', name: 'Solid Gold', emoji: '🏆', cost: 40000, category: 'cosmetic', tier: 3, description: 'Midas touch.', cosmeticType: 'bg', cosmeticValue: 'bg-yellow-600', active: true },
+
+    // --- TIER 4: Legendary (50,000+ Coins) ---
+    { id: 'bg_diamond_aura', name: 'Diamond Aura', emoji: '💎', cost: 60000, category: 'cosmetic', tier: 4, description: 'Unbreakable wealth.', cosmeticType: 'bg', cosmeticValue: 'bg-cyan-300', active: true },
+    { id: 'fit_carpet', name: 'Magic Carpet', emoji: '🧞', cost: 80000, category: 'cosmetic', tier: 4, description: 'A whole new world.', cosmeticType: 'outfit', cosmeticValue: '🧞', active: true },
+    { id: 'face_god_lion', name: 'Wealth God', emoji: '🦁', cost: 100000, category: 'cosmetic', tier: 4, description: 'Apex predator.', cosmeticType: 'emoji', cosmeticValue: '🦁', active: true },
 ];
 
 // --- Logic Helpers ---
