@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -15,7 +16,8 @@ import {
     BoltIcon,
     ArrowRightOnRectangleIcon,
     PencilSquareIcon,
-    CheckBadgeIcon
+    CheckBadgeIcon,
+    ArrowRightIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -23,7 +25,8 @@ import {
     LeaderboardEntry, 
     UserState, 
     SHOP_ITEMS,
-    BADGES
+    BADGES,
+    getXpForNextLevel
 } from '../services/gamification';
 import { claimDailyChest } from '../services/gameLogic';
 import { generateLinkCode } from '../services/portal';
@@ -58,6 +61,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
 
     // Guest Upgrade State
     const [isUpgrading, setIsUpgrading] = useState(false);
+
+    // XP Calculation
+    const nextLevelXp = getXpForNextLevel(user.level);
+    const prevLevelXp = getXpForNextLevel(user.level - 1);
+    const currentLevelProgress = user.xp - prevLevelXp;
+    const levelRange = nextLevelXp - prevLevelXp;
+    const progressPercent = Math.min(100, Math.max(0, (currentLevelProgress / levelRange) * 100));
 
     // PWA Install Logic
     useEffect(() => {
@@ -249,27 +259,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 </div>
             )}
 
-            {/* HEADER */}
-            <div className="sticky top-8 z-40 px-4 pt-2 pb-2 bg-[#1a0b2e]/95 backdrop-blur-sm border-b border-white/5">
-                <div className="flex items-center justify-between mb-4">
+            {/* REVAMPED HEADER - PREDOMINANT STATS */}
+            <div className="sticky top-0 z-40 pt-4 pb-4 bg-[#1a0b2e]/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
+                <div className="px-4 flex items-start justify-between mb-6">
                     
-                    {/* User Info */}
-                    <div className="flex items-center gap-3 relative">
-                        <div 
-                            className="relative group cursor-pointer"
-                            onMouseDown={handleAvatarDown}
-                            onMouseUp={handleAvatarUp}
-                            onTouchStart={handleAvatarDown}
-                            onTouchEnd={handleAvatarUp}
-                            onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        >
-                            <Avatar level={user.level} size="sm" customConfig={user.avatar} />
-                            <div className="absolute -bottom-1 -right-1 bg-neon-blue text-black text-[10px] font-black px-1.5 rounded-full border border-white">
-                                {user.level}
-                            </div>
-                        </div>
-                        
-                        {/* Profile Dropdown */}
+                    {/* User Identity & Badge */}
+                    <div className="flex items-center gap-4 relative">
+                        {/* Profile Menu Dropdown */}
                         {showProfileMenu && (
                             <div className="absolute top-14 left-0 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 w-48 z-[100] animate-pop-in">
                                 <div className="px-3 py-2 border-b border-slate-800 mb-1">
@@ -290,82 +286,130 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                             </div>
                         )}
 
+                        <div 
+                            className="relative group cursor-pointer transition-transform active:scale-95"
+                            onMouseDown={handleAvatarDown}
+                            onMouseUp={handleAvatarUp}
+                            onTouchStart={handleAvatarDown}
+                            onTouchEnd={handleAvatarUp}
+                            onClick={() => setShowProfileMenu(!showProfileMenu)}
+                        >
+                            <Avatar level={user.level} size="md" customConfig={user.avatar} />
+                            {/* Edit Indicator */}
+                            <div className="absolute -bottom-1 -right-1 bg-slate-800 text-white p-1 rounded-full border-2 border-slate-600">
+                                <PencilSquareIcon className="w-3 h-3" />
+                            </div>
+                        </div>
+                        
                         <div>
-                             <div className="flex items-center gap-2">
-                                <div className="text-white font-bold text-lg leading-none font-game">{user.nickname}</div>
+                             <div className="flex items-center gap-2 mb-1">
+                                <div className="text-white font-game text-2xl tracking-wide text-shadow-sm">{user.nickname}</div>
                                 {user.subscriptionStatus === 'pro' && (
-                                    <span className="bg-yellow-400 text-black text-[10px] font-black px-1 rounded uppercase">PRO</span>
+                                    <span className="bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[10px] font-black px-2 py-0.5 rounded uppercase shadow-sm">PRO</span>
                                 )}
                              </div>
                              
-                             {/* BADGE DISPLAY - CLICK TO OPEN COLLECTION */}
+                             {/* BADGE DISPLAY */}
                              <div 
                                 onClick={() => { playSound('pop'); setActiveTab('badges'); }}
-                                className="flex items-center gap-2 mt-1 cursor-pointer group"
+                                className="flex items-center gap-2 cursor-pointer group hover:bg-white/5 p-1 rounded-lg transition-colors -ml-1"
                              >
                                 {latestBadge ? (
                                     <>
-                                        <div className="text-xl filter drop-shadow-[0_0_5px_rgba(255,255,255,0.8)] group-hover:scale-110 transition-transform">
+                                        <div className="text-lg filter drop-shadow-md group-hover:scale-110 transition-transform">
                                             {latestBadge.icon}
                                         </div>
-                                        <div className="text-[10px] font-bold text-neon-green uppercase tracking-wider border border-neon-green/30 bg-neon-green/10 px-2 py-0.5 rounded-md group-hover:bg-neon-green/20 transition-colors truncate max-w-[120px]">
+                                        <div className="text-[10px] font-bold text-neon-green uppercase tracking-wider truncate max-w-[120px]">
                                             {latestBadge.name}
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider animate-pulse">
-                                        No badges yet...
+                                    <div className="text-[10px] font-bold text-gray-600 uppercase tracking-wider pl-1">
+                                        No Badges
                                     </div>
                                 )}
                              </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                         <div className="flex flex-col items-end">
-                             <span className={`font-bold transition-colors text-xs ${user.coins < 1000 ? 'text-red-500 animate-pulse' : 'text-yellow-400'}`}>
-                                🪙 {user.coins.toLocaleString()}
-                             </span>
-                         </div>
+                    {/* STREAK BADGE (Top Right) */}
+                    <button className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-2 border border-white/10 active:scale-90 transition-all group">
+                        <div className={`text-3xl drop-shadow-[0_0_10px_rgba(255,100,0,0.5)] ${user.streak > 0 ? 'animate-fire-flicker' : 'grayscale opacity-50'}`}>
+                            {user.streak > 30 ? '💎' : '🔥'}
+                        </div>
+                        <div className="text-[10px] font-black text-orange-500 uppercase leading-none mt-1 group-hover:text-orange-400">
+                            {user.streak} Days
+                        </div>
+                    </button>
+                </div>
 
-                        {/* STREAK BUTTON */}
-                        <button className="flex flex-col items-center relative group active:scale-90 transition-transform">
-                            <div className={`text-5xl drop-shadow-[0_0_15px_rgba(255,165,0,0.6)] ${user.streak > 7 ? 'animate-fire-flicker text-blue-400' : 'animate-pulse text-orange-500'}`}>
-                                {user.streak > 30 ? '💎' : user.streak > 7 ? '🔥' : '🔥'}
+                {/* PREDOMINANT STATS ROW */}
+                <div className="px-4 grid grid-cols-2 gap-3 mb-4">
+                    
+                    {/* COINS CARD */}
+                    <div className="bg-gradient-to-br from-slate-900 to-black border border-yellow-500/30 rounded-2xl p-4 relative overflow-hidden shadow-lg group">
+                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-yellow-500/10 rounded-full blur-xl group-hover:bg-yellow-500/20 transition-all"></div>
+                        <div className="relative z-10">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Bank Balance</div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl group-hover:scale-110 transition-transform duration-300">🪙</span>
+                                <span className="font-game text-2xl md:text-3xl text-yellow-400 tracking-tight text-shadow-sm">
+                                    {user.coins.toLocaleString()}
+                                </span>
                             </div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-black text-black text-xl mt-2 pointer-events-none">
-                                {user.streak}
-                            </div>
-                            <div className="text-[9px] text-orange-400 font-black uppercase tracking-wider bg-black/50 px-2 rounded-full mt-[-5px]">
-                                Streak
-                            </div>
-                        </button>
+                        </div>
                     </div>
+
+                    {/* XP/LEVEL CARD */}
+                    <div className="bg-gradient-to-br from-slate-900 to-black border border-blue-500/30 rounded-2xl p-4 relative overflow-hidden shadow-lg group">
+                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-blue-500/10 rounded-full blur-xl group-hover:bg-blue-500/20 transition-all"></div>
+                        <div className="relative z-10">
+                            <div className="flex justify-between items-center mb-1">
+                                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Level {user.level}</div>
+                                <div className="text-[10px] font-bold text-blue-400">{Math.floor(progressPercent)}%</div>
+                            </div>
+                            
+                            <div className="font-game text-xl text-white mb-2 flex items-baseline gap-1">
+                                {user.xp.toLocaleString()} <span className="text-[10px] font-sans font-bold text-gray-500">XP</span>
+                            </div>
+
+                            {/* Progress Bar */}
+                            <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 shadow-[0_0_10px_rgba(59,130,246,0.5)] transition-all duration-1000 ease-out"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 {/* DAILY REWARD CHEST */}
-                <button 
-                    onClick={handleChestClick}
-                    disabled={!isChestReady}
-                    className={`w-full rounded-2xl p-1 btn-3d group relative overflow-hidden transition-all
-                        ${isChestReady ? 'bg-gradient-to-r from-indigo-900 to-purple-900 cursor-pointer' : 'bg-gray-800 cursor-not-allowed grayscale opacity-75'}
-                    `}
-                >
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/diagonal-stripes-light.png')] opacity-10"></div>
-                    <div className="flex items-center justify-between px-4 py-2 relative z-10">
-                        <div className="flex items-center gap-3">
-                             <div className={`text-3xl transition-transform ${isChestReady ? 'animate-bounce' : ''}`}>
-                                 🎁
-                             </div>
-                             <div className="text-left">
-                                 <div className="text-white font-game text-sm uppercase">{isChestReady ? 'Daily Loot Ready!' : 'Loot Claimed'}</div>
-                                 <div className="text-[10px] text-indigo-300 font-bold flex items-center gap-1">
-                                     {isChestReady ? 'Tap to open' : 'Refreshes tomorrow'}
-                                 </div>
-                             </div>
+                <div className="px-4">
+                    <button 
+                        onClick={handleChestClick}
+                        disabled={!isChestReady}
+                        className={`w-full rounded-xl p-[1px] group relative overflow-hidden transition-all active:scale-[0.98]
+                            ${isChestReady 
+                                ? 'bg-gradient-to-r from-neon-purple via-white to-neon-purple animate-shimmer' 
+                                : 'bg-gray-800 cursor-not-allowed opacity-60'}
+                        `}
+                    >
+                        <div className="bg-[#150520] rounded-[11px] px-4 py-2 flex items-center justify-between relative z-10">
+                            <div className="flex items-center gap-3">
+                                <div className={`text-2xl ${isChestReady ? 'animate-bounce' : 'grayscale'}`}>🎁</div>
+                                <div className="text-left">
+                                    <div className={`font-game text-sm uppercase ${isChestReady ? 'text-white' : 'text-gray-500'}`}>
+                                        {isChestReady ? 'Daily Loot Ready!' : 'Loot Claimed'}
+                                    </div>
+                                    {isChestReady && <div className="text-[9px] text-neon-purple font-bold">Tap to Open</div>}
+                                </div>
+                            </div>
+                            {isChestReady && <div className="bg-white/20 p-1 rounded-full"><ArrowRightIcon className="w-4 h-4 text-white" /></div>}
                         </div>
-                    </div>
-                </button>
+                    </button>
+                </div>
             </div>
 
             {/* MAIN CONTENT */}
