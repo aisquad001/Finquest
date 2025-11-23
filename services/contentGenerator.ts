@@ -67,7 +67,7 @@ const CONTENT_DB: Record<string, any> = {
             { cap: "Me expecting to be rich", text: "Without saving a dollar", img: "https://i.imgflip.com/30b1gx.jpg" },
             { cap: "Inflation hitting my wallet", text: "My $10 is now $5", img: "https://i.imgflip.com/1ur9b0.jpg" },
             { cap: "Buying coffee daily", text: "Wondering why I'm broke", img: "https://i.imgflip.com/24y43o.jpg" },
-            { cap: "Direct Deposit hits", text: "And... it's gone", img: "https://i.imgflip.com/3l60ph.jpg" },
+            { cap: "Found some loose change", text: "We eating good tonight", img: "https://i.imgflip.com/3l60ph.jpg" },
             { cap: "Saving $5", text: "I am financial genius", img: "https://i.imgflip.com/2b7c.jpg" },
             { cap: "Checking bank account", text: "Calculated risk... but man am I bad at math", img: "https://i.imgflip.com/2gnnjh.jpg" },
             { cap: "When you skip the avocado toast", text: "Where is my mansion?", img: "https://i.imgflip.com/1w7ygt.jpg" },
@@ -79,7 +79,7 @@ const CONTENT_DB: Record<string, any> = {
             { q: "Save $50/mo vs Spend $50/mo. Gap in 1 year?", a: 1200, t: "You have $600, they lost $600. The gap is double!" },
             { q: "10% of $500 paycheck?", a: 50, t: "The minimum you should be saving." },
             { q: "Double $1 twenty times?", a: 1000000, t: "Exponential growth is wild." },
-            { q: "72 / 8% interest?", a: 9, t: "Years to double your money (Rule of 72)." },
+            { q: "Opportunity Cost of $100 today vs 10%?", a: 110, t: "Spending $100 today costs you $110 next year." },
             { q: "$1000 credit card debt at 20% for 1 year?", a: 1200, t: "You paid $200 just to borrow money. Ouch." },
             { q: "$5 latte x 365 days?", a: 1825, t: "That's a vacation to Hawaii you drank." }
         ]
@@ -102,7 +102,7 @@ const CONTENT_DB: Record<string, any> = {
             { text: "Fixed Expenses", options: ["Dining out", "Rent", "Insurance", "Car Payment"], correct: 0, exp: "Dining out fluctuates. Rent is fixed." },
             { text: "Variable Expenses", options: ["Mortgage", "Groceries", "Electricity", "Entertainment"], correct: 0, exp: "Mortgage stays same. The rest vary." },
             { text: "Zero-Based Budget", options: ["Balance is $0", "Income minus Expenses = 0", " Spend nothing", "Every dollar assigned"], correct: 2, exp: "It doesn't mean spend nothing. It means plan everything." },
-            { text: "Emergency Fund", options: ["Invest it in crypto", "Keep in savings", "3-6 months expenses", "Liquid cash"], correct: 0, exp: "Never gamble your safety net." },
+            { text: "Sinking Funds", options: ["Titanic money", "Saving for specific goal", "Car repair fund", "Christmas fund"], correct: 0, exp: "It's saving a little bit monthly for a big future bill." },
             { text: "Envelope Method", options: ["Mailing checks", "Cash in envelopes", "Physical limits", "Visual tracking"], correct: 0, exp: "It's about sorting cash for categories, not mail." }
         ],
         memes: [
@@ -110,7 +110,7 @@ const CONTENT_DB: Record<string, any> = {
             { cap: "When check card declines", text: "But I had $5 yesterday?", img: "https://i.imgflip.com/24y43o.jpg" },
             { cap: "Looking at bank account", text: "I am never gonna financially recover", img: "https://i.imgflip.com/3l60ph.jpg" },
             { cap: "Spending $100 on food", text: "Vs $10 shipping (Too expensive)", img: "https://i.imgflip.com/2b7c.jpg" },
-            { cap: "Direct Deposit", text: "Aaaaand bills took it all", img: "https://i.imgflip.com/1ur9b0.jpg" },
+            { cap: "Subscription Renewed", text: "I thought I cancelled you", img: "https://i.imgflip.com/1ur9b0.jpg" },
             { cap: "Me ignoring my budget", text: "This is fine.", img: "https://i.imgflip.com/2gnnjh.jpg" },
             { cap: "Buying store brand", text: "Taste the savings", img: "https://i.imgflip.com/1w7ygt.jpg" },
             { cap: "When you save $1", text: "Stonks", img: "https://i.imgflip.com/4t0m5.jpg" }
@@ -143,7 +143,7 @@ const CONTENT_DB: Record<string, any> = {
             { text: "Compound Interest", options: ["Only for math nerds", "8th wonder of world", "Money makes money", "Exponential growth"], correct: 0, exp: "Einstein called it the 8th wonder. It's for everyone." },
             { text: "Risk", options: ["Savings accounts have risk", "Stocks have risk", "Cash has no risk", "Inflation is a risk"], correct: 2, exp: "Cash has 'Purchasing Power Risk' due to inflation." },
             { text: "Day Trading", options: ["Easy money", "High risk", "Most lose money", "Stressful"], correct: 0, exp: "90% of day traders lose money." },
-            { text: "Dividends", options: ["Free money", "Profit sharing", "Guaranteed forever", "Reinvest for growth"], correct: 2, exp: "Dividends can be cut. Not guaranteed." },
+            { text: "Capital Gains", options: ["Tax on profit", "Tax on revenue", "Short term rates", "Long term rates"], correct: 1, exp: "You only pay tax on the PROFIT (Gain), not the total amount." },
             { text: "Index Funds", options: ["Buy whole market", "Low fees", "Beat most pros", "High maintenance"], correct: 3, exp: "They are the ultimate 'lazy' wealth builder." },
             { text: "Time in Market", options: ["Beats timing the market", "Is irrelevant", "Reduces risk", "Builds wealth"], correct: 1, exp: "Time in the market is EVERYTHING." }
         ],
