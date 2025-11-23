@@ -286,13 +286,12 @@ const ContentCMS = () => {
         
         try {
             // Simulate batch generation
-            const updates = [];
-            for (let i = 1; i <= 8; i++) {
-                const { level, lessons } = generateLevelContent(worldId, i);
-                // In a real app, we'd save these to Firestore 'levels' and 'lessons' collections
-                // Here we just simulate the delay
-            }
             await new Promise(r => setTimeout(r, 1500));
+            // Using the generator to ensure it works, even if we don't save it
+            for (let i = 1; i <= 2; i++) {
+                const res = generateLevelContent(worldId, i);
+                console.log("Generated:", res.level.title);
+            }
             alert(`Content regenerated for ${worldId}`);
         } catch (e) {
             console.error(e);
@@ -301,7 +300,7 @@ const ContentCMS = () => {
     };
 
     return (
-        <div className="p-8 animate-pop-in h-full overflow-y-auto">
+        <div className="p-8 animate-pop-in">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h2 className="text-3xl font-game text-white">Content CMS</h2>
@@ -331,7 +330,7 @@ const ContentCMS = () => {
                                 <div key={i} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
                                     <div>
                                         <div className="text-neon-green font-bold text-xs uppercase">Level {i + 1}</div>
-                                        <div className="text-white font-bold">The Boss Battle</div>
+                                        <div className="text-white font-bold">Content Block</div>
                                     </div>
                                     <button className="p-2 hover:bg-white/10 rounded-lg text-slate-400">
                                         <PencilSquareIcon className="w-5 h-5" />
@@ -393,7 +392,7 @@ const ShopEconomy = () => {
     };
 
     return (
-        <div className="p-8 h-full overflow-y-auto animate-pop-in">
+        <div className="p-8 animate-pop-in">
             <h2 className="text-3xl font-game text-white mb-2">Shop Economy</h2>
             <p className="text-slate-400 text-sm mb-8">Adjust item prices and availability dynamically.</p>
             
@@ -476,6 +475,12 @@ const PushNotificationManager = () => {
 // 6. ZOO ADMIN
 const ZooAdmin = () => {
     const [market, setMarket] = useState(getMarketData());
+
+    // Simple refresh to show live data
+    useEffect(() => {
+        const interval = setInterval(() => setMarket([...getMarketData()]), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
         <div className="p-8 animate-pop-in">
@@ -693,17 +698,15 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
             </div>
 
             {/* MAIN CONTENT AREA */}
-            <div className="flex-1 bg-slate-900 overflow-hidden relative">
-                <div className="absolute inset-0 overflow-y-auto">
-                    {view === 'dashboard' && <DashboardHome users={users} />}
-                    {view === 'users' && <UserManagement users={users} />}
-                    {view === 'cms' && <ContentCMS />}
-                    {view === 'shop' && <ShopEconomy />}
-                    {view === 'push' && <PushNotificationManager />}
-                    {view === 'zoo' && <ZooAdmin />}
-                    {view === 'god' && <GodTools users={users} />}
-                    {view === 'logs' && <LogsViewer />}
-                </div>
+            <div className="flex-1 bg-slate-900 overflow-hidden relative flex flex-col">
+                {view === 'dashboard' && <div className="h-full overflow-y-auto"><DashboardHome users={users} /></div>}
+                {view === 'users' && <UserManagement users={users} />}
+                {view === 'cms' && <div className="h-full overflow-y-auto"><ContentCMS /></div>}
+                {view === 'shop' && <div className="h-full overflow-y-auto"><ShopEconomy /></div>}
+                {view === 'push' && <div className="h-full overflow-y-auto"><PushNotificationManager /></div>}
+                {view === 'zoo' && <div className="h-full overflow-y-auto"><ZooAdmin /></div>}
+                {view === 'god' && <div className="h-full overflow-y-auto"><GodTools users={users} /></div>}
+                {view === 'logs' && <LogsViewer />}
             </div>
         </div>
     );
