@@ -1,6 +1,7 @@
 {
   "name": "Racked",
   "short_name": "Racked",
+  "id": "/",
   "description": "Gamified money skills for teens — 8 worlds, 384 levels, avatar shop, boss battles, and fake millions. Learn budgeting, investing, and compound interest while flexing on the leaderboard.",
   "start_url": "/",
   "display": "standalone",
