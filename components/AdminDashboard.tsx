@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -43,8 +44,7 @@ import {
     batchWrite
 } from '../services/db';
 import { db } from '../services/firebase';
-// Remove V9 imports as they cause crashes in V8 env
-// import { collection, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, writeBatch, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { playSound } from '../services/audio';
 import { sendMockNotification } from '../services/notifications';
 import { useUserStore } from '../services/useUserStore';
@@ -175,8 +175,7 @@ const UserManagement = ({ users }: { users: UserState[] }) => {
         if (action === 'delete') {
             if(confirm(`PERMANENTLY DELETE USER ${uid}? This cannot be undone.`)) {
                 try {
-                    if(!db) throw new Error("DB not ready");
-                    await db.collection('users').doc(uid).delete();
+                    await deleteDoc(doc(db, 'users', uid));
                     playSound('error'); // sound for delete
                 } catch (e: any) {
                     alert("Delete failed: " + e.message);
@@ -315,24 +314,23 @@ const ContentCMS = () => {
     }, []);
 
     const handleSeedDB = async () => {
-        if (!db) return;
         if (!confirm("⚠️ WARNING: This will DELETE ALL current lessons and re-seed the database with default content. Continue?")) return;
         
         setIsProcessing(true);
         try {
             // A. DELETE ALL EXISTING
             console.log("Cleaning up existing records...");
-            const snapshot = await db.collection("lessons").get();
+            const snapshot = await getDocs(collection(db, "lessons"));
             if (!snapshot.empty) {
                 const chunks = [];
-                let batch = db.batch();
+                let batch = writeBatch(db);
                 let count = 0;
-                snapshot.docs.forEach((doc: any) => {
+                snapshot.docs.forEach((doc) => {
                     batch.delete(doc.ref);
                     count++;
                     if (count % 400 === 0) {
                         chunks.push(batch.commit());
-                        batch = db.batch();
+                        batch = writeBatch(db);
                     }
                 });
                 if (count % 400 !== 0) chunks.push(batch.commit());
@@ -347,17 +345,17 @@ const ContentCMS = () => {
             // C. WRITE NEW DATA
             console.log(`Writing records to database...`);
             const writeBatches: Promise<void>[] = [];
-            let writeBatchInst = db.batch();
+            let writeBatchInst = writeBatch(db);
             let writeCount = 0;
 
             for (const item of seedData) {
                 if (!item.id) continue;
-                const ref = db.collection("lessons").doc(item.id);
+                const ref = doc(db, "lessons", item.id);
                 writeBatchInst.set(ref, item);
                 writeCount++;
                 if (writeCount % 400 === 0) {
                     writeBatches.push(writeBatchInst.commit());
-                    writeBatchInst = db.batch();
+                    writeBatchInst = writeBatch(db);
                 }
             }
             if (writeCount % 400 !== 0) writeBatches.push(writeBatchInst.commit());
@@ -397,10 +395,9 @@ const ContentCMS = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!db) return;
         if (!confirm(`Delete lesson ${id}?`)) return;
         try {
-            await db.collection("lessons").doc(id).delete();
+            await deleteDoc(doc(db, "lessons", id));
             playSound('pop');
         } catch (e) {
             alert("Error deleting: " + e);
@@ -427,14 +424,13 @@ const ContentCMS = () => {
     };
 
     const handleSave = async () => {
-        if (!db) return;
         if (!editForm.id || !editForm.title) {
             alert("ID and Title are required.");
             return;
         }
         setIsProcessing(true);
         try {
-            await db.collection("lessons").doc(editForm.id).set(editForm);
+            await setDoc(doc(db, "lessons", editForm.id), editForm);
             setIsEditorOpen(false);
             playSound('success');
         } catch (e: any) {
@@ -445,7 +441,6 @@ const ContentCMS = () => {
     };
 
     const handleBulkUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!db) return;
         const file = e.target.files?.[0];
         if (!file) return;
         
@@ -458,16 +453,16 @@ const ContentCMS = () => {
             if (!Array.isArray(json)) throw new Error("JSON must be an array of lessons");
 
             const batches: Promise<void>[] = [];
-            let batch = db.batch();
+            let batch = writeBatch(db);
             let count = 0;
 
             json.forEach(item => {
                 if (!item.id) return;
-                batch.set(db!.collection("lessons").doc(item.id), item, { merge: true });
+                batch.set(doc(db, "lessons", item.id), item, { merge: true });
                 count++;
                 if (count % 400 === 0) {
                     batches.push(batch.commit());
-                    batch = db!.batch();
+                    batch = writeBatch(db);
                 }
             });
             if (count % 400 !== 0) batches.push(batch.commit());
@@ -987,7 +982,7 @@ export const AdminDashboard: React.FC<AdminProps> = ({ onExit }) => {
             {/* SIDEBAR */}
             <div className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col flex-shrink-0 relative z-10">
                 <div className="p-6 flex items-center gap-2">
-                    <img src="/icons/icon-192x192.png" className="w-8 h-8 rounded-lg shadow-lg" alt="Racked" />
+                    <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-600 rounded flex items-center justify-center font-bold text-xs shadow-lg animate-pulse">GM</div>
                     <div>
                         <h1 className="font-bold text-lg tracking-wider leading-none">GOD MODE</h1>
                         <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1">

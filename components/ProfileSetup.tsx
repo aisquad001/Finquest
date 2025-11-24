@@ -100,7 +100,6 @@ export const ProfileSetup: React.FC<ProfileSetupProps> = ({ user, onSave, isNewU
             <div className="w-full max-w-md space-y-8">
                 
                 <div className="text-center">
-                    <img src="/icons/icon-512x512.png" className="w-20 h-20 mx-auto mb-4 rounded-2xl shadow-2xl border-4 border-white/10 animate-bounce" alt="Racked" />
                     <h1 className="font-game text-4xl text-white text-stroke-black mb-2 drop-shadow-neon">
                         {isNewUser ? "WHO ARE YOU?" : "EDIT PROFILE"}
                     </h1>

@@ -1,12 +1,16 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 import { create } from 'zustand';
+import * as firestore from 'firebase/firestore';
 import { db } from './firebase';
 import { UserState } from './gamification';
 import { convertDocToUser, getUser } from './db';
 import { logger } from './logger';
+
+const { doc, onSnapshot } = firestore;
 
 interface UserStore {
     user: UserState | null;
@@ -63,11 +67,11 @@ export const useUserStore = create<UserStore>((set, get) => ({
                 }
             }, 15000);
 
-            unsub = db.collection('users').doc(uid).onSnapshot(
-                (docSnap: any) => {
+            unsub = onSnapshot(doc(db, 'users', uid), 
+                (docSnap) => {
                     clearTimeout(connectionTimeout); // Connection established
                     
-                    if (docSnap.exists) {
+                    if (docSnap.exists()) {
                         const userData = convertDocToUser(docSnap.data());
                         set({ user: userData, loading: false, error: null });
                     } else {
@@ -76,7 +80,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
                         logger.info("Auth success but profile doc missing. Waiting for creation...", { uid });
                     }
                 },
-                (err: any) => {
+                (err) => {
                     clearTimeout(connectionTimeout);
                     logger.error('Firestore Sync Error', { code: err.code, msg: err.message });
                     

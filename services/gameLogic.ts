@@ -5,6 +5,9 @@
 import { UserState, SHOP_ITEMS, WORLDS_METADATA, getXpForNextLevel, checkStreak, EarnedBadge } from './gamification';
 import { playSound } from './audio';
 import { updateUser, getUser } from './db';
+import * as firestore from 'firebase/firestore';
+
+const { serverTimestamp } = firestore;
 
 // --- UTILS ---
 const getTodayStr = () => new Date().toLocaleDateString('en-CA');

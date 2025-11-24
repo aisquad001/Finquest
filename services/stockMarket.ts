@@ -1,8 +1,11 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { db } from './firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { logger } from './logger';
 
 // ALPHA VANTAGE CONFIG

@@ -1,12 +1,34 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import { db, firebase } from './firebase';
+import { db } from './firebase';
+import * as firestore from 'firebase/firestore';
 import { UserState, checkStreak, createInitialUser, LevelData, Lesson, LeaderboardEntry } from './gamification';
 import { generateLevelContent } from './contentGenerator';
 import { logger } from './logger';
 import { getMarketData } from './stockMarket';
+
+const { 
+    doc, 
+    getDoc, 
+    setDoc, 
+    updateDoc, 
+    deleteDoc, 
+    serverTimestamp,
+    increment,
+    Timestamp,
+    arrayUnion,
+    collection,
+    onSnapshot,
+    query,
+    limit,
+    orderBy,
+    writeBatch,
+    getDocs,
+    where
+} = firestore;
 
 // --- MOCK DB HELPERS ---
 const MOCK_STORAGE_KEY = 'racked_mock_users';
@@ -20,8 +42,20 @@ const getMockDB = (): Record<string, UserState> => {
     }
 };
 
+const getMockContent = (): { levels: LevelData[], lessons: Lesson[] } => {
+    try {
+        return JSON.parse(localStorage.getItem(MOCK_CONTENT_KEY) || '{"levels":[], "lessons":[]}');
+    } catch {
+        return { levels: [], lessons: [] };
+    }
+};
+
 const saveMockDB = (data: Record<string, UserState>) => {
     localStorage.setItem(MOCK_STORAGE_KEY, JSON.stringify(data));
+};
+
+const saveMockContent = (data: any) => {
+    localStorage.setItem(MOCK_CONTENT_KEY, JSON.stringify(data));
 };
 
 const dispatchMockUpdate = (uid: string, user: UserState) => {
@@ -31,11 +65,11 @@ const dispatchMockUpdate = (uid: string, user: UserState) => {
 // --- CONVERTER ---
 export const convertDocToUser = (data: any): UserState => {
     const user = { ...data };
-    if (user.createdAt && user.createdAt.toDate) user.createdAt = user.createdAt.toDate().toISOString();
-    if (user.lastLoginAt && user.lastLoginAt.toDate) user.lastLoginAt = user.lastLoginAt.toDate().toISOString();
-    if (user.joinedAt && user.joinedAt.toDate) user.joinedAt = user.joinedAt.toDate().toISOString();
-    if (user.streakLastDate && user.streakLastDate.toDate) user.streakLastDate = user.streakLastDate.toDate().toISOString();
-    if (user.proExpiresAt && user.proExpiresAt.toDate) user.proExpiresAt = user.proExpiresAt.toDate().toISOString();
+    if (user.createdAt instanceof Timestamp) user.createdAt = user.createdAt.toDate().toISOString();
+    if (user.lastLoginAt instanceof Timestamp) user.lastLoginAt = user.lastLoginAt.toDate().toISOString();
+    if (user.joinedAt instanceof Timestamp) user.joinedAt = user.joinedAt.toDate().toISOString();
+    if (user.streakLastDate instanceof Timestamp) user.streakLastDate = user.streakLastDate.toDate().toISOString();
+    if (user.proExpiresAt instanceof Timestamp) user.proExpiresAt = user.proExpiresAt.toDate().toISOString();
     
     // SAFETY: Ensure arrays exist
     if (!user.completedLevels) user.completedLevels = [];
@@ -57,19 +91,27 @@ export const getUser = async (uid: string): Promise<UserState | null> => {
         return mockDB[uid] || null;
     }
     try {
-        const userDoc = await db.collection('users').doc(uid).get();
+        // Race getDoc against a timeout to prevent hanging
+        const userDoc: any = await Promise.race([
+            getDoc(doc(db, 'users', uid)),
+            timeoutPromise(15000)
+        ]);
         
-        if (userDoc.exists) {
+        if (userDoc.exists()) {
             return convertDocToUser(userDoc.data());
         }
         return null;
     } catch (error: any) {
         logger.error("Error fetching user", error);
+        if (error.code === 'permission-denied') {
+            logger.warn("DB Permissions missing.");
+        }
         return null;
     }
 };
 
 export const createUserDoc = async (uid: string, onboardingData: any) => {
+    // --- MOCK MODE HANDLER ---
     if (uid.startsWith('mock_')) {
         const mockDB = getMockDB();
         if (mockDB[uid]) {
@@ -95,30 +137,42 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
         return dataToSave;
     }
 
+    // --- REAL FIRESTORE HANDLER ---
     try {
-        const userRef = db.collection('users').doc(uid);
-        const userSnap = await userRef.get();
+        const userRef = doc(db, "users", uid);
+        
+        const userSnap: any = await Promise.race([
+            getDoc(userRef),
+            timeoutPromise(15000)
+        ]);
 
-        if (!userSnap.exists) {
+        if (!userSnap.exists()) {
             logger.info("[DB] Creating new user document", { uid });
             const initialData = createInitialUser(onboardingData);
             
+            // SECURITY: Explicitly set default roles
+            // We store dates as timestamps in Firestore, but as strings in the returned object for the app
             const dataToSave = {
                 ...initialData,
                 uid: uid,
                 email: onboardingData.email || '',
                 photoURL: onboardingData.photoURL || null,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: serverTimestamp(),
+                lastLoginAt: serverTimestamp(),
                 isAdmin: false, 
                 role: 'user' as const,
                 loginType: onboardingData.authMethod || 'google'
             };
             
-            await userRef.set(dataToSave);
+            await Promise.race([
+                setDoc(userRef, dataToSave),
+                timeoutPromise(15000)
+            ]);
 
             logger.info("[DB] User document created successfully.");
             
+            // Return the user object with ISO strings so the app can use it immediately
+            // without waiting for a fetch
             return {
                 ...initialData,
                 uid: uid,
@@ -133,15 +187,15 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
 
         } else {
             logger.info("[DB] User exists, updating login time.");
-            await userRef.update({
-                lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            await updateDoc(userRef, {
+                lastLoginAt: serverTimestamp()
             });
             return convertDocToUser(userSnap.data());
         }
     } catch (error: any) {
         logger.error("Error creating/fetching user doc", error);
         if (error.code === 'permission-denied') {
-            const msg = "Sign in failed. Profile creation failed. Missing or insufficient permissions.";
+            const msg = "Sign in failed. Profile creation failed. Missing or insufficient permissions.\n\nFIX: Go to Firebase Console > Firestore > Rules and change to 'allow read, write: if request.auth != null;'";
             logger.error(msg);
             throw new Error(msg);
         }
@@ -149,9 +203,11 @@ export const createUserDoc = async (uid: string, onboardingData: any) => {
     }
 };
 
+// CRITICAL: Guest -> Real Migration
 export const migrateGuestToReal = async (guestUid: string, realUid: string, realEmail: string) => {
     logger.info(`[MIGRATION] Starting migration from ${guestUid} to ${realUid}`);
     
+    // 1. Fetch Guest Data
     let guestData: UserState | null = null;
     
     if (guestUid.startsWith('mock_')) {
@@ -162,27 +218,29 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
             saveMockDB(mockDB);
         }
     } else {
-        const guestRef = db.collection('users').doc(guestUid);
-        const guestDoc = await guestRef.get();
-        if (guestDoc.exists) {
+        const guestDoc = await getDoc(doc(db, 'users', guestUid));
+        if (guestDoc.exists()) {
             guestData = convertDocToUser(guestDoc.data());
-            await guestRef.delete();
+            // Delete old doc
+            await deleteDoc(doc(db, 'users', guestUid));
         }
     }
 
-    const realRef = db.collection('users').doc(realUid);
-    const realSnap = await realRef.get();
+    // 2. Check if Target User Already Exists (Merge strategy)
+    const realRef = doc(db, 'users', realUid);
+    const realSnap = await getDoc(realRef);
 
-    if (realSnap.exists) {
+    if (realSnap.exists()) {
         logger.info("Target user exists, merging stats if guest has significant progress...");
         if (guestData) {
-            await realRef.update({
-                coins: firebase.firestore.FieldValue.increment(guestData.coins),
-                xp: firebase.firestore.FieldValue.increment(guestData.xp),
-                inventory: firebase.firestore.FieldValue.arrayUnion(...guestData.inventory)
+            await updateDoc(realRef, {
+                coins: increment(guestData.coins),
+                xp: increment(guestData.xp),
+                inventory: arrayUnion(...guestData.inventory)
             });
         }
     } else {
+        // Target is new, create it with guest data
         if (!guestData) {
              logger.warn("No guest data found, creating fresh.");
              await createUserDoc(realUid, { email: realEmail, authMethod: 'google' });
@@ -196,11 +254,11 @@ export const migrateGuestToReal = async (guestUid: string, realUid: string, real
             loginType: 'google',
             isAdmin: false, 
             role: 'user' as const,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+            createdAt: serverTimestamp(),
+            lastLoginAt: serverTimestamp()
         };
 
-        await realRef.set(newUserData);
+        await setDoc(realRef, newUserData);
     }
     logger.info("[MIGRATION] Success! Guest data moved/merged to real account.");
 };
@@ -217,16 +275,19 @@ export const updateUser = async (uid: string, data: Partial<UserState>) => {
     }
 
     try {
-        await db.collection('users').doc(uid).update({
+        const userRef = doc(db, 'users', uid);
+        await updateDoc(userRef, {
             ...data,
-            lastSyncedAt: firebase.firestore.FieldValue.serverTimestamp()
+            lastSyncedAt: serverTimestamp()
         });
     } catch (error) {
         logger.error("Error updating user", error);
     }
 };
 
+// NEW: Parent Code Helpers
 export const updateParentCode = async (uid: string, code: string) => {
+    // Handle mock mode if needed, though typically parent portal is a "real" feature
     if (uid.startsWith('mock_')) {
         const mockDB = getMockDB();
         if (mockDB[uid]) {
@@ -240,12 +301,15 @@ export const updateParentCode = async (uid: string, code: string) => {
 };
 
 export const fetchChildByCode = async (code: string): Promise<UserState | null> => {
+    // Mock check
     const mockDB = getMockDB();
     const mockUser = Object.values(mockDB).find(u => u.parentCode === code);
     if (mockUser) return mockUser;
 
     try {
-        const snapshot = await db.collection('users').where('parentCode', '==', code).limit(1).get();
+        // Simple equality query (requires simple index, which is default)
+        const q = query(collection(db, 'users'), where('parentCode', '==', code), limit(1));
+        const snapshot = await getDocs(q);
         if (!snapshot.empty) {
             return convertDocToUser(snapshot.docs[0].data());
         }
@@ -260,7 +324,7 @@ export const handleDailyLogin = async (uid: string, currentUserState: UserState)
     const { updatedUser, savedByFreeze, broken } = checkStreak(currentUserState);
     
     const updatePayload: any = {
-        lastLoginAt: uid.startsWith('mock_') ? new Date().toISOString() : firebase.firestore.FieldValue.serverTimestamp()
+        lastLoginAt: uid.startsWith('mock_') ? new Date().toISOString() : serverTimestamp()
     };
 
     if (updatedUser.streak !== currentUserState.streak || updatedUser.streakFreezes !== currentUserState.streakFreezes) {
@@ -285,6 +349,7 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
         if (mockDB[uid]) {
             const user = mockDB[uid];
             if (completed) {
+                // Ensure array exists
                 if (!user.completedLevels) user.completedLevels = [];
                 
                 if (!user.completedLevels.includes(levelId)) {
@@ -304,66 +369,87 @@ export const saveLevelProgress = async (uid: string, worldId: string, levelId: s
     }
 
     try {
-        const updatePayload: any = { lastActive: firebase.firestore.FieldValue.serverTimestamp() };
+        const userRef = doc(db, 'users', uid);
+        const updatePayload: any = { lastActive: serverTimestamp() };
         if (completed) {
-             updatePayload.completedLevels = firebase.firestore.FieldValue.arrayUnion(levelId);
-             updatePayload[`progress.${worldId}.score`] = firebase.firestore.FieldValue.increment(xpEarned);
+             updatePayload.completedLevels = arrayUnion(levelId);
+             updatePayload[`progress.${worldId}.score`] = increment(xpEarned);
              updatePayload[`progress.${worldId}.lessonsCompleted.${levelId}`] = true;
         }
-        await db.collection('users').doc(uid).set(updatePayload, { merge: true });
+        await setDoc(userRef, updatePayload, { merge: true });
     } catch (error) {
         logger.error("Error saving progress", error);
     }
 };
 
+// --- LEADERBOARD ---
 export const subscribeToLeaderboard = (callback: (entries: LeaderboardEntry[]) => void) => {
-    return db.collection('users')
-        .orderBy('xp', 'desc')
-        .limit(50)
-        .onSnapshot((snapshot) => {
-            const marketData = getMarketData();
-            const entries: LeaderboardEntry[] = snapshot.docs.map((doc) => {
-                const u = doc.data() as UserState;
-                let netWorth = u.portfolio?.cash || 0;
-                if (u.portfolio?.holdings) {
-                    Object.entries(u.portfolio.holdings).forEach(([symbol, qty]) => {
-                        const stock = marketData.find(s => s.symbol === symbol);
-                        if (stock) {
-                            netWorth += stock.price * (qty as number);
-                        }
-                    });
-                }
-                return {
-                    rank: 0,
-                    name: u.nickname || 'Anonymous',
-                    xp: u.xp,
-                    avatar: u.avatar?.emoji || '👤',
-                    country: 'Global',
-                    netWorth: netWorth
-                };
-            });
-            entries.sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0));
-            const rankedEntries = entries.map((e, i) => ({...e, rank: i + 1}));
-            callback(rankedEntries);
-        }, (err) => {
-            logger.error("Leaderboard Error", err);
-            callback([]);
+    // Query top 50 by XP to minimize reads, then we filter/sort in client for specifics
+    const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+
+    return onSnapshot(q, (snapshot) => {
+        const marketData = getMarketData(); // Get current prices
+        
+        const entries: LeaderboardEntry[] = snapshot.docs.map((doc) => {
+            const u = doc.data() as UserState;
+            
+            // Calculate Net Worth dynamically using REAL stock prices
+            let netWorth = u.portfolio?.cash || 0;
+            
+            if (u.portfolio?.holdings) {
+                Object.entries(u.portfolio.holdings).forEach(([symbol, qty]) => {
+                    const stock = marketData.find(s => s.symbol === symbol);
+                    if (stock) {
+                        // Valid stock found in current market data
+                        netWorth += stock.price * (qty as number);
+                    }
+                });
+            }
+            
+            // Use nickname (Avatar Name) always, as requested
+            return {
+                rank: 0, // Will assign after sort
+                name: u.nickname || 'Anonymous',
+                xp: u.xp,
+                avatar: u.avatar?.emoji || '👤',
+                country: 'Global',
+                netWorth: netWorth
+            };
         });
+
+        // Sort by Net Worth for the Wall Street Zoo leaderboard
+        entries.sort((a, b) => (b.netWorth || 0) - (a.netWorth || 0));
+        
+        // Re-assign ranks after sort
+        const rankedEntries = entries.map((e, i) => ({...e, rank: i + 1}));
+        
+        callback(rankedEntries);
+    }, (err) => {
+        logger.error("Leaderboard Error", err);
+        callback([]);
+    });
 };
 
+// --- ADMIN GENERIC CRUD HELPERS ---
+
 export const subscribeToCollection = (colName: string, callback: (data: any[]) => void) => {
-    return db.collection(colName).onSnapshot((snapshot) => {
+    const q = query(collection(db, colName));
+    return onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(items);
     }, (error) => {
         logger.error(`Error subscribing to ${colName}`, error);
-        callback([]);
+        if (error.code === 'permission-denied') {
+            // Return empty array to stop loading states in UI
+            callback([]);
+        }
     });
 };
 
 export const saveDoc = async (colName: string, id: string, data: any) => {
     try {
-        await db.collection(colName).doc(id).set({ ...data, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        const ref = doc(db, colName, id);
+        await setDoc(ref, { ...data, updatedAt: serverTimestamp() }, { merge: true });
     } catch (e) {
         logger.error(`Error saving to ${colName}`, e);
         throw e;
@@ -372,7 +458,7 @@ export const saveDoc = async (colName: string, id: string, data: any) => {
 
 export const deleteDocument = async (colName: string, id: string) => {
     try {
-        await db.collection(colName).doc(id).delete();
+        await deleteDoc(doc(db, colName, id));
     } catch (e) {
         logger.error(`Error deleting from ${colName}`, e);
         throw e;
@@ -380,19 +466,29 @@ export const deleteDocument = async (colName: string, id: string) => {
 };
 
 export const batchWrite = async (colName: string, items: any[]) => {
-    const batch = db.batch();
+    const batch = writeBatch(db);
     items.forEach(item => {
-        const ref = db.collection(colName).doc(item.id || db.collection(colName).doc().id);
-        batch.set(ref, { ...item, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+        const ref = doc(db, colName, item.id || doc(collection(db, colName)).id);
+        batch.set(ref, { ...item, updatedAt: serverTimestamp() }, { merge: true });
     });
     await batch.commit();
 };
 
+// --- FETCH HELPERS (Dynamic vs Generated) ---
+
 export const fetchLevelsForWorld = async (worldId: string): Promise<LevelData[]> => {
+    // 1. Check Firestore for custom levels
+    // (In a real app, we'd check DB first. For hybrid approach, we generate then override)
+    
+    // Generate baseline
     const generated = Array.from({ length: 8 }, (_, i) => {
          const { level } = generateLevelContent(worldId, i + 1);
          return level;
     });
+
+    // For now, we return generated. 
+    // Admin dashboard implementation will allow writing to 'levels' collection
+    // which could be merged here in future iterations.
     return generated; 
 };
 
@@ -407,31 +503,38 @@ export const seedGameData = async () => {
     logger.info("Seeding DB...");
     localStorage.removeItem(MOCK_CONTENT_KEY);
     localStorage.removeItem(MOCK_STORAGE_KEY);
+    // No-op in real DB mode, but useful for clearing cache
 };
 
+// --- ADMIN REAL-TIME USER DATA ---
 export const subscribeToAllUsers = (callback: (users: UserState[]) => void) => {
     logger.info("[ADMIN] Subscribing to ALL users...");
-    return db.collection('users').orderBy('lastLoginAt', 'desc').limit(100).onSnapshot((snapshot) => {
+    const q = query(collection(db, 'users'), orderBy('lastLoginAt', 'desc'), limit(100));
+    
+    return onSnapshot(q, (snapshot) => {
         const users = snapshot.docs.map(doc => convertDocToUser(doc.data()));
         callback(users);
     }, (error) => {
         logger.error("Admin Sub Error", error);
+        // Call with empty list to resolve loading state in UI
         callback([]);
     });
 };
 
 export const adminUpdateUser = async (uid: string, data: Partial<UserState>) => {
-    await db.collection('users').doc(uid).update(data);
+    const ref = doc(db, 'users', uid);
+    await updateDoc(ref, data);
 };
 
 export const adminMassUpdate = async (action: 'give_coins' | 'reset' | 'reward_all') => {
-    const snapshot = await db.collection('users').limit(100).get();
-    const batch = db.batch();
+    const snapshot = await getDocs(query(collection(db, 'users'), limit(100)));
+    const batch = writeBatch(db);
 
     snapshot.docs.forEach(doc => {
         if (action === 'give_coins') {
-            batch.update(doc.ref, { coins: firebase.firestore.FieldValue.increment(1000) });
+            batch.update(doc.ref, { coins: increment(1000) });
         } else if (action === 'reset') {
+            // FIX: Explicitly clear completedLevels so map resets correctly
             batch.update(doc.ref, { 
                 coins: 500, 
                 level: 1, 
@@ -442,7 +545,7 @@ export const adminMassUpdate = async (action: 'give_coins' | 'reset' | 'reward_a
                 badges: []
             });
         } else if (action === 'reward_all') {
-             batch.update(doc.ref, { lastDailyChestClaim: '' });
+             batch.update(doc.ref, { lastDailyChestClaim: '' }); // Reset chest
         }
     });
 

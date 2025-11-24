@@ -61,7 +61,6 @@ export const PremiumModal: React.FC<PremiumModalProps> = ({ onClose, onUpgrade }
 
                     {view === 'pro' && (
                         <div className="text-center">
-                            <img src="/icons/icon-192x192.png" className="w-16 h-16 mx-auto mb-4 rounded-2xl shadow-lg" alt="Racked" />
                             <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-orange-600 rounded-full flex items-center justify-center text-5xl shadow-[0_0_30px_rgba(234,179,8,0.4)] mb-6 animate-pulse-fast">
                                 👑
                             </div>

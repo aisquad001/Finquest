@@ -71,7 +71,6 @@ export const WorldLevelMap: React.FC<WorldLevelMapProps> = ({ world, completedLe
                     >
                         <ArrowLeftIcon className="w-6 h-6 text-white" />
                     </button>
-                    <img src="/icons/icon-192x192.png" className="w-8 h-8 rounded-lg border border-white/20 shadow-md" alt="Racked" />
                     <div>
                         <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">World Map</div>
                         <h1 className="font-game text-xl text-white tracking-wide text-stroke-black">{world.title}</h1>

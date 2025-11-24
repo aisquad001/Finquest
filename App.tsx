@@ -43,14 +43,10 @@ const App: React.FC = () => {
   // ROUTING FIX: Support query param 'view=portal' to avoid 404s on static hosts
   const searchParams = new URLSearchParams(window.location.search);
   const isPortalRoute = window.location.pathname === '/portal' || searchParams.get('view') === 'portal';
-  const isZooRoute = searchParams.get('view') === 'zoo';
   const isAdminRoute = window.location.pathname === '/admin';
   
   const [view, setView] = useState<'dashboard' | 'map' | 'lesson' | 'zoo' | 'portal' | 'admin'>(
-      isAdminRoute ? 'admin' : 
-      isPortalRoute ? 'portal' : 
-      isZooRoute ? 'zoo' : 
-      'dashboard'
+      isAdminRoute ? 'admin' : isPortalRoute ? 'portal' : 'dashboard'
   );
 
   const [activeWorld, setActiveWorld] = useState<WorldData | null>(null);
