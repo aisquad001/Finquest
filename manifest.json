@@ -1,3 +1,4 @@
+
 {
   "name": "Racked",
   "short_name": "Racked",
@@ -19,7 +20,8 @@
     }
   ],
   "start_url": "/",
-  "display": "standalone",
+  "display": "fullscreen",
+  "orientation": "portrait",
   "background_color": "#12002A",
   "theme_color": "#00FF9D"
 }

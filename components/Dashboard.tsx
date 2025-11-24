@@ -18,7 +18,8 @@ import {
     CheckBadgeIcon,
     ArrowRightIcon,
     ArrowTrendingUpIcon,
-    ArrowTrendingDownIcon
+    ArrowTrendingDownIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/react/24/solid';
 import { 
     WORLDS_METADATA, 
@@ -374,15 +375,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                         </div>
                     </div>
 
-                    {/* STREAK BADGE (Top Right) */}
-                    <button className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-2 border border-white/10 active:scale-90 transition-all group">
-                        <div className={`text-3xl drop-shadow-[0_0_10px_rgba(255,100,0,0.5)] ${user.streak > 0 ? 'animate-fire-flicker' : 'grayscale opacity-50'}`}>
-                            {user.streak > 30 ? '💎' : '🔥'}
-                        </div>
-                        <div className="text-[10px] font-black text-orange-500 uppercase leading-none mt-1 group-hover:text-orange-400">
-                            {user.streak} Days
-                        </div>
-                    </button>
+                    {/* RIGHT SIDE: INSTALL + STREAK */}
+                    <div className="flex gap-2">
+                        {installPrompt && (
+                            <button 
+                                onClick={handleInstall}
+                                className="flex flex-col items-center justify-center bg-neon-green/10 rounded-2xl p-2 border border-neon-green/50 active:scale-90 transition-all h-[58px] w-[58px]"
+                            >
+                                <ArrowDownTrayIcon className="w-6 h-6 text-neon-green animate-bounce" />
+                                <div className="text-[8px] font-black text-neon-green uppercase leading-none mt-1">
+                                    Install
+                                </div>
+                            </button>
+                        )}
+
+                        {/* STREAK BADGE (Top Right) */}
+                        <button className="flex flex-col items-center justify-center bg-black/40 rounded-2xl p-2 border border-white/10 active:scale-90 transition-all group h-[58px] min-w-[58px]">
+                            <div className={`text-3xl drop-shadow-[0_0_10px_rgba(255,100,0,0.5)] ${user.streak > 0 ? 'animate-fire-flicker' : 'grayscale opacity-50'}`}>
+                                {user.streak > 30 ? '💎' : '🔥'}
+                            </div>
+                            <div className="text-[10px] font-black text-orange-500 uppercase leading-none mt-1 group-hover:text-orange-400">
+                                {user.streak} Days
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 {/* PREDOMINANT STATS ROW */}
