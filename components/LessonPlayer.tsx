@@ -632,22 +632,25 @@ export const LessonPlayer: React.FC<LessonPlayerProps> = ({ level, onClose, onCo
 
             {/* HEADER */}
             <div className="flex items-center justify-between p-4 bg-black/20 backdrop-blur-sm border-b border-white/5 z-50">
-                <div className="w-full mr-4">
-                    {isBossStage ? (
-                        <div className="flex gap-2 justify-center w-full">
-                            {[...Array(3)].map((_, i) => (
-                                <HeartIcon key={i} className={`w-8 h-8 drop-shadow-md ${i < hearts ? 'text-red-500 animate-pulse' : 'text-gray-800'}`} />
-                            ))}
-                        </div>
-                    ) : (
-                         <div className="w-full relative h-6 bg-gray-800 rounded-full border-2 border-black overflow-hidden">
-                             <MotionDiv 
-                                className="h-full bg-neon-green"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
-                             />
-                         </div>
-                    )}
+                <div className="flex items-center gap-3 w-full mr-4">
+                    <img src="/icons/icon-192x192.png" className="w-8 h-8 rounded-lg shadow-sm" alt="Racked" />
+                    <div className="w-full">
+                        {isBossStage ? (
+                            <div className="flex gap-2 justify-center w-full">
+                                {[...Array(3)].map((_, i) => (
+                                    <HeartIcon key={i} className={`w-8 h-8 drop-shadow-md ${i < hearts ? 'text-red-500 animate-pulse' : 'text-gray-800'}`} />
+                                ))}
+                            </div>
+                        ) : (
+                             <div className="w-full relative h-6 bg-gray-800 rounded-full border-2 border-black overflow-hidden">
+                                 <MotionDiv 
+                                    className="h-full bg-neon-green"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${((currentIndex + 1) / lessons.length) * 100}%` }}
+                                 />
+                             </div>
+                        )}
+                    </div>
                 </div>
                 <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20">
                     <XMarkIcon className="w-6 h-6 text-white" />

@@ -306,7 +306,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onOpenWorld, onClaim
                 <div className="px-4 flex items-start justify-between mb-6">
                     
                     {/* User Identity & Badge */}
-                    <div className="flex items-center gap-4 relative">
+                    <div className="flex items-center gap-3 relative">
+                        {/* Logo */}
+                        <img src="/icons/icon-192x192.png" className="w-10 h-10 rounded-xl shadow-lg border border-white/10 hidden md:block" alt="Racked" />
+
                         {/* Profile Menu Dropdown */}
                         {showProfileMenu && (
                             <div className="absolute top-14 left-0 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl p-2 w-48 z-[100] animate-pop-in">
