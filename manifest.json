@@ -20,5 +20,28 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshots/1.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Dashboard & Stats"
+    },
+    {
+      "src": "screenshots/2.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "World Map Journey"
+    },
+    {
+      "src": "screenshots/3.jpg",
+      "sizes": "1080x1920",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Interactive Lessons"
+    }
   ]
 }
