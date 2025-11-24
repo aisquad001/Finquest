@@ -31,21 +31,21 @@
   "screenshots": [
     {
       "src": "screenshots/1.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1440x2637",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Dashboard & Stats"
     },
     {
       "src": "screenshots/2.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1440x2637",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "World Map Journey"
     },
     {
       "src": "screenshots/3.jpg",
-      "sizes": "1080x1920",
+      "sizes": "1440x2637",
       "type": "image/jpeg",
       "form_factor": "narrow",
       "label": "Interactive Lessons"
